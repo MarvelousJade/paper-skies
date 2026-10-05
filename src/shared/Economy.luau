@@ -5,6 +5,11 @@ export type Profile={gold:number,levels:{[string]:number},color:number,bestDista
 function Economy.new(): Profile
  return {gold=0,levels={Glide=0,Launch=0,Handling=0},color=1,bestDistance=0,planeId="Dart",ownedPlanes={Dart=true}}
 end
+-- Both live telemetry and banking use this rule so displayed and awarded gold agree.
+-- Inputs are accumulated by the authoritative flight server, never supplied by clients.
+function Economy.flightReward(ringGold:number,distance:number):number
+ return ringGold+math.floor(distance/Config.DistanceGoldStuds)
+end
 function Economy.cost(key:string,level:number):number
  return math.floor(Config.Upgrades[key].baseCost*1.65^level)
 end

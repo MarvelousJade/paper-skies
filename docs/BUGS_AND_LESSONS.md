@@ -554,3 +554,18 @@ The sky layout now has twenty-four curved trails of ten rings each (240 sky ring
 The two additional meadow encounters were removed, leaving a bear and turtle in the introductory field and thirteen animals at their existing hidden locations. All seven species remain represented. Complete sideways belly rings are retained for the fifteen animals. Total rewards: 266.
 
 The scenery rebuild reused existing terrain and regenerated trees against the new ring corridors. All 4481 geometry/layout assertions passed, including opening/rim clearance, plane-width belly approaches, ten-ring minimum trail length, and exactly two visible field encounters. Close screenshots show the longer curved chain and the open-field bear/turtle placement. The scene contains 26,936 descendants. This is a design iteration, not a newly discovered defect; device performance and full keyboard-flown collection of every route remain unverified. Changes remain uncommitted.
+
+
+## October 5 distance-gold balance
+
+### D21 Passive flight income made progression too generous
+
+**Observed:** The user reported that flying around earned too much gold and requested a checkpoint before changing it. The current layout was committed as `a0285a5` first.
+
+**Cause:** Passive income awarded one gold per 40 studs, so ordinary 150–165 SPS gliding generated roughly 225–248 gold per minute without collecting rings. The same hardcoded formula appeared separately in telemetry and final banking, increasing the chance that a future balance edit could change only one path.
+
+**Change:** Set `Config.DistanceGoldStuds` to 200, reducing distance-income rate by 80%. At 1000 studs, passive earnings fall from 25 to 5 gold. `Economy.flightReward` now supplies both live telemetry and final payout. Ring values, aircraft prices, and existing saved balances are unchanged; deliberate exploration stays rewarding.
+
+**Verification:** All 87 flight/economy/camera assertions passed, including zero distance, the 200-stud boundary, integer rounding, and preservation of collected ring gold. A fresh Studio run traveled 495.84 studs without rings: the HUD displayed 2 gold, Ended awarded 2, and the wallet increased by 2. Another reset did not pay again. The old formula would have awarded 12 for that distance. The live check used normal launch/reset requests and Studio-only progress; no persistent balances were edited. `git diff --check` passed.
+
+**Interview lesson:** Balance passive income against traversal speed and upgrade prices. Keep display and settlement on one server-owned reward rule, and verify both the visible reward and actual wallet change. This is a tuning correction; long-session progression still needs player feedback. The balance adjustment remains uncommitted for testing.

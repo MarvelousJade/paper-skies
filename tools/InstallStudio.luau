@@ -32,6 +32,8 @@ Config.MaxDuration = 240
 Config.WorldMin = Vector3.new(-5900,-20,-5600)
 Config.WorldMax = Vector3.new(4900,2800,5900)
 Config.RingValue = 10
+-- Passive flight income stays secondary to collecting exploration rewards.
+Config.DistanceGoldStuds = 200
 Config.CollectionRadius = 12
 Config.RingMargin = 3.6
 Config.CollectSoundId = "rbxassetid://99102731755541"
@@ -781,6 +783,11 @@ export type Profile={gold:number,levels:{[string]:number},color:number,bestDista
 function Economy.new(): Profile
  return {gold=0,levels={Glide=0,Launch=0,Handling=0},color=1,bestDistance=0,planeId="Dart",ownedPlanes={Dart=true}}
 end
+-- Both live telemetry and banking use this rule so displayed and awarded gold agree.
+-- Inputs are accumulated by the authoritative flight server, never supplied by clients.
+function Economy.flightReward(ringGold:number,distance:number):number
+ return ringGold+math.floor(distance/Config.DistanceGoldStuds)
+end
 function Economy.cost(key:string,level:number):number
  return math.floor(Config.Upgrades[key].baseCost*1.65^level)
 end
@@ -931,7 +938,7 @@ local function stop(player,message)
   s.model:Destroy()
   local p=profiles[player]
   if p then
-   local reward=s.gold+math.floor(s.distance/40)
+   local reward=Economy.flightReward(s.gold,s.distance)
    p.gold+=reward;p.bestDistance=math.max(p.bestDistance,math.floor(s.distance))
    send(player,"Ended",{message=message,gold=reward,distance=s.distance,rings=s.count})
    sync(player)
@@ -1101,7 +1108,7 @@ RunService.Heartbeat:Connect(function(dt)
    if s.notify>=0.1 then
     s.notify=0;collect(player,s,s.ringPosition,pos);s.ringPosition=pos
     prefetch(player,pos+Flight.frame(s.state).LookVector*650-Vector3.new(0,90,0))
-    send(player,"Telemetry",{gold=s.gold+math.floor(s.distance/40),rings=s.count,distance=s.distance,
+    send(player,"Telemetry",{gold=Economy.flightReward(s.gold,s.distance),rings=s.count,distance=s.distance,
      speed=s.state.speed,stalled=s.state.stalled,lift=lift,boostRemaining=s.state.boostRemaining,boosting=s.state.boosting,recharging=s.state.recharging,region=World.region(pos),altitude=pos.Y,
      pitch=s.state.pitch,yaw=s.state.yaw,position=pos})
    end

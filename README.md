@@ -89,7 +89,7 @@ The installer builds the five aircraft and world from source. Terrain uses the `
 
 The client sends steering and boost requests at 15 Hz. The server simulates at 60 Hz, validates types and ranges, rate-limits requests, and clears stale input after 0.5 seconds. Plane attributes and purchases are resolved from the server catalog.
 
-Ring rewards use spatial bins and swept plane crossing through an opening with a 3.6-stud margin. Each ring pays once per run. Removing the session before banking prevents repeated reset payouts. Client collection IDs keep returning streamed ring parts hidden.
+Ring rewards use spatial bins and swept plane crossing through an opening with a 3.6-stud margin. Each ring pays once per run. Distance income is 1 gold per 200 studs (previously 40); a 1000-stud flight earns 5 distance gold instead of 25. Ring values and plane prices are unchanged. Live HUD totals and final banked rewards share `Economy.flightReward`. Removing the session before banking prevents repeated reset payouts. Client collection IDs keep returning streamed ring parts hidden.
 
 A replication focus follows the plane while the avatar stays behind. Flight rendering interpolates the server state. Prediction/reconciliation is not implemented.
 
@@ -119,6 +119,6 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The latest requested checkpoint is **`04acf33` — Add reference wildlife, expanded ring routes and flight audio**. The newer 24-trail layout and two-animal open field remain uncommitted for user testing.
+The latest requested checkpoint is **`a0285a5` — Expand connected ring trails and simplify field wildlife**. The newer distance-gold balance adjustment remains uncommitted for user testing.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.

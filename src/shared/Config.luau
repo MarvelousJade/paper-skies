@@ -19,6 +19,8 @@ Config.MaxDuration = 240
 Config.WorldMin = Vector3.new(-5900,-20,-5600)
 Config.WorldMax = Vector3.new(4900,2800,5900)
 Config.RingValue = 10
+-- Passive flight income stays secondary to collecting exploration rewards.
+Config.DistanceGoldStuds = 200
 Config.CollectionRadius = 12
 Config.RingMargin = 3.6
 Config.CollectSoundId = "rbxassetid://99102731755541"
