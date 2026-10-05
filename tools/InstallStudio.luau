@@ -43,7 +43,7 @@ Config.CollectionRadius = 12
 Config.RingMargin = 3.6
 -- Quiet coin pickup with a softened attack and release, separate from the music mix.
 Config.CollectSoundId = "rbxassetid://4612374807"
-Config.CollectSoundVolume = 0.14
+Config.CollectSoundVolume = 0.18
 Config.CollectSoundHighGain = -12
 Config.CollectSoundMidGain = -2
 Config.CollectSoundDuration = 0.5
@@ -179,8 +179,9 @@ end
 function Camera.step(state:State,dt:number,boosting:boolean): State
  local age=state.age+math.max(0,dt)
  local throwPulse=math.sin(math.pi*math.clamp(age/1.4,0,1))
- local fov=70+math.max(throwPulse*10,boosting and 14 or 0)
- local distance=29+math.max(throwPulse*9,boosting and 11 or 0)
+ -- Half-strength boost zoom keeps the speed cue comfortable during exploration.
+ local fov=70+math.max(throwPulse*10,boosting and 7 or 0)
+ local distance=29+math.max(throwPulse*9,boosting and 5.5 or 0)
  local blend=1-math.exp(-7*math.max(0,dt))
  return {age=age,fov=state.fov+(fov-state.fov)*blend,distance=state.distance+(distance-state.distance)*blend}
 end

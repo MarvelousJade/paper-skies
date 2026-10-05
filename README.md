@@ -17,7 +17,7 @@ Press **F** to aim, move the mouse to rotate the smooth green aiming arc, then c
 
 Climbing spends speed, prolonged climbing causes a stall and nose drop, and diving rebuilds speed. The starter loses energy sharply beyond a 12-degree climb; stronger types tolerate steeper climbs (up to a 28-degree comfort threshold on Kestrel). Above each type's air ceiling, additional drag and sink gradually make further climbing harder. Range comes from energy, drag, sink, and flying technique; there is no per-type distance cutoff. This is a tuned kinematic glider. Collect optional neon rings and distance gold to buy different plane types through **Planes**. Customize changes paper color; Explore lists regions.
 
-A throw briefly widens the camera to about 80 degrees and increases follow distance. It settles back to the normal 70-degree view. Active boost smoothly widens to 84 degrees; releasing boost returns to normal even while speed remains high.
+A throw briefly widens the camera to about 80 degrees and increases follow distance. It settles back to the normal 70-degree view. Active boost smoothly widens to 77 degrees and moves the camera from 29 to 34.5 studs back (half the previous boost effect); releasing boost returns to normal even while speed remains high.
 
 ## Plane progression
 
@@ -95,13 +95,13 @@ A replication focus follows the plane while the avatar stays behind. Flight rend
 
 Published profile writes use UpdateAsync with ownership leases, retries, periodic saves, and departure/shutdown saves. Normalization retains valid plane ownership and selection; old profiles keep gold and existing bonuses. **Studio progress is session-only; published persistence has not been verified end to end.**
 
-Wind asset: 687874741. Pickup audio: [coin_pickup_1 by thienbao2109](https://create.roblox.com/store/asset/4612374807), one quiet voice at volume 0.14 and fixed playback speed 0.92. A 25 ms attack, 180 ms release, and reduced high frequencies soften its 500 ms playback window. Original chill EDM loop: `assets/audio/PaperSkies.wav`; regeneration and Roblox setup are documented in `docs/AUDIO.md`. Background music uses the uploaded PaperSkies asset `126932983544303` at volume 0.16, with looping and the shared Sound toggle.
+Wind asset: 687874741. Pickup audio: [coin_pickup_1 by thienbao2109](https://create.roblox.com/store/asset/4612374807), one quiet voice at volume 0.18 and fixed playback speed 0.92. A 25 ms attack, 180 ms release, and reduced high frequencies soften its 500 ms playback window. Original chill EDM loop: `assets/audio/PaperSkies.wav`; regeneration and Roblox setup are documented in `docs/AUDIO.md`. Background music uses the uploaded PaperSkies asset `126932983544303` at volume 0.16, with looping and the shared Sound toggle.
 
 ## Validation
 
 - 82 flight, stamina, camera, pickup, economy, profile-normalization, and model assertions passed.
 - A controlled 24-degree climb stalled the starter at 3.18 seconds; Kestrel remained unstalled at four seconds.
-- Live camera samples reached 79.45 degrees on throw and 83.99 on boost, then returned to 70 on release. Server telemetry and the HUD both showed stamina recovery during a suitable glide.
+- Earlier camera samples reached 79.45 degrees on throw and 83.99 on boost, then returned to 70 on release; boost now targets 77 degrees. Server telemetry and the HUD both showed stamina recovery during a suitable glide.
 - 2875 actual-scene geometry/layout assertions passed, including eight default throw directions, ring-rim clearance samples, and sideways animal-ring crossings. These are repeated geometric samples, not 2875 distinct play sessions.
 - Live purchase deducted Delta's real 550-gold price; repeat selection was free.
 - Held and server-launched models matched Delta; changing type during flight was rejected; Kestrel could be purchased after landing.
@@ -119,6 +119,6 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The latest requested checkpoint is **`ba1ca74` — Soften pickup chime and round wildlife limbs**. Moving the turtle and its belly ring to the rear field and replacing the Sonic sample with a quiet coin pickup remain uncommitted for user testing.
+The latest requested checkpoint is **`5363eca` — Move turtle to rear field and soften coin pickup audio**. Half-strength boost camera movement and the slightly louder coin pickup remain uncommitted for user testing.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.

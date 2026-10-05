@@ -2,7 +2,7 @@
 
 ## Ring collection
 
-The ring uses [coin_pickup_1 by thienbao2109](https://create.roblox.com/store/asset/4612374807), a free Creator Store audio asset, ID `4612374807`. Its 0.702-second source replaces the Sonic sample for a calmer exploration mix. Playback uses a fixed speed of 0.92 and maximum volume 0.14, with a 25 ms fade-in and 180 ms fade-out over a 500 ms playback window. A pickup-only EqualizerSoundEffect reduces highs by 12 dB and mids by 2 dB, with lows unchanged. The sample is a Creator Store asset; Paper Skies remains the original project music. Listening approval remains with the user.
+The ring uses [coin_pickup_1 by thienbao2109](https://create.roblox.com/store/asset/4612374807), a free Creator Store audio asset, ID `4612374807`. Its 0.702-second source replaces the Sonic sample for a calmer exploration mix. Playback uses a fixed speed of 0.92 and maximum volume 0.18, with a 25 ms fade-in and 180 ms fade-out over a 500 ms playback window. A pickup-only EqualizerSoundEffect reduces highs by 12 dB and mids by 2 dB, with lows unchanged. The sample is a Creator Store asset; Paper Skies remains the original project music. Listening approval remains with the user.
 
 There is one `RingPickupChime` Sound instance. Rapid pickups restart it instead of stacking voices, and the duplicate-ring guard runs before playback. Sound OFF immediately stops the chime, mutes wind, and mutes music. Sound ON permits new chimes and restores music volume without restarting the song.
 
@@ -53,3 +53,5 @@ Earlier softened Sonic pickup Play check: source loaded; volume 0.20; enabled pi
 ## Current quiet coin verification
 
 Fresh Studio Play verification: the replacement source loaded at 0.702 seconds with playback speed 0.92 and pickup-only EQ at -12 dB high / -2 dB mid. Three unique synthetic pickup notifications plus a duplicate produced exactly three starts on one Sound instance; peak volume was 0.14 and playback stopped after the envelope. Sound OFF suppressed the next pickup and muted music; Sound ON restored the continuing music. Temporary listeners were disconnected. Synthetic IDs awarded no server gold. Subjective listening approval, actual flown collection, and published audio permissions remain manual checks.
+
+Volume follow-up: raised the quiet coin maximum from 0.14 to 0.18 at user request. A fresh Play cosmetic pickup reached 0.18 and stopped at the envelope end while music continued. The source, EQ, and envelope are unchanged. Listening approval remains pending.

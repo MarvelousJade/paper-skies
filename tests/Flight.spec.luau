@@ -186,7 +186,7 @@ check(throwView.fov>75 and throwView.distance>33,"throw briefly widens FOV and p
 local normalView=cameraStep(throwView,3,60,false)
 check(math.abs(normalView.fov-70)<0.01 and math.abs(normalView.distance-29)<0.01,"throw effect returns to normal flight view")
 local boostView=cameraStep(normalView,1,60,true)
-check(boostView.fov>83 and boostView.distance>39,"active boost zooms out")
+check(math.abs(boostView.fov-77)<0.02 and math.abs(boostView.distance-34.5)<0.02,"active boost settles at the reduced zoom target")
 local firstRelease=Camera.step(boostView,1/60,false)
 check(firstRelease.fov<boostView.fov and firstRelease.fov>70,"boost release eases back instead of snapping")
 local releasedView=cameraStep(firstRelease,2,60,false)

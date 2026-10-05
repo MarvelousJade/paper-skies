@@ -30,7 +30,7 @@ Config.CollectionRadius = 12
 Config.RingMargin = 3.6
 -- Quiet coin pickup with a softened attack and release, separate from the music mix.
 Config.CollectSoundId = "rbxassetid://4612374807"
-Config.CollectSoundVolume = 0.14
+Config.CollectSoundVolume = 0.18
 Config.CollectSoundHighGain = -12
 Config.CollectSoundMidGain = -2
 Config.CollectSoundDuration = 0.5

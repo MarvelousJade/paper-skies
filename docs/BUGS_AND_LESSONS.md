@@ -648,3 +648,13 @@ The user found the Sonic-style sound unsuitable for the relaxed scenery and musi
 Fresh Studio Play verification: the replacement source loaded at 0.702 seconds with playback speed 0.92 and pickup-only EQ at -12 dB high / -2 dB mid. Three unique synthetic pickup notifications plus a duplicate produced exactly three starts on one Sound instance; peak volume was 0.14 and playback stopped after the envelope. Sound OFF suppressed the next pickup and muted music; Sound ON restored the continuing music. Temporary listeners were disconnected. Synthetic IDs awarded no server gold. Subjective listening approval, actual flown collection, and published audio permissions remain manual checks.
 
 **Interview lesson:** Technical playback correctness does not establish a suitable sound style. Treat listening feedback as an art-direction iteration, select a different source when attenuation alone is insufficient, and preserve duplicate and mute behavior while tuning. This is a design refinement, not a newly discovered software defect. The coin replacement and rear-field turtle move remain uncommitted for user testing.
+
+## October 5 boost-camera comfort tuning
+
+### D27 Halve the Space boost camera motion
+
+Committed the rear-field turtle and calm pickup as `5363eca` before this change. The user found the boost camera movement excessive. Halved its extra FOV from 14 to 7 degrees and extra follow distance from 11 to 5.5 studs. Normal flight remains 70 degrees / 29 studs, and the original throw pulse and easing rate are retained. Coin volume increases slightly from 0.14 to 0.18 with the same source, EQ, and envelope.
+
+Validation: all 87 flight, pickup, upgrade, and camera assertions passed. The fresh client module settled at 77 degrees / 34.5 studs during a simulated two-second boost and returned to 70 degrees / 29 studs on release. This checks the live-loaded module, not a full keyboard-flown camera recording. A cosmetic pickup reached volume 0.18, then stopped; music continued and no server gold was awarded. Listening and hands-on camera comfort remain for user testing. Changes remain uncommitted.
+
+Tooling hurdle: Edit execution was rejected when Studio had returned to Play after a stop request. Checking the actual mode and stopping again allowed installation. During the next startup, the client bridge was temporarily unreachable, so a dependent smoke read had no listener state. After startup completed, the listener was installed and the check repeated with a new synthetic ID, then disconnected. No game-code fix was needed; wait for the target datamodel to be ready and establish test setup successfully before relying on it.
