@@ -49,19 +49,21 @@ Config.CollectSoundPlaybackSpeed = 0.92
 Config.MusicSoundId = "rbxassetid://126932983544303"
 Config.MusicVolume = 0.16
 Config.BoostDuration = 4.5
-Config.BoostAcceleration = 65
+-- Gentler forward acceleration keeps boost controllable around scenery.
+Config.BoostAcceleration = 45
 -- A short release pause makes stamina recovery readable without requiring a glide.
 Config.BoostRechargeDelay = 0.35
 Config.AltitudeSoftBand = 220
 Config.WindSoundId = "rbxassetid://687874741"
 -- Costs and performance are game balance values, not claims about real folded designs.
 Config.PlaneOrder={"Dart","Lockwing","Delta","Sailwing","Kestrel"}
+-- Preserve original starter handling; purchased folds turn progressively faster.
 Config.Planes={
- Dart={name="Paper Dart",price=0,launchSpeed=90,maxSpeed=160,drag=0.000376,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,climbComfort=math.rad(12),climbLoss=70,boostRecharge=0.9,rank=1},
- Lockwing={name="Lockwing",price=180,launchSpeed=105,maxSpeed=190,drag=0.000342,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,climbComfort=math.rad(16),climbLoss=60,boostRecharge=0.98,rank=2},
- Delta={name="Delta",price=550,launchSpeed=120,maxSpeed=220,drag=0.000308,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,climbComfort=math.rad(20),climbLoss=50,boostRecharge=1.05,rank=3},
- Sailwing={name="Sailwing",price=1400,launchSpeed=135,maxSpeed=250,drag=0.000274,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,climbComfort=math.rad(24),climbLoss=40,boostRecharge=1.12,rank=4},
- Kestrel={name="Kestrel",price=3200,launchSpeed=150,maxSpeed=280,drag=0.000239,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,climbComfort=math.rad(28),climbLoss=30,boostRecharge=1.2,rank=5},
+ Dart={name="Paper Dart",price=0,launchSpeed=90,maxSpeed=160,drag=0.000376,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,climbComfort=math.rad(12),climbLoss=70,boostRecharge=0.9,boostAcceleration=45,rank=1},
+ Lockwing={name="Lockwing",price=180,launchSpeed=105,maxSpeed=190,drag=0.000342,sink=1.95,handling=1.12,airCeiling=950,thermalEfficiency=0.8,climbComfort=math.rad(16),climbLoss=60,boostRecharge=0.98,boostAcceleration=50,rank=2},
+ Delta={name="Delta",price=550,launchSpeed=120,maxSpeed=220,drag=0.000308,sink=1.7,handling=1.25,airCeiling=1300,thermalEfficiency=0.9,climbComfort=math.rad(20),climbLoss=50,boostRecharge=1.05,boostAcceleration=55,rank=3},
+ Sailwing={name="Sailwing",price=1400,launchSpeed=135,maxSpeed=250,drag=0.000274,sink=1.45,handling=1.4,airCeiling=1750,thermalEfficiency=1.02,climbComfort=math.rad(24),climbLoss=40,boostRecharge=1.12,boostAcceleration=60,rank=4},
+ Kestrel={name="Kestrel",price=3200,launchSpeed=150,maxSpeed=280,drag=0.000239,sink=1.2,handling=1.55,airCeiling=2250,thermalEfficiency=1.15,climbComfort=math.rad(28),climbLoss=30,boostRecharge=1.2,boostAcceleration=65,rank=5},
 }
 -- Retained for existing profile bonuses; new purchases use named plane types.
 Config.Upgrades = {

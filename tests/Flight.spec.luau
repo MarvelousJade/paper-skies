@@ -271,6 +271,17 @@ local freshControl=Flight.new(Vector3.new(0,400,0),0,Config.TrimPitch,stats)
 local directed=Flight.step(freshControl,Flight.aimInput(freshControl,0,math.rad(20)),0.1,stats)
 check(directed.pitch>freshControl.pitch,"the player can deliberately pitch up again after recovery")
 -- Each equipped plane owns its speed limit; boost and dives respect that limit.
+-- Isolate boost from drag/gravity: each purchased plane adds more forward impulse.
+local previousImpulse=0
+for _,id in Config.PlaneOrder do
+ local settings=Flight.stats({},id)
+ local start=Flight.new(Vector3.new(0,400,0),0,0,settings);start.speed=90
+ local on=Flight.step(start,Vector2.zero,0.1,settings,0,true)
+ local off=Flight.step(start,Vector2.zero,0.1,settings,0,false)
+ local impulse=on.speed-off.speed
+ check(impulse>previousImpulse,"Purchased plane boost must accelerate more strongly than the previous tier")
+ previousImpulse=impulse
+end
 local expectedCaps={Dart=160,Lockwing=190,Delta=220,Sailwing=250,Kestrel=280}
 for _,id in Config.PlaneOrder do
  local settings=Flight.stats({},id)
