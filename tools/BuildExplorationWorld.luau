@@ -58,6 +58,16 @@ end
 local terrain=workspace.Terrain
 local backups=SS:FindFirstChild("PaperFlightBackups") or Instance.new("Folder")
 backups.Name="PaperFlightBackups";backups.Parent=SS
+-- Restore staged models to the old world before archiving it. Otherwise a full
+-- rebuild would merge the old deferred models into the newly generated scene.
+local staged=SS:FindFirstChild("PaperDeferredWorld")
+local previousWorld=workspace:FindFirstChild("PaperFlightWorld")
+if staged then
+ for _,object in staged:GetChildren() do
+  local target=previousWorld and previousWorld:FindFirstChild(object:GetAttribute("TargetGroup") or "")
+  object.Parent=target or backups
+ end
+end
 if not terrain:GetAttribute("PaperArchipelagoV5") then
  -- Previous V2 terrain is reproducible from commit 5fd61e2; preserve the existing snapshot.
  -- Only clear the authored world bounds, in bounded operations.

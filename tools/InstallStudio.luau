@@ -336,14 +336,7 @@ write(package,"WorldData","ModuleScript",[=[
 local Landscape=require(script.Parent.Landscape)
 local Config=require(script.Parent.Config)
 local World={}
-World.Regions={
- {name="Coastal Cliffs",center=Vector3.new(-550,0,534),color=Color3.fromRGB(85,153,95)},
- {name="Paperwood Valley",center=Vector3.new(-2450,0,-700),color=Color3.fromRGB(81,150,108)},
- {name="Azure Lagoon",center=Vector3.new(2000,0,650),color=Color3.fromRGB(96,198,232)},
- {name="Cloudspire Highlands",center=Vector3.new(650,0,3600),color=Color3.fromRGB(165,157,231)},
- {name="Western Isles",center=Vector3.new(-3100,0,2200),color=Color3.fromRGB(228,177,98)},
- {name="Northern Reach",center=Vector3.new(-550,0,-3250),color=Color3.fromRGB(195,223,228)},
-}
+World.Regions=require(script.Parent.Regions)
 World.Thermals={
  {center=Vector3.new(-550,0,-700),radius=260,height=900,strength=13},
  {center=Vector3.new(600,0,-400),radius=270,height=950,strength=14},
@@ -1073,6 +1066,9 @@ function Scenery.stone(model,origin,size,heading)
 end
 function Scenery.patch(model,origin,ground,seed)
  local rng=Random.new(seed);model:SetAttribute("SceneryKind","MeadowPatch")
+ model:SetAttribute("PatchSeed",seed)
+ local heights={};local sampleGround=ground
+ ground=function(x,z) local y=sampleGround(x,z);table.insert(heights,y);return y end
  model:SetAttribute("BasePosition",origin)
  for i=1,9 do
   local x,z=origin.X+rng:NextNumber(-9,9),origin.Z+rng:NextNumber(-9,9)
@@ -1090,9 +1086,159 @@ function Scenery.patch(model,origin,ground,seed)
    triangle(model,"GrassBlade",base-across,base+across,base+d*1.2+V(0,1.7+j*0.3,0),Color3.fromRGB(125+j*7,165+j*6,72+j*3))
   end
  end
+ model:SetAttribute("PatchHeights",game:GetService("HttpService"):JSONEncode(heights))
  for _,p in model:GetChildren() do if p:IsA("BasePart") then p.CanCollide=false;p.CanQuery=false;p.CastShadow=false end end
 end
 return Scenery
+]=])
+write(package,"Regions","ModuleScript",[=[
+-- Shared menu labels without generating the full world catalog.
+return {
+ {name="Coastal Cliffs",center=Vector3.new(-550,0,534),color=Color3.fromRGB(85,153,95)},
+ {name="Paperwood Valley",center=Vector3.new(-2450,0,-700),color=Color3.fromRGB(81,150,108)},
+ {name="Azure Lagoon",center=Vector3.new(2000,0,650),color=Color3.fromRGB(96,198,232)},
+ {name="Cloudspire Highlands",center=Vector3.new(650,0,3600),color=Color3.fromRGB(165,157,231)},
+ {name="Western Isles",center=Vector3.new(-3100,0,2200),color=Color3.fromRGB(228,177,98)},
+ {name="Northern Reach",center=Vector3.new(-550,0,-3250),color=Color3.fromRGB(195,223,228)},
+}
+]=])
+write(package,"MeadowDetails","ModuleScript",[=[
+-- Decorative patches are transmitted as a seed and baked surface heights.
+-- Nearby detail is reconstructed in small batches, with a hard per-client budget.
+local Scenery=require(script.Parent.Scenery)
+local HttpService=game:GetService("HttpService")
+local Details={Radius=220,ReleaseRadius=250,MaxPatches=24,BuildsPerUpdate=2}
+function Details.new(parent,world)
+ local folder=Instance.new("Folder");folder.Name="LocalMeadowDetails";folder.Parent=parent
+ local markers,active={},{}
+ local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Include
+ params.FilterDescendantsInstances={workspace.Terrain};params.IgnoreWater=true
+ local function add(v)
+  if v:IsA("Model") and v.Name=="FlowerPatch" and v:GetAttribute("PatchSeed") then markers[v]=true end
+ end
+ local function release(marker)
+  if active[marker] then active[marker]:Destroy();active[marker]=nil end
+ end
+ local added=world.DescendantAdded:Connect(add)
+ local removed=world.DescendantRemoving:Connect(function(v) markers[v]=nil;release(v) end)
+ for _,v in world:GetDescendants() do add(v) end
+ local api={Folder=folder}
+ function api:Update(eye)
+  local count=0
+  for marker,model in active do
+   local base=marker:GetAttribute("BasePosition")
+   local distance=(base-eye).Magnitude
+   if not marker:IsDescendantOf(world) or distance>Details.ReleaseRadius then release(marker)
+   else
+    count+=1;local fade=math.clamp((distance-175)/(Details.Radius-175),0,1)
+    for _,p in model:GetChildren() do if p:IsA("BasePart") then p.LocalTransparencyModifier=fade end end
+   end
+  end
+  local candidates={}
+  for marker in markers do
+   local base=marker:GetAttribute("BasePosition")
+   if base and not active[marker] then
+    local distance=(base-eye).Magnitude
+    if distance<Details.Radius then table.insert(candidates,{marker=marker,distance=distance,base=base}) end
+   end
+  end
+  table.sort(candidates,function(a,b) return a.distance<b.distance end)
+  local built=0
+  for _,candidate in candidates do
+   if count>=Details.MaxPatches or built>=Details.BuildsPerUpdate then break end
+   local base,marker=candidate.base,candidate.marker
+   local hit=workspace:Raycast(base+Vector3.yAxis*16,-Vector3.yAxis*32,params)
+   if not hit then continue end -- Retry naturally when the ground streams in.
+   local heights=HttpService:JSONDecode(marker:GetAttribute("PatchHeights"))
+   local index=0;local model=Instance.new("Model");model.Name="FlowerDetail"
+   Scenery.patch(model,base,function()
+    index+=1;return heights[index]
+   end,marker:GetAttribute("PatchSeed"))
+   local fade=math.clamp((candidate.distance-175)/(Details.Radius-175),0,1)
+   for _,p in model:GetChildren() do if p:IsA("BasePart") then p.LocalTransparencyModifier=fade end end
+   model.Parent=folder;active[marker]=model;count+=1;built+=1
+  end
+  folder:SetAttribute("ActivePatches",count)
+ end
+ function api:Destroy()
+  added:Disconnect();removed:Disconnect();folder:Destroy();table.clear(active);table.clear(markers)
+ end
+ return api
+end
+return Details
+]=])
+write(game.ReplicatedFirst,"PaperSurfaceVisibility","ModuleScript",[=[
+-- Keep a skyline fallback until the detailed terrain is actually present.
+local Visibility={}
+function Visibility.fade(distance,covered)
+ if not covered then return 0 end
+ return 1-math.clamp((distance-1100)/550,0,1)
+end
+function Visibility.new(vista,terrain,world)
+ local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Include
+ params.FilterDescendantsInstances={terrain};params.IgnoreWater=true
+ local tiles={}
+ for _,tile in vista:GetChildren() do
+  local center=tile:GetAttribute("Center")
+  if center then
+   local parts={};local samples={center}
+   for _,p in tile:GetDescendants() do
+    if p:IsA("BasePart") then table.insert(parts,p);table.insert(samples,p.Position) end
+   end
+   table.insert(tiles,{center=center,parts=parts,samples=samples,fade=-1})
+  end
+ end
+ local api={}
+ function api:Update(eye)
+  for _,tile in tiles do
+   local distance=(tile.center-eye).Magnitude
+   local covered=false
+   if distance<1650 then
+    covered=true
+    for _,sample in tile.samples do
+     local hit=world:Raycast(sample+Vector3.yAxis*3000,-Vector3.yAxis*6000,params)
+     if not hit or hit.Position.Y<sample.Y-12 then covered=false;break end
+    end
+   end
+   local fade=Visibility.fade(distance,covered)
+   if fade~=tile.fade then
+    tile.fade=fade
+    for _,p in tile.parts do p.LocalTransparencyModifier=fade end
+   end
+  end
+ end
+ return api
+end
+return Visibility
+]=])
+write(game.ReplicatedFirst,"PaperEarlyWorldClient","LocalScript",[=[
+-- ReplicatedFirst contains only the small skyline, not the full scenery.
+local started=os.clock()
+local RF=game:GetService("ReplicatedFirst")
+local RunService=game:GetService("RunService")
+local Visibility=require(RF:WaitForChild("PaperSurfaceVisibility"))
+local source=RF:WaitForChild("PaperEarlyWorld")
+source.Name="PaperEarlyWorld";source.Parent=workspace
+local controller=Visibility.new(source:WaitForChild("DistantLandscape"),workspace.Terrain,workspace)
+workspace:SetAttribute("PaperSkylineReadySeconds",os.clock()-started)
+local elapsed=0
+local connection=RunService.Heartbeat:Connect(function(dt)
+ elapsed+=dt;if elapsed<0.5 then return end;elapsed=0
+ local camera=workspace.CurrentCamera;if not camera then return end
+ controller:Update(camera.CFrame.Position)
+ local world=workspace:FindFirstChild("PaperFlightWorld")
+ local rings=world and world:FindFirstChild("Rings")
+ for _,marker in source.SummitMarkers:GetChildren() do
+  local actual=rings and rings:FindFirstChild(marker.Name)
+  local beacon=marker:FindFirstChild("SummitBeacon")
+  local anchor=marker:FindFirstChild("SummitBeaconAnchor")
+  -- The normal ring controller owns collection visibility once its model arrives.
+  if actual and actual:FindFirstChild("SummitBeacon") then marker:Destroy()
+  elseif beacon and anchor then beacon.Enabled=(camera.CFrame.Position-anchor.Position).Magnitude>300 end
+ end
+end)
+script.Destroying:Connect(function() connection:Disconnect();source:Destroy() end)
+print(string.format("Early skyline ready in %.3fs",os.clock()-started))
 ]=])
 write(package,"MeadowGrass","ModuleScript",[=[
 -- Client-only close-range grass. A bounded pool follows the camera; no server collision.
@@ -1235,6 +1381,62 @@ function Economy.selectPlane(profile:Profile,id:string):(boolean,string)
  return true,plane.name.." unlocked!"
 end
 return Economy
+]=])
+write(game.ServerScriptService,"PaperDeferredScenery","ModuleScript",[=[
+-- Server-owned scenery is staged behind mountains until a player approaches.
+-- Original models move between storage and Workspace; collision stays authoritative.
+local Deferred={RevealRadius=1400,ReleaseRadius=1800,HideDelay=10,PartBudget=900}
+function Deferred.new(world,storage)
+ local entries={}
+ for _,object in storage:GetChildren() do
+  table.insert(entries,{object=object,position=object:GetAttribute("StreamingPosition"),
+   target=world:WaitForChild(object:GetAttribute("TargetGroup")),cost=math.max(1,#object:GetDescendants()),absent=0})
+ end
+ local api={Entries=entries}
+ function api:Update(positions,dt)
+  local queue={};local active=0
+  for _,entry in entries do
+   local distance=math.huge
+   for _,position in positions do distance=math.min(distance,(entry.position-position).Magnitude) end
+   if entry.object.Parent==storage then
+    if distance<Deferred.RevealRadius then table.insert(queue,{entry=entry,distance=distance}) end
+   else
+    if distance>Deferred.ReleaseRadius then entry.absent+=dt else entry.absent=0 end
+    if entry.absent>=Deferred.HideDelay then entry.object.Parent=storage;entry.absent=0
+    else active+=1 end
+   end
+  end
+  table.sort(queue,function(a,b) return a.distance<b.distance end)
+  local spent=0
+  for _,item in queue do
+   local entry=item.entry
+   if spent>0 and spent+entry.cost>Deferred.PartBudget then break end
+   entry.object.Parent=entry.target;entry.absent=0;spent+=entry.cost;active+=1
+  end
+  storage:SetAttribute("ActiveModels",active)
+  return active,spent
+ end
+ return api
+end
+return Deferred
+]=])
+write(game.ServerScriptService,"PaperDeferredWorldServer","Script",[=[
+local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
+local Deferred=require(script.Parent:WaitForChild("PaperDeferredScenery"))
+local controller=Deferred.new(workspace:WaitForChild("PaperFlightWorld"),game.ServerStorage:WaitForChild("PaperDeferredWorld"))
+local elapsed=0
+RunService.Heartbeat:Connect(function(dt)
+ elapsed+=dt;if elapsed<0.1 then return end
+ local positions={};local planes=workspace:FindFirstChild("ActivePaperPlanes")
+ for _,player in Players:GetPlayers() do
+  local character=player.Character;local root=character and character:FindFirstChild("HumanoidRootPart")
+  if root then table.insert(positions,root.Position) end
+  local plane=planes and planes:FindFirstChild("Plane_"..player.UserId)
+  if plane and plane.PrimaryPart then table.insert(positions,plane.PrimaryPart.Position) end
+ end
+ controller:Update(positions,elapsed);elapsed=0
+end)
 ]=])
 write(game.ServerScriptService,"PaperFlightProfiles","ModuleScript",[=[
 -- Profiles are server-owned. Studio uses isolated in-memory progress.
@@ -1562,7 +1764,7 @@ local cameraMotion=FlightCamera.new()
 local cameraParams=RaycastParams.new();cameraParams.FilterType=Enum.RaycastFilterType.Include
 cameraParams.FilterDescendantsInstances={workspace.Terrain,workspace:WaitForChild("PaperFlightWorld")}
 cameraParams.IgnoreWater=true
-local World=require(package.WorldData)
+local Regions=require(package:WaitForChild("Regions"))
 local Economy=require(package.Economy)
 local remote=package:WaitForChild("RaceEvent")
 local camera=workspace.CurrentCamera
@@ -1692,7 +1894,7 @@ local function renderModal()
   end
  else
   heading.Text="EXPLORE THE ARCHIPELAGO"
-  for i,area in World.Regions do
+  for i,area in Regions do
    local name=label(contents,area.name,area.name,UDim2.new(1,0,0,30),UDim2.fromOffset(0,(i-1)*40),22)
    name.ZIndex=12;name.TextColor3=area.color;name.TextXAlignment=Enum.TextXAlignment.Left
    local desc=label(contents,"Coords"..i,("X %d  /  Z %d"):format(area.center.X,area.center.Z),UDim2.new(1,0,0,20),UDim2.fromOffset(0,(i-1)*40+24),13)
@@ -2007,25 +2209,6 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
   boostButton.Text=telemetry.boosting and "BOOSTING" or "HOLD BOOST"
  end
 end)
--- Coarse distant terrain stays visible beyond streamed detail, without loading every tree.
-task.spawn(function()
- local world=workspace:WaitForChild("PaperFlightWorld")
- local vista=world:WaitForChild("DistantLandscape")
- local tiles={}
- for _,tile in vista:GetChildren() do
-  local center=tile:GetAttribute("Center")
-  if center then table.insert(tiles,{center=center,parts=tile:GetDescendants()}) end
- end
- while gui.Parent do
-  local eye=camera.CFrame.Position
-  for _,tile in tiles do
-   local d=(tile.center-eye).Magnitude
-   local fade=1-math.clamp((d-1100)/550,0,1)
-   for _,p in tile.parts do if p:IsA("BasePart") then p.LocalTransparencyModifier=fade end end
-  end
-  task.wait(0.5)
- end
-end)
 -- Distant summit halos keep a readable angular size while the actual opening stays small.
 task.spawn(function()
  local world=workspace:WaitForChild("PaperFlightWorld")
@@ -2060,6 +2243,18 @@ local connection=RunService.Heartbeat:Connect(function(dt)
  elapsed=0
 end)
 script.Destroying:Connect(function() connection:Disconnect();grass:Destroy() end)
+]=])
+write(game.StarterPlayer.StarterPlayerScripts,"PaperMeadowDetails","LocalScript",[=[
+local RS=game:GetService("ReplicatedStorage")
+local RunService=game:GetService("RunService")
+local Details=require(RS:WaitForChild("PaperFlight"):WaitForChild("MeadowDetails"))
+local details=Details.new(workspace,workspace:WaitForChild("PaperFlightWorld"))
+local elapsed=0
+local connection=RunService.Heartbeat:Connect(function(dt)
+ elapsed+=dt;if elapsed<0.15 then return end;elapsed=0
+ local camera=workspace.CurrentCamera;if camera then details:Update(camera.CFrame.Position) end
+end)
+script.Destroying:Connect(function() connection:Disconnect();details:Destroy() end)
 ]=])
 if not package:FindFirstChild('Plane') then
 local function originalArt()
@@ -2572,6 +2767,16 @@ end
 local terrain=workspace.Terrain
 local backups=SS:FindFirstChild("PaperFlightBackups") or Instance.new("Folder")
 backups.Name="PaperFlightBackups";backups.Parent=SS
+-- Restore staged models to the old world before archiving it. Otherwise a full
+-- rebuild would merge the old deferred models into the newly generated scene.
+local staged=SS:FindFirstChild("PaperDeferredWorld")
+local previousWorld=workspace:FindFirstChild("PaperFlightWorld")
+if staged then
+ for _,object in staged:GetChildren() do
+  local target=previousWorld and previousWorld:FindFirstChild(object:GetAttribute("TargetGroup") or "")
+  object.Parent=target or backups
+ end
+end
 if not terrain:GetAttribute("PaperArchipelagoV5") then
  -- Previous V2 terrain is reproducible from commit 5fd61e2; preserve the existing snapshot.
  -- Only clear the authored world bounds, in bounded operations.
@@ -2920,3 +3125,92 @@ return string.format("World: %d exploration rings, %d wildlife landmarks, varied
 
 end
 print(exploration())
+local function optimize()
+-- Edit-time, repeatable release preparation; gameplay geometry is preserved.
+local RF=game:GetService("ReplicatedFirst")
+local SS=game:GetService("ServerStorage")
+local world=assert(workspace:FindFirstChild("PaperFlightWorld"),"Build the exploration world first")
+local deferred=SS:FindFirstChild("PaperDeferredWorld") or Instance.new("Folder")
+deferred.Name="PaperDeferredWorld";deferred.Parent=SS
+for _,object in deferred:GetChildren() do
+ object.Parent=assert(world:FindFirstChild(object:GetAttribute("TargetGroup")))
+end
+-- Validate migration inputs before removing any decorative geometry.
+for _,patch in world.MeadowAccents:GetChildren() do
+ if patch:GetAttribute("SceneryKind")=="MeadowPatch" then
+  assert(patch:GetAttribute("PatchSeed") and patch:GetAttribute("PatchHeights"),"Rebuild meadow accents with baked patch data first")
+ end
+end
+local excluded=0
+local backups=SS:FindFirstChild("PaperFlightBackups")
+if backups then
+ excluded=#backups:GetDescendants()+1
+ backups.Archivable=false
+ backups:SetAttribute("ReleaseNote","Session-only development backups; omitted from saves/publishes. Previous published versions and Git preserve prior work.")
+end
+local early=RF:FindFirstChild("PaperEarlyWorld") or Instance.new("Folder")
+early.Name="PaperEarlyWorld";early.Parent=RF
+local vista=world:FindFirstChild("DistantLandscape")
+if vista then
+ local prior=early:FindFirstChild("DistantLandscape");if prior then prior:Destroy() end
+ vista.ModelStreamingMode=Enum.ModelStreamingMode.Default;vista.Parent=early
+end
+assert(early:FindFirstChild("DistantLandscape"),"Missing early mountain silhouettes")
+local markers=early:FindFirstChild("SummitMarkers") or Instance.new("Folder")
+markers.Name="SummitMarkers";markers.Parent=early;markers:ClearAllChildren()
+for _,ring in world.Rings:GetChildren() do
+ local anchor=ring:FindFirstChild("SummitBeaconAnchor")
+ local beacon=ring:FindFirstChild("SummitBeacon")
+ if anchor and beacon then
+  local marker=Instance.new("Model");marker.Name=ring.Name
+  local copy=anchor:Clone();copy:ClearAllChildren();copy.Parent=marker
+  local halo=beacon:Clone();halo.Adornee=copy;halo.Parent=marker;marker.Parent=markers
+ end
+end
+local removed,patches=0,0
+for _,patch in world.MeadowAccents:GetChildren() do
+ if patch:GetAttribute("SceneryKind")=="MeadowPatch" then
+  patches+=1
+  for _,p in patch:GetChildren() do if p:IsA("BasePart") and p.Name~="DetailAnchor" then p:Destroy();removed+=1 end end
+  local anchor=patch:FindFirstChild("DetailAnchor") or Instance.new("Part")
+  anchor.Name="DetailAnchor";anchor.Size=Vector3.new(20,3,20)
+  anchor.Position=patch:GetAttribute("BasePosition");anchor.Transparency=1;anchor.Anchored=true
+  anchor.CanCollide=false;anchor.CanTouch=false;anchor.CanQuery=false;anchor.CastShadow=false;anchor.Parent=patch
+  patch.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
+ end
+end
+-- Stage only the far, lower side of each peak. Summit routes/rewards stay available.
+local package=game.ReplicatedStorage.PaperFlight
+local Landscape=require(package.Landscape);local Config=require(package.Config);local World=require(package.WorldData)
+local function behindMountain(position)
+ for i,peak in Landscape.Peaks do
+  local away=Vector2.new(peak.x-Config.ThrowStand.X,peak.z-Config.ThrowStand.Z).Unit
+  local offset=Vector2.new(position.X-peak.x,position.Z-peak.z)
+  local along=offset:Dot(away);local side=math.abs(offset.X*away.Y-offset.Y*away.X)
+  if along>math.min(peak.rx,peak.rz)*0.18 and along<math.max(peak.rx,peak.rz)*2.5
+   and side<math.max(peak.rx,peak.rz)*1.25 and position.Y<peak.h*0.72 then return i end
+ end
+end
+local deferredParts=0
+for _,groupName in {"Woodlands","MeadowAccents","PaperAnimals","Rings"} do
+ for _,object in world[groupName]:GetChildren() do
+  local position=object:GetAttribute("BasePosition");local peak
+  if groupName=="PaperAnimals" then
+   local animal=World.Animals[object:GetAttribute("AnimalId")]
+   position=animal.position;peak=animal.behindPeak
+  elseif groupName=="Rings" then
+   local ring=World.Rings[object:GetAttribute("RingId")]
+   local animal=ring and ring.animalId and World.Animals[ring.animalId]
+   if animal then position=ring.position;peak=animal.behindPeak end
+  elseif position then peak=behindMountain(position) end
+  if peak then
+   object:SetAttribute("TargetGroup",groupName);object:SetAttribute("StreamingPosition",position)
+   object:SetAttribute("DeferredPeak",peak);object.Parent=deferred
+   for _,p in object:GetDescendants() do if p:IsA("BasePart") then deferredParts+=1 end end
+  end
+ end
+end
+return string.format("Release prep: %d backup instances excluded; %d meadow patches compacted; %d decorative parts removed; early skyline %d instances; %d rear models (%d parts) deferred",excluded,patches,removed,#early:GetDescendants(),#deferred:GetChildren(),deferredParts)
+
+end
+print(optimize())

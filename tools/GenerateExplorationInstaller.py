@@ -29,16 +29,24 @@ for parent,name,cls,path in [
  ("package","WorldData","ModuleScript","src/shared/WorldData.luau"),
  ("package","ReferenceAnimals","ModuleScript","src/shared/ReferenceAnimals.luau"),
  ("package","Scenery","ModuleScript","src/shared/Scenery.luau"),
+ ("package","Regions","ModuleScript","src/shared/Regions.luau"),
+ ("package","MeadowDetails","ModuleScript","src/shared/MeadowDetails.luau"),
+ ('game.ReplicatedFirst',"PaperSurfaceVisibility","ModuleScript","src/shared/SurfaceVisibility.luau"),
+ ('game.ReplicatedFirst',"PaperEarlyWorldClient","LocalScript","src/client/EarlyWorld.client.luau"),
  ("package","MeadowGrass","ModuleScript","src/shared/MeadowGrass.luau"),
  ("package","Economy","ModuleScript","src/shared/Economy.luau"),
+ ('game.ServerScriptService',"PaperDeferredScenery","ModuleScript","src/server/DeferredScenery.luau"),
+ ('game.ServerScriptService',"PaperDeferredWorldServer","Script","src/server/DeferredScenery.server.luau"),
  ('game.ServerScriptService',"PaperFlightProfiles","ModuleScript","src/server/ProfileStore.luau"),
  ('game.ServerScriptService',"PaperFlightServer","Script","src/server/RaceServer.server.luau"),
  ('game.StarterPlayer.StarterPlayerScripts',"PaperFlightClient","LocalScript","src/client/FlightClient.client.luau"),
  ('game.StarterPlayer.StarterPlayerScripts',"PaperMeadowGrass","LocalScript","src/client/MeadowGrass.client.luau"),
+ ('game.StarterPlayer.StarterPlayerScripts',"PaperMeadowDetails","LocalScript","src/client/MeadowDetails.client.luau"),
 ]:
     output.append(f'write({parent},"{name}","{cls}",{literal(read(path))})\n')
 output.append("if not package:FindFirstChild('Plane') then\nlocal function originalArt()\n"+read("tools/BuildDreamWorld.luau")+"\nend\noriginalArt()\nend\n")
 output.append("local function planeModels()\n"+read("tools/BuildPlaneModels.luau")+"\nend\nprint(planeModels())\n")
 output.append("local function exploration()\n"+read("tools/BuildExplorationWorld.luau")+"\nend\nprint(exploration())\n")
+output.append("local function optimize()\n"+read("tools/OptimizeWorld.luau")+"\nend\nprint(optimize())\n")
 (ROOT/"tools/InstallStudio.luau").write_text("".join(output),encoding="utf-8")
 print("Generated exploration tools/InstallStudio.luau")

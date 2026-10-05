@@ -1,3 +1,8 @@
+-- Validate the complete authored layout, including staged rear scenery.
+local staged=game.ServerStorage:FindFirstChild("PaperDeferredWorld")
+local stagedObjects=staged and staged:GetChildren() or {}
+for _,object in stagedObjects do object.Parent=workspace.PaperFlightWorld[object:GetAttribute("TargetGroup")] end
+local success,result=xpcall(function()
 -- Geometry and discovery-layout checks; run after rebuilding the world.
 local package=game.ReplicatedStorage.PaperFlight
 local L=require(package.Landscape)
@@ -262,3 +267,8 @@ for _,positions in clusters do
 end
 check(clusterCount==6,"Six loose groves complement scattered trees")
 return string.format("%d geometry and discovery-layout checks passed",passed)
+
+end,debug.traceback)
+for _,object in stagedObjects do object.Parent=staged end
+assert(success,result)
+return result

@@ -66,7 +66,7 @@ Project: `G:\Roblox Projects\Roblox Paper Plane`.
 
 Source files do not automatically sync with Studio. The assistant installed the revision in the active scene; saving a place file and publishing were not performed.
 
-The installer builds the five aircraft and world from source. Terrain uses the `PaperArchipelagoV5` guard and 1720 height-field tiles. The clear operation covers the union of old and new authored bounds so moving the islands does not leave old land behind. Prior scenery is archived under ServerStorage; the earlier terrain snapshot is retained. Re-running the same terrain revision rebuilds scenery while skipping terrain. The compact starting mountain has its own PaperLaunchMesaV3 migration: it snapshots and rewrites only the old launch footprint (X −1024–0, Z 0–1024, Y −32–416), removing the old wide plateau voxels. The outer exploration mountains remain intact.
+The installer builds the five aircraft and world from source. Terrain uses the `PaperArchipelagoV5` guard and 1720 height-field tiles. The clear operation covers the union of old and new authored bounds so moving the islands does not leave old land behind. Prior scenery and terrain snapshots remain in ServerStorage for the current editing session. Release preparation marks PaperFlightBackups non-archivable: these development copies are omitted from saves, Play clones, and publishes. Previous published place versions and Git preserve earlier revisions; export any session snapshot separately before closing Studio if it is needed. Re-running the same terrain revision rebuilds scenery while skipping terrain. The compact starting mountain has its own PaperLaunchMesaV3 migration: it snapshots and rewrites only the old launch footprint (X −1024–0, Z 0–1024, Y −32–416), removing the old wide plateau voxels. The outer exploration mountains remain intact.
 
 ## Source layout
 
@@ -113,7 +113,7 @@ Wind asset: 687874741. Pickup audio: [coin_pickup_1 by thienbao2109](https://cre
 
 Earlier revision tests covered 250 SPS boost, fuel exhaustion, live reward banking, malformed inputs, duplicate resets, and audio. Current automated totals are assertions, not hundreds of independent full-game playtests.
 
-Pending: the distant-terrain Play rendering issue, full flights to new summits, multiplayer, mobile/controller, latency/load profiling, and published persistence/audio/streaming. Terrain collision still sweeps the plane center rather than its full wingspan.
+Pending: published cold-join timings and low-device rendering coverage, full flights to new summits, multiplayer, mobile/controller, latency/load profiling, and published persistence/audio/streaming. Terrain collision still sweeps the plane center rather than its full wingspan.
 
 ## Bugs and interview preparation
 
@@ -121,11 +121,11 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The latest checkpoint is **`df7f049` — Fix repeated climb-stall cycles and refine boost stamina**. It fixes repeated climb/stall motion, adds the short stamina recovery pause, and spreads forest trees apart. The current uncommitted revision sets launch/top speed progression to 90/160, 105/190, 120/220, 135/250, and 150/280 SPS. The root cause, reproduction, and interview explanation are recorded in bug B17.
+The latest checkpoint is **`cf89033` — Tune launch and top speeds for each plane tier**. Launch/top speed progression is 90/160, 105/190, 120/220, 135/250, and 150/280 SPS. The current uncommitted revision improves startup content and defers rear scenery. The root cause, reproduction, and interview explanation are recorded in bug B17.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.
 
-Scenery verification: 148,611 geometry/layout assertions passed after rebuilding Woodlands, MeadowAccents, Rings, and PaperAnimals, including mountain route spacing, continuous ascent, tilted collection planes, forest neighbors, and terrain clearance. Green/blossom trees and grounded meadow details were visually inspected. Tree models are limited to 130 primitives (current maximum 124); flower/grass accents do not collide with planes.
+Scenery verification: 119,063 geometry/layout assertions passed with staged content temporarily restored, including mountain route spacing, continuous ascent, tilted collection planes, forest neighbors, and terrain clearance. Green/blossom trees and grounded meadow details were visually inspected. Tree models are limited to 130 primitives (current maximum 124); flower/grass accents do not collide with planes.
 
 Close grass: three triangular blades per clump, 4.2-stud spacing with jitter, 1.6–3.1 studs tall. Interleaved detail layers reach 58, 80, and 160 studs, fading from 40, 52, and 105 studs respectively. The sparse outer layer doubles the prior range while retaining dense near coverage. Water, rock, steep surfaces, and high flight are excluded. Checks verified 1252 pooled clumps and 5256 visible blade parts in the test meadow, visible grass beyond 120 studs, release at altitude/water, reuse on return, and cleanup. The per-client cap is 1400 clumps / 8400 blade Parts. Device frame-rate testing remains pending.
 
@@ -134,3 +134,18 @@ Material limitation found in fresh Play: Roblox rejects the bundled local PNGs u
 Launch regression: 6,476 checks passed for 10°, 30°, and maximum 48° throws in eight directions over three seconds, camera clearance while aiming/counting down/flying, removal of old plateau terrain, and camera shortening in front of a wall. Minimum sampled camera clearance with the current flight tuning was 10.00 studs. These deterministic checks supplement user flight testing; they do not guarantee unlimited survival when continuously pulling upward.
 
 Boost stamina: releasing boost recovers 0.9/0.98/1.05/1.12/1.2 seconds of charge per second for Dart/Lockwing/Delta/Sailwing/Kestrel. The 4.5-second bar takes 5.0/4.59/4.29/4.02/3.75 seconds of active recovery respectively, plus the 0.35-second release pause. A 0.35-second released-input delay precedes recovery; there is no flight-attitude requirement. Held boost consumes charge and blocks recharge even when empty; the bar cannot exceed capacity.
+
+
+## Startup and exploration loading
+
+Mountains and summit goals take priority. ReplicatedFirst contains 126 coarse mountain tiles (504 parts) and nine temporary summit beacons, about 740 instances in total. The regular summit rings remain Persistent. A fallback tile is hidden near the camera only when terrain raycasts confirm its replacement exists. Early beacons hand visibility to the normal ring controller as each real summit model arrives.
+
+Three hundred and eight models behind the lower sides of mountains (19,721 parts, including seven wildlife encounters and their belly rings) begin in ServerStorage.PaperDeferredWorld. The server reveals nearby models within 1400 studs of any player or active plane, in batches of roughly 900 instances per 0.1-second update. All current individual models fit that budget. Models return to storage only after all observers stay farther than 1800 studs for ten seconds. The complete original geometry retains server collision when active; this is proximity staging, not camera-based occlusion. Upper slopes and summit routes are not staged.
+
+All 332 flower patches now replicate a seed, 18 baked surface heights, and one invisible anchor instead of 81 decorative parts each. A client reconstructs at most two patches per update within 220 studs, keeps at most 24 patches, and releases them beyond 250 studs. The existing close-grass pool is unchanged. Original patch placement was retained and all 26,892 reconstructed part positions were checked against the prior scene.
+
+Measured Studio startup scene: 94,253 world instances / 92,321 parts, compared with 141,533 / 139,106 before preparation (about one-third fewer initial world parts). The 796,305-instance backup folder is omitted from Play/publish serialization; fresh Play confirmed it was absent. This reduces cold-server contents, not client download traffic from ServerStorage. The flight menu uses a small Regions module rather than rerunning WorldData generation (the latter measured 0.337 seconds in one Edit fixture).
+
+Validation: 28,400 streaming/detail assertions, 119,063 layout assertions, 1,779 flight assertions, and 6,476 launch/camera checks passed. Fresh Play ran the new scripts without new script errors, created all 504 skyline parts, kept all 308 rear models staged at spawn, and loaded the HUD. The early script logged 0.009 seconds for local setup; that is not a network join-time measurement. Existing invalid local PBR texture warnings remain.
+
+Studio's missing distant objects were separately traced to Automatic rendering quality: colored probes at 200/600/1400/2500 studs existed in view, but only the nearest rendered. Setting Studio Rendering.QualityLevel to Level21 made all probes and the mountain terrain visible immediately. Probes were removed; Studio was left at Level21 for visual testing. This is a local Studio preference, not a game script forcing player graphics settings. Distant visibility still depends on device graphics quality. Re-publish privately and measure a fresh Roblox-app join before reporting an improvement over the user's original 20–30-second load.

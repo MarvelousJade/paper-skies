@@ -99,6 +99,9 @@ function Scenery.stone(model,origin,size,heading)
 end
 function Scenery.patch(model,origin,ground,seed)
  local rng=Random.new(seed);model:SetAttribute("SceneryKind","MeadowPatch")
+ model:SetAttribute("PatchSeed",seed)
+ local heights={};local sampleGround=ground
+ ground=function(x,z) local y=sampleGround(x,z);table.insert(heights,y);return y end
  model:SetAttribute("BasePosition",origin)
  for i=1,9 do
   local x,z=origin.X+rng:NextNumber(-9,9),origin.Z+rng:NextNumber(-9,9)
@@ -116,6 +119,7 @@ function Scenery.patch(model,origin,ground,seed)
    triangle(model,"GrassBlade",base-across,base+across,base+d*1.2+V(0,1.7+j*0.3,0),Color3.fromRGB(125+j*7,165+j*6,72+j*3))
   end
  end
+ model:SetAttribute("PatchHeights",game:GetService("HttpService"):JSONEncode(heights))
  for _,p in model:GetChildren() do if p:IsA("BasePart") then p.CanCollide=false;p.CanQuery=false;p.CastShadow=false end end
 end
 return Scenery

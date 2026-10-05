@@ -14,7 +14,7 @@ local cameraMotion=FlightCamera.new()
 local cameraParams=RaycastParams.new();cameraParams.FilterType=Enum.RaycastFilterType.Include
 cameraParams.FilterDescendantsInstances={workspace.Terrain,workspace:WaitForChild("PaperFlightWorld")}
 cameraParams.IgnoreWater=true
-local World=require(package.WorldData)
+local Regions=require(package:WaitForChild("Regions"))
 local Economy=require(package.Economy)
 local remote=package:WaitForChild("RaceEvent")
 local camera=workspace.CurrentCamera
@@ -144,7 +144,7 @@ local function renderModal()
   end
  else
   heading.Text="EXPLORE THE ARCHIPELAGO"
-  for i,area in World.Regions do
+  for i,area in Regions do
    local name=label(contents,area.name,area.name,UDim2.new(1,0,0,30),UDim2.fromOffset(0,(i-1)*40),22)
    name.ZIndex=12;name.TextColor3=area.color;name.TextXAlignment=Enum.TextXAlignment.Left
    local desc=label(contents,"Coords"..i,("X %d  /  Z %d"):format(area.center.X,area.center.Z),UDim2.new(1,0,0,20),UDim2.fromOffset(0,(i-1)*40+24),13)
@@ -457,25 +457,6 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
    or not boostHeld and not telemetry.boosting and "RECOVERING SOON" or "BOOST"
   boostLabel.Text=string.format("%s  %.1fs",boostStatus,fuel)
   boostButton.Text=telemetry.boosting and "BOOSTING" or "HOLD BOOST"
- end
-end)
--- Coarse distant terrain stays visible beyond streamed detail, without loading every tree.
-task.spawn(function()
- local world=workspace:WaitForChild("PaperFlightWorld")
- local vista=world:WaitForChild("DistantLandscape")
- local tiles={}
- for _,tile in vista:GetChildren() do
-  local center=tile:GetAttribute("Center")
-  if center then table.insert(tiles,{center=center,parts=tile:GetDescendants()}) end
- end
- while gui.Parent do
-  local eye=camera.CFrame.Position
-  for _,tile in tiles do
-   local d=(tile.center-eye).Magnitude
-   local fade=1-math.clamp((d-1100)/550,0,1)
-   for _,p in tile.parts do if p:IsA("BasePart") then p.LocalTransparencyModifier=fade end end
-  end
-  task.wait(0.5)
  end
 end)
 -- Distant summit halos keep a readable angular size while the actual opening stays small.
