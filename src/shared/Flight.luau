@@ -1,13 +1,13 @@
 --!strict
 local Config = require(script.Parent.Config)
-export type Stats = {launchSpeed:number, drag:number, sink:number, turnRate:number,
+export type Stats = {launchSpeed:number, maxSpeed:number, drag:number, sink:number, turnRate:number,
  climbComfort:number, climbLoss:number, airCeiling:number, boostRecharge:number}
 export type State = {position:Vector3, yaw:number, pitch:number, speed:number, stalled:boolean, bank:number,
  boostRemaining:number?, boosting:boolean?, recharging:boolean?, age:number?, boostRest:number?}
 local Flight = {}
 function Flight.stats(levels: {[string]:number}?,planeId:string?): Stats
  local l=levels or {};local plane=Config.Planes[planeId or "Dart"] or Config.Planes.Dart
- return {launchSpeed=plane.launchSpeed+(l.Launch or 0)*6, drag=plane.drag*(1-0.085*(l.Glide or 0)),
+ return {launchSpeed=math.min(plane.maxSpeed,plane.launchSpeed+(l.Launch or 0)*6), maxSpeed=plane.maxSpeed, drag=plane.drag*(1-0.085*(l.Glide or 0)),
   sink=plane.sink*(1-0.07*(l.Glide or 0)), turnRate=Config.TurnRate*plane.handling*(1+0.08*(l.Handling or 0)),
   climbComfort=plane.climbComfort,climbLoss=plane.climbLoss,airCeiling=plane.airCeiling,boostRecharge=plane.boostRecharge}
 end
@@ -48,7 +48,7 @@ function Flight.step(state:State, steer:Vector2, dt:number, stats:Stats?, updraf
  local remaining=math.clamp(state.boostRemaining or 0,0,Config.BoostDuration)
  local used=boostHeld and math.min(step,remaining) or 0
  local acceleration=-Config.Gravity*math.sin(pitch)-drag
- speed=math.clamp(speed+acceleration*step+Config.BoostAcceleration*used,12,Config.MaxSpeed)
+ speed=math.clamp(speed+acceleration*step+Config.BoostAcceleration*used,12,settings.maxSpeed)
  local direction=(CFrame.Angles(0,yaw,0)*CFrame.Angles(pitch,0,0)).LookVector
  local sink=settings.sink+(Config.StallSpeed/math.max(speed,12))^2*(stalled and Config.StallSinkMultiplier or 1)+altitudeLoad*10
  local position=state.position+(direction*speed+Vector3.new(0,(updraft or 0)-sink,0))*step

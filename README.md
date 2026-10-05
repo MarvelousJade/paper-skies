@@ -15,19 +15,19 @@ Press **F** to aim, move the mouse to rotate the smooth green aiming arc, then c
 - Controller: left stick aims, A activates, B resets, R2 boosts.
 - Touch: drag to aim and hold boost. Device testing is pending.
 
-The starter launches at 120 SPS and gradually settles toward its approximately 100-SPS natural glide speed. Diving and boost can still exceed that speed, up to the existing 250 SPS cap. Climbing spends speed, prolonged climbing causes a stall and nose drop, and diving rebuilds speed. Fresh throws start with 10% of the extra steep-climb drag and pitch-dependent stall threshold, easing smoothly to normal over 1.2 seconds. Gravity, base stall speed, ordinary drag, altitude pressure, and boost costs remain active throughout; this is a short launch transition, not stall immunity. Extra climb drag is now gentler, and the stall nose target is −32° instead of −52°. After a stall, the controls clear any stale upward aim to a shallow glide so recovery does not immediately trigger another climb/stall cycle. Fresh mouse input can still request a climb. The starter begins spending extra energy beyond a 12-degree climb; stronger types tolerate steeper climbs (up to a 28-degree comfort threshold on Kestrel). Above each type's air ceiling, additional drag and sink gradually make further climbing harder. Range comes from energy, drag, sink, and flying technique; there is no per-type distance cutoff. This is a tuned kinematic glider. Collect optional neon rings and distance gold to buy different plane types through **Planes**. Customize changes paper color; Explore lists regions.
+The starter launches at 90 SPS and gradually settles toward its approximately 100-SPS natural glide speed. Diving and boost can exceed that speed, up to its 160 SPS cap. Both launch speed and maximum speed increase with aircraft tier; the server enforces the equipped type's cap. Climbing spends speed, prolonged climbing causes a stall and nose drop, and diving rebuilds speed. Fresh throws start with 10% of the extra steep-climb drag and pitch-dependent stall threshold, easing smoothly to normal over 1.2 seconds. Gravity, base stall speed, ordinary drag, altitude pressure, and boost costs remain active throughout; this is a short launch transition, not stall immunity. Extra climb drag is now gentler, and the stall nose target is −32° instead of −52°. After a stall, the controls clear any stale upward aim to a shallow glide so recovery does not immediately trigger another climb/stall cycle. Fresh mouse input can still request a climb. The starter begins spending extra energy beyond a 12-degree climb; stronger types tolerate steeper climbs (up to a 28-degree comfort threshold on Kestrel). Above each type's air ceiling, additional drag and sink gradually make further climbing harder. Range comes from energy, drag, sink, and flying technique; there is no per-type distance cutoff. This is a tuned kinematic glider. Collect optional neon rings and distance gold to buy different plane types through **Planes**. Customize changes paper color; Explore lists regions.
 
 The camera orbits above the plane independently of steep aim and shortens its follow distance when a volume sweep hits scenery. This applies while aiming, during the throw countdown, and in flight. The maximum aim angle remains 48 degrees. A throw briefly widens the camera to about 80 degrees and increases follow distance. It settles back to the normal 70-degree view. Active boost smoothly widens to 77 degrees and moves the camera from 29 to 34.5 studs back (half the previous boost effect); releasing boost returns to normal even while speed remains high.
 
 ## Plane progression
 
-| Type | Gold | Launch speed | Rising air fades out by |
-| --- | ---: | ---: | ---: |
-| Paper Dart | Free | 120 SPS | 650 studs |
-| Lockwing | 180 | 128 SPS | 950 studs |
-| Delta | 550 | 136 SPS | 1300 studs |
-| Sailwing | 1400 | 144 SPS | 1750 studs |
-| Kestrel | 3200 | 154 SPS | 2250 studs |
+| Type | Gold | Launch speed | Top speed | Rising air fades out by |
+| --- | ---: | ---: | ---: | ---: |
+| Paper Dart | Free | 90 SPS | 160 SPS | 650 studs |
+| Lockwing | 180 | 105 SPS | 190 SPS | 950 studs |
+| Delta | 550 | 120 SPS | 220 SPS | 1300 studs |
+| Sailwing | 1400 | 135 SPS | 250 SPS | 1750 studs |
+| Kestrel | 3200 | 150 SPS | 280 SPS | 2250 studs |
 
 The five models have different wing shapes and folds. Higher types reduce drag and sink while improving handling. The hangar has 3D previews, server-validated purchases, permanent ownership within the saved profile, and free switching between owned types. Switching during flight is rejected.
 
@@ -84,7 +84,7 @@ The installer builds the five aircraft and world from source. Terrain uses the `
 - `tools/BuildPlaneModels.luau`: five reproducible folded-paper models.
 - `tools/BuildExplorationWorld.luau`: terrain, scenery, rings, wildlife.
 - `src/shared/ReferenceAnimals.luau`: all seven procedural wildlife models.
-- `tests/Flight.spec.luau`: 113 assertions.
+- `tests/Flight.spec.luau`: 1779 assertions.
 - `tests/World.spec.luau`: terrain-backed geometry and discovery-layout assertions.
 
 ## Engineering decisions
@@ -101,8 +101,8 @@ Wind asset: 687874741. Pickup audio: [coin_pickup_1 by thienbao2109](https://cre
 
 ## Validation
 
-- 113 flight, stamina, camera, pickup, economy, profile-normalization, and model assertions passed.
-- A controlled 24-degree climb stalled the starter at 3.18 seconds; Kestrel remained unstalled at four seconds.
+- 1779 flight, stamina, camera, pickup, economy, profile-normalization, and model assertions passed.
+- All five types reached their configured top speed during a 4.5-second boost fixture; dives and legacy upgrade bonuses stayed within each type's cap.
 - Earlier camera samples reached 79.45 degrees on throw and 83.99 on boost, then returned to 70 on release; boost now targets 77 degrees. Server telemetry and the HUD both showed stamina recovery during a suitable glide.
 - 2875 actual-scene geometry/layout assertions passed, including eight default throw directions, ring-rim clearance samples, and sideways animal-ring crossings. These are repeated geometric samples, not 2875 distinct play sessions.
 - Live purchase deducted Delta's real 550-gold price; repeat selection was free.
@@ -121,7 +121,7 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The previous checkpoint is **`974d8b5` — Refine mountain wildlife and fix steep launch camera and terrain**. This checkpoint fixes repeated climb/stall motion, improves launch momentum, adds the short stamina recovery pause, and spreads forest trees apart. The root cause, reproduction, and interview explanation are recorded in bug B17.
+The latest checkpoint is **`df7f049` — Fix repeated climb-stall cycles and refine boost stamina**. It fixes repeated climb/stall motion, adds the short stamina recovery pause, and spreads forest trees apart. The current uncommitted revision sets launch/top speed progression to 90/160, 105/190, 120/220, 135/250, and 150/280 SPS. The root cause, reproduction, and interview explanation are recorded in bug B17.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.
 
@@ -131,6 +131,6 @@ Close grass: three triangular blades per clump, 4.2-stud spacing with jitter, 1.
 
 Material limitation found in fresh Play: Roblox rejects the bundled local PNGs used by PaperMeadow's PBR maps, even though those files can preload and the Edit preview renders. The custom material is not verified in a published client. Replace these maps with uploaded texture assets before claiming the matte override is production ready; see the bug log.
 
-Launch regression: 6,337 checks passed for 10°, 30°, and maximum 48° throws in eight directions over three seconds, camera clearance while aiming/counting down/flying, removal of old plateau terrain, and camera shortening in front of a wall. Minimum sampled camera clearance with the current flight tuning was 10.00 studs. These deterministic checks supplement user flight testing; they do not guarantee unlimited survival when continuously pulling upward.
+Launch regression: 6,476 checks passed for 10°, 30°, and maximum 48° throws in eight directions over three seconds, camera clearance while aiming/counting down/flying, removal of old plateau terrain, and camera shortening in front of a wall. Minimum sampled camera clearance with the current flight tuning was 10.00 studs. These deterministic checks supplement user flight testing; they do not guarantee unlimited survival when continuously pulling upward.
 
 Boost stamina: releasing boost recovers 0.9/0.98/1.05/1.12/1.2 seconds of charge per second for Dart/Lockwing/Delta/Sailwing/Kestrel. The 4.5-second bar takes 5.0/4.59/4.29/4.02/3.75 seconds of active recovery respectively, plus the 0.35-second release pause. A 0.35-second released-input delay precedes recovery; there is no flight-attitude requirement. Held boost consumes charge and blocks recharge even when empty; the bar cannot exceed capacity.

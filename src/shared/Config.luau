@@ -53,16 +53,15 @@ Config.BoostAcceleration = 65
 -- A short release pause makes stamina recovery readable without requiring a glide.
 Config.BoostRechargeDelay = 0.35
 Config.AltitudeSoftBand = 220
-Config.MaxSpeed = 250
 Config.WindSoundId = "rbxassetid://687874741"
 -- Costs and performance are game balance values, not claims about real folded designs.
 Config.PlaneOrder={"Dart","Lockwing","Delta","Sailwing","Kestrel"}
 Config.Planes={
- Dart={name="Paper Dart",price=0,launchSpeed=120,drag=0.000376,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,climbComfort=math.rad(12),climbLoss=70,boostRecharge=0.9,rank=1},
- Lockwing={name="Lockwing",price=180,launchSpeed=128,drag=0.000342,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,climbComfort=math.rad(16),climbLoss=60,boostRecharge=0.98,rank=2},
- Delta={name="Delta",price=550,launchSpeed=136,drag=0.000308,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,climbComfort=math.rad(20),climbLoss=50,boostRecharge=1.05,rank=3},
- Sailwing={name="Sailwing",price=1400,launchSpeed=144,drag=0.000274,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,climbComfort=math.rad(24),climbLoss=40,boostRecharge=1.12,rank=4},
- Kestrel={name="Kestrel",price=3200,launchSpeed=154,drag=0.000239,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,climbComfort=math.rad(28),climbLoss=30,boostRecharge=1.2,rank=5},
+ Dart={name="Paper Dart",price=0,launchSpeed=90,maxSpeed=160,drag=0.000376,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,climbComfort=math.rad(12),climbLoss=70,boostRecharge=0.9,rank=1},
+ Lockwing={name="Lockwing",price=180,launchSpeed=105,maxSpeed=190,drag=0.000342,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,climbComfort=math.rad(16),climbLoss=60,boostRecharge=0.98,rank=2},
+ Delta={name="Delta",price=550,launchSpeed=120,maxSpeed=220,drag=0.000308,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,climbComfort=math.rad(20),climbLoss=50,boostRecharge=1.05,rank=3},
+ Sailwing={name="Sailwing",price=1400,launchSpeed=135,maxSpeed=250,drag=0.000274,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,climbComfort=math.rad(24),climbLoss=40,boostRecharge=1.12,rank=4},
+ Kestrel={name="Kestrel",price=3200,launchSpeed=150,maxSpeed=280,drag=0.000239,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,climbComfort=math.rad(28),climbLoss=30,boostRecharge=1.2,rank=5},
 }
 -- Retained for existing profile bonuses; new purchases use named plane types.
 Config.Upgrades = {

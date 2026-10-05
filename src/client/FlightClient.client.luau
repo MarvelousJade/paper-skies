@@ -127,7 +127,7 @@ local function renderModal()
    local eye=Instance.new("Camera");eye.CFrame=CFrame.lookAt(Vector3.new(10,13,-14),Vector3.zero);eye.FieldOfView=45;eye.Parent=viewport;viewport.CurrentCamera=eye
    local name=label(contents,id.."Name",def.name,UDim2.new(1,-205,0,24),UDim2.fromOffset(85,y),20)
    name.ZIndex=12;name.TextXAlignment=Enum.TextXAlignment.Left
-   local detail=label(contents,id.."Stats",string.format("%d SPS  |  Rising air to %d",def.launchSpeed,def.airCeiling),UDim2.new(1,-205,0,20),UDim2.fromOffset(85,y+25),13)
+   local detail=label(contents,id.."Stats",string.format("Launch %d / Top %d SPS\nAir ceiling %d",def.launchSpeed,def.maxSpeed,def.airCeiling),UDim2.new(1,-205,0,30),UDim2.fromOffset(85,y+23),12)
    detail.ZIndex=12;detail.TextXAlignment=Enum.TextXAlignment.Left
    local text=equipped and "EQUIPPED" or owned and "EQUIP" or "$"..def.price
    local buy=button(contents,id,text,UDim2.fromOffset(112,43),UDim2.new(1,-112,0,y+4),equipped and Color3.fromRGB(56,116,94) or Color3.fromRGB(63,83,68))

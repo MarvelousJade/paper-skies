@@ -66,16 +66,15 @@ Config.BoostAcceleration = 65
 -- A short release pause makes stamina recovery readable without requiring a glide.
 Config.BoostRechargeDelay = 0.35
 Config.AltitudeSoftBand = 220
-Config.MaxSpeed = 250
 Config.WindSoundId = "rbxassetid://687874741"
 -- Costs and performance are game balance values, not claims about real folded designs.
 Config.PlaneOrder={"Dart","Lockwing","Delta","Sailwing","Kestrel"}
 Config.Planes={
- Dart={name="Paper Dart",price=0,launchSpeed=120,drag=0.000376,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,climbComfort=math.rad(12),climbLoss=70,boostRecharge=0.9,rank=1},
- Lockwing={name="Lockwing",price=180,launchSpeed=128,drag=0.000342,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,climbComfort=math.rad(16),climbLoss=60,boostRecharge=0.98,rank=2},
- Delta={name="Delta",price=550,launchSpeed=136,drag=0.000308,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,climbComfort=math.rad(20),climbLoss=50,boostRecharge=1.05,rank=3},
- Sailwing={name="Sailwing",price=1400,launchSpeed=144,drag=0.000274,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,climbComfort=math.rad(24),climbLoss=40,boostRecharge=1.12,rank=4},
- Kestrel={name="Kestrel",price=3200,launchSpeed=154,drag=0.000239,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,climbComfort=math.rad(28),climbLoss=30,boostRecharge=1.2,rank=5},
+ Dart={name="Paper Dart",price=0,launchSpeed=90,maxSpeed=160,drag=0.000376,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,climbComfort=math.rad(12),climbLoss=70,boostRecharge=0.9,rank=1},
+ Lockwing={name="Lockwing",price=180,launchSpeed=105,maxSpeed=190,drag=0.000342,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,climbComfort=math.rad(16),climbLoss=60,boostRecharge=0.98,rank=2},
+ Delta={name="Delta",price=550,launchSpeed=120,maxSpeed=220,drag=0.000308,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,climbComfort=math.rad(20),climbLoss=50,boostRecharge=1.05,rank=3},
+ Sailwing={name="Sailwing",price=1400,launchSpeed=135,maxSpeed=250,drag=0.000274,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,climbComfort=math.rad(24),climbLoss=40,boostRecharge=1.12,rank=4},
+ Kestrel={name="Kestrel",price=3200,launchSpeed=150,maxSpeed=280,drag=0.000239,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,climbComfort=math.rad(28),climbLoss=30,boostRecharge=1.2,rank=5},
 }
 -- Retained for existing profile bonuses; new purchases use named plane types.
 Config.Upgrades = {
@@ -92,14 +91,14 @@ return table.freeze(Config)
 write(package,"Flight","ModuleScript",[=[
 --!strict
 local Config = require(script.Parent.Config)
-export type Stats = {launchSpeed:number, drag:number, sink:number, turnRate:number,
+export type Stats = {launchSpeed:number, maxSpeed:number, drag:number, sink:number, turnRate:number,
  climbComfort:number, climbLoss:number, airCeiling:number, boostRecharge:number}
 export type State = {position:Vector3, yaw:number, pitch:number, speed:number, stalled:boolean, bank:number,
  boostRemaining:number?, boosting:boolean?, recharging:boolean?, age:number?, boostRest:number?}
 local Flight = {}
 function Flight.stats(levels: {[string]:number}?,planeId:string?): Stats
  local l=levels or {};local plane=Config.Planes[planeId or "Dart"] or Config.Planes.Dart
- return {launchSpeed=plane.launchSpeed+(l.Launch or 0)*6, drag=plane.drag*(1-0.085*(l.Glide or 0)),
+ return {launchSpeed=math.min(plane.maxSpeed,plane.launchSpeed+(l.Launch or 0)*6), maxSpeed=plane.maxSpeed, drag=plane.drag*(1-0.085*(l.Glide or 0)),
   sink=plane.sink*(1-0.07*(l.Glide or 0)), turnRate=Config.TurnRate*plane.handling*(1+0.08*(l.Handling or 0)),
   climbComfort=plane.climbComfort,climbLoss=plane.climbLoss,airCeiling=plane.airCeiling,boostRecharge=plane.boostRecharge}
 end
@@ -140,7 +139,7 @@ function Flight.step(state:State, steer:Vector2, dt:number, stats:Stats?, updraf
  local remaining=math.clamp(state.boostRemaining or 0,0,Config.BoostDuration)
  local used=boostHeld and math.min(step,remaining) or 0
  local acceleration=-Config.Gravity*math.sin(pitch)-drag
- speed=math.clamp(speed+acceleration*step+Config.BoostAcceleration*used,12,Config.MaxSpeed)
+ speed=math.clamp(speed+acceleration*step+Config.BoostAcceleration*used,12,settings.maxSpeed)
  local direction=(CFrame.Angles(0,yaw,0)*CFrame.Angles(pitch,0,0)).LookVector
  local sink=settings.sink+(Config.StallSpeed/math.max(speed,12))^2*(stalled and Config.StallSinkMultiplier or 1)+altitudeLoad*10
  local position=state.position+(direction*speed+Vector3.new(0,(updraft or 0)-sink,0))*step
@@ -1676,7 +1675,7 @@ local function renderModal()
    local eye=Instance.new("Camera");eye.CFrame=CFrame.lookAt(Vector3.new(10,13,-14),Vector3.zero);eye.FieldOfView=45;eye.Parent=viewport;viewport.CurrentCamera=eye
    local name=label(contents,id.."Name",def.name,UDim2.new(1,-205,0,24),UDim2.fromOffset(85,y),20)
    name.ZIndex=12;name.TextXAlignment=Enum.TextXAlignment.Left
-   local detail=label(contents,id.."Stats",string.format("%d SPS  |  Rising air to %d",def.launchSpeed,def.airCeiling),UDim2.new(1,-205,0,20),UDim2.fromOffset(85,y+25),13)
+   local detail=label(contents,id.."Stats",string.format("Launch %d / Top %d SPS\nAir ceiling %d",def.launchSpeed,def.maxSpeed,def.airCeiling),UDim2.new(1,-205,0,30),UDim2.fromOffset(85,y+23),12)
    detail.ZIndex=12;detail.TextXAlignment=Enum.TextXAlignment.Left
    local text=equipped and "EQUIPPED" or owned and "EQUIP" or "$"..def.price
    local buy=button(contents,id,text,UDim2.fromOffset(112,43),UDim2.new(1,-112,0,y+4),equipped and Color3.fromRGB(56,116,94) or Color3.fromRGB(63,83,68))

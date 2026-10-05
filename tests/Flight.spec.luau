@@ -62,7 +62,7 @@ check(math.abs(used-Config.BoostDuration)<0.03,"boost lasts only its finite dura
 check(boosted.boostRemaining==0 and not boosted.boosting,"held boost cannot run after fuel is empty")
 local top=Flight.new(Vector3.new(0,1000,0),0,Config.TrimPitch,stats)
 for _=1,270 do top=Flight.step(top,Vector2.zero,1/60,stats,0,true) end
-check(top.speed==Config.MaxSpeed,"base plane reaches 250 SPS with boost")
+check(top.speed==160 and top.speed==stats.maxSpeed,"starter boost is capped at 160 SPS")
 local idle=Flight.step(top,Vector2.zero,0.25,stats,0,false)
 check(idle.boostRemaining==top.boostRemaining and not idle.recharging,"short release pause precedes stamina recovery")
 local f30=Flight.new(Vector3.new(0,1000,0),0,Config.TrimPitch,stats)
@@ -70,7 +70,7 @@ local f120=Flight.new(Vector3.new(0,1000,0),0,Config.TrimPitch,stats)
 for _=1,90 do f30=Flight.step(f30,Vector2.zero,1/30,stats,0,true) end
 for _=1,360 do f120=Flight.step(f120,Vector2.zero,1/120,stats,0,true) end
 check(math.abs(f30.boostRemaining-f120.boostRemaining)<0.0001,"boost duration is timestep-independent")
-check(stats.launchSpeed==120 and glide.speed>100 and glide.speed<120,"starter launches at 120 and gradually settles into ordinary glide")
+check(stats.launchSpeed==90 and glide.speed>90 and glide.speed<100,"starter launches at 90 and settles toward its natural glide speed")
 local hangar=Economy.new()
 check(hangar.planeId=="Dart" and hangar.ownedPlanes.Dart,"new players own and equip the starter")
 check(not Economy.selectPlane(hangar,"Kestrel") and hangar.planeId=="Dart","cannot buy without funds")
@@ -92,7 +92,7 @@ for _,id in Config.PlaneOrder do
  check(stats.launchSpeed==definition.launchSpeed,"flight uses equipped type attributes")
  check(World.lift(zone.center+Vector3.yAxis*definition.airCeiling,id)==0,"lift tapers fully at aircraft ceiling")
  if previous then
-  check(stats.launchSpeed>previous.launchSpeed and stats.drag<previous.drag and stats.sink<previous.sink,"higher tier has stronger flight attributes")
+  check(stats.launchSpeed>previous.launchSpeed and stats.maxSpeed>previous.maxSpeed and stats.drag<previous.drag and stats.sink<previous.sink,"higher tier has stronger flight attributes")
  end
  previous=stats
 end
@@ -225,7 +225,7 @@ end
 local freshStall,freshHeight,early,fresh=steepThrow(60)
 local normalStall,normalHeight=steepThrow(60,10)
 check(freshStall>0.4 and freshStall>normalStall+0.3,"steep throw gets time to leave the hand before stalling")
-check(early.speed<stats.launchSpeed and early.speed>90,"throw keeps initial momentum but gravity still spends speed")
+check(early.speed<stats.launchSpeed and early.speed>stats.launchSpeed*0.85,"throw keeps initial momentum but gravity still spends speed")
 check(freshHeight>normalHeight+15 and freshHeight<90,"throw grace gives a small launch arc, not mountain-scale free height")
 check(freshStall<1.5 and fresh.pitch<0,"continued steep launch eventually stalls and drops its nose")
 check(math.abs(fresh.age-2)<0.0001,"simulation time consumes the throw transition once")
@@ -270,4 +270,26 @@ check(Flight.settleAim(math.rad(-25),true)==math.rad(-25),"stall recovery preser
 local freshControl=Flight.new(Vector3.new(0,400,0),0,Config.TrimPitch,stats)
 local directed=Flight.step(freshControl,Flight.aimInput(freshControl,0,math.rad(20)),0.1,stats)
 check(directed.pitch>freshControl.pitch,"the player can deliberately pitch up again after recovery")
+-- Each equipped plane owns its speed limit; boost and dives respect that limit.
+local expectedCaps={Dart=160,Lockwing=190,Delta=220,Sailwing=250,Kestrel=280}
+for _,id in Config.PlaneOrder do
+ local settings=Flight.stats({},id)
+ check(settings.maxSpeed==expectedCaps[id],"Equipped plane receives its advertised top speed")
+ local s=Flight.new(Vector3.new(0,400,0),0,Config.TrimPitch,settings)
+ for i=1,270 do
+  s=Flight.step(s,Vector2.zero,1/60,settings,0,true)
+  check(s.speed<=settings.maxSpeed,"Boost cannot exceed the equipped plane limit")
+ end
+ check(s.speed==settings.maxSpeed,"Every tier can reach its top speed within a full boost bar")
+ s.pitch=math.rad(-55)
+ for i=1,60 do
+  s=Flight.step(s,Vector2.new(0,-0.1),1/60,settings,0,true)
+  check(s.speed<=settings.maxSpeed,"A dive cannot bypass the plane limit")
+ end
+ local maxed=Flight.stats({Launch=5,Glide=5},id)
+ local upgraded=Flight.new(Vector3.new(0,400,0),0,Config.TrimPitch,maxed)
+ for i=1,270 do upgraded=Flight.step(upgraded,Vector2.zero,1/60,maxed,0,true) end
+ check(upgraded.speed==settings.maxSpeed,"Legacy bonuses preserve each plane's top speed")
+end
+check(Flight.stats({},"Invalid").maxSpeed==160,"Invalid type falls back to the starter cap")
 return string.format("%d flight, pickup, upgrade, and camera assertions passed",passed)

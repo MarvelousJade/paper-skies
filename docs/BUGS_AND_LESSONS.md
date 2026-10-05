@@ -830,3 +830,12 @@ Validation: all 113 flight/pickup/economy/camera assertions passed, including th
 Interview lesson: distinguish an acceleration bug from a target-control bug. Isolated force equations did not explain the repeated oscillation; reproducing the loop from retained input through physics and recovery exposed it. Update expectations for deliberately changed tuning while retaining tests for safety bounds and the reported behavior.
 
 **Interview explanation:** “The plane kept an upward steering target after stalling. Its automatic nose drop restored speed, but the controller then pulled it back toward that old target, causing another stall. I reproduced the complete feedback loop, reset stale upward aim from the server's stall state, and verified that the plane recovered into a glide. I also tested that boost only adds speed, releasing boost preserves momentum, and deliberate new steering still works.”
+
+
+### D41 Launch and top speed progression by aircraft
+
+After checkpoint `df7f049`, the user requested increasing maximum speed per aircraft, then chose a starter launch of 90 SPS and top speed of 160 SPS. Final launch/top values are Dart 90/160, Lockwing 105/190, Delta 120/220, Sailwing 135/250, and Kestrel 150/280. This supersedes D40's launch speeds and shared 250-SPS cap. Drag, stall recovery, launch grace, stamina timing, camera behavior, and altitude tuning are unchanged.
+
+The previous shared maximum gave every aircraft the same ultimate speed despite different launch/handling stats. The catalog now declares `maxSpeed` per type; `Flight.stats` resolves it and the authoritative simulation clamps speed to it. Legacy launch bonuses are retained but cannot exceed the equipped type's cap. The hangar shows launch speed, top speed, and air ceiling.
+
+Validation: 1779 flight/pickup/economy/camera assertions passed. Every aircraft reached its cap during the boost fixture, with every simulated tick checked against the cap; boosted dives and legacy upgrades respected it too. Invalid type selection falls back to starter stats. All 6476 actual-scene launch/camera checks passed, including maximum 48-degree throws in eight directions; minimum sampled camera clearance was 10.00 studs. These are deterministic checks, not manual balance playtests. No new runtime defect was encountered. The installer was regenerated; this tuning remains uncommitted for user testing.
