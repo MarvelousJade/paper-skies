@@ -1,0 +1,15 @@
+{
+  "title": "Paper Skies",
+  "bpm": 100,
+  "bars": 32,
+  "duration_seconds": 76.8,
+  "sample_rate": 44100,
+  "channels": 2,
+  "bit_depth": 16,
+  "file_bytes": 13547564,
+  "peak_dbfs": -2.05,
+  "rms_dbfs": -15.62,
+  "clipped_samples": 0,
+  "loop_boundary_delta": 0,
+  "composition": "Original algorithmic composition; synthesized instruments; no external samples"
+}

@@ -6,6 +6,7 @@ local Lighting=game:GetService("Lighting")
 local Config=require(RS.PaperFlight.Config)
 local World=require(RS.PaperFlight.WorldData)
 local Landscape=require(RS.PaperFlight.Landscape)
+local ReferenceAnimals=require(RS.PaperFlight.ReferenceAnimals)
 local V,CF=Vector3.new,CFrame.new
 local rng=Random.new(70421)
 local folder=Instance.new("Folder");folder.Name="PaperFlightWorld"
@@ -255,90 +256,10 @@ for _,zone in World.Thermals do
  end
 end
 local animals=model("PaperAnimals")
--- Shared folded construction with distinct silhouettes; open leg spacing is intentional.
-local function foldedAnimal(animal)
- local m=model(animal.species..animal.id,animals);m.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
- m:SetAttribute("Species",animal.species);m:SetAttribute("AnimalId",animal.id)
- local cf=CF(animal.position)*CFrame.Angles(0,animal.heading,0)
- local function p(v) return cf:PointToWorldSpace(v) end
- local colors={Lion=Color3.fromRGB(242,202,78),Elephant=Color3.fromRGB(173,192,208),
-  Deer=Color3.fromRGB(202,161,117),Fox=Color3.fromRGB(230,133,71),Giraffe=Color3.fromRGB(233,196,101)}
- local color=colors[animal.species];local light=color:Lerp(Color3.fromRGB(255,246,216),0.3)
- local function shape(name,center,size,col)
-  return shell(m,name,cf*CF(center),size,col or color,8,4)
- end
- local bodySize=animal.species=="Elephant" and V(39,32,65) or V(32,25,58)
- shape("FoldedBody",V(0,43,0),bodySize)
- -- Tapered legs touch their actual terrain samples and leave a wide longitudinal corridor.
- for _,x in {-15,15} do for _,z in {-20,20} do
-  local foot=p(V(x,0,z));local scaledFoot=animal.position+(foot-animal.position)*animal.scale
-  local y=animal.position.Y+(ground(scaledFoot.X,scaledFoot.Z)-animal.position.Y)/animal.scale
-  local a=p(V(x,42,z));local b=V(foot.X,y,foot.Z)
-  local right=cf.RightVector*3;local back=cf.LookVector*3
-  local t={a-right-back,a+right-back,a+right+back,a-right+back}
-  local q={b-right*0.7-back,b+right*0.7-back,b+right*0.7+back,b-right*0.7+back}
-  for j=1,4 do local k=j%4+1;quad(m,"LegFold",t[j],t[k],q[k],q[j],j%2==0 and color or light) end
- end end
- local head=V(0,55,-36)
- if animal.species=="Giraffe" then
-  shape("LongNeck",V(0,78,-24),V(13,70,14),light);head=V(0,113,-35)
-  for j=1,6 do
-   decor(part(m,"PaperSpot",V(13.2,5,5),cf*CF(0,55+j*8,-25),Color3.fromRGB(158,107,58)))
-  end
- end
- shape("FoldedHead",head,animal.species=="Elephant" and V(29,30,28) or V(23,22,27),light)
- for _,side in {-1,1} do
-  decor(part(m,"Eye",V(1.1,1.5,0.6),cf*CF(head+V(side*7,2,-12.5)),Color3.fromRGB(42,45,47)))
- end
- if animal.species=="Lion" then
-  for i=1,16 do
-   local a=i/16*math.pi*2;local b=(i+1)/16*math.pi*2;local mid=(a+b)/2
-   local a1=head+V(math.cos(a)*21,math.sin(a)*23,1)
-   local b1=head+V(math.cos(b)*21,math.sin(b)*23,1)
-   local a2=head+V(math.cos(a)*10,math.sin(a)*11,-9)
-   local b2=head+V(math.cos(b)*10,math.sin(b)*11,-9)
-   local ridge=head+V(math.cos(mid)*17,math.sin(mid)*18,-13)
-   triangle(m,"ManeFold",p(a1),p(b1),p(ridge),color)
-   triangle(m,"ManeFold",p(b1),p(b2),p(ridge),light)
-   triangle(m,"ManeFold",p(b2),p(a2),p(ridge),color)
-   triangle(m,"ManeFold",p(a2),p(a1),p(ridge),light)
-  end
- elseif animal.species=="Elephant" then
-  for _,side in {-1,1} do
-   quad(m,"BroadEar",p(head+V(side*8,10,0)),p(head+V(side*30,8,3)),p(head+V(side*29,-19,1)),p(head+V(side*10,-13,-5)),light)
-  end
-  -- Trunk curls forward above the fly-through path.
-  local points={head+V(0,-3,-13),V(0,34,-54),V(0,29,-66),V(0,39,-72)}
-  for i=1,#points-1 do beam(m,"FoldedTrunk",p(points[i]),p(points[i+1]),6-i,color) end
- elseif animal.species=="Deer" then
-  for _,side in {-1,1} do
-   local root=head+V(side*7,8,1);local tip=root+V(side*10,29,5)
-   beam(m,"Antler",p(root),p(tip),1.7,Color3.fromRGB(124,98,72))
-   for j=1,3 do
-    local at=root:Lerp(tip,j/4)
-    beam(m,"AntlerTine",p(at),p(at+V(side*8,9,-3)),1.2,Color3.fromRGB(139,114,82))
-   end
-  end
- elseif animal.species=="Fox" then
-  for _,side in {-1,1} do
-   triangle(m,"PointedEar",p(head+V(side*5,5,0)),p(head+V(side*11,29,1)),p(head+V(side*14,3,-6)),color)
-  end
-  shape("WhiteMuzzle",head+V(0,-6,-12),V(17,10,16),Color3.fromRGB(246,233,207))
-  shape("BushyTail",V(7,45,43),V(20,18,39),color)
-  shape("TailTip",V(7,46,61),V(14,13,14),Color3.fromRGB(247,237,214))
- else
-  for _,side in {-1,1} do
-   beam(m,"Ossicone",p(head+V(side*6,8,0)),p(head+V(side*6,20,0)),2,color)
-   triangle(m,"Ear",p(head+V(side*8,3,0)),p(head+V(side*23,9,0)),p(head+V(side*12,-3,-2)),light)
-  end
- end
- if animal.species~="Fox" then
-  beam(m,"Tail",p(V(0,48,27)),p(V(5,34,47)),2,color)
- end
- m.WorldPivot=cf;m:ScaleTo(animal.scale);m:SetAttribute("WildlifeScale",animal.scale)
- if animal.behindPeak then m:SetAttribute("BehindPeak",animal.behindPeak) end
+-- Every encounter now uses the reference-inspired roster; no legacy quadruped fallback.
+for _,animal in World.Animals do
+ assert(ReferenceAnimals.build(animal,animals,ground),"Missing wildlife builder: "..animal.species)
 end
-for _,animal in World.Animals do foldedAnimal(animal) end
 -- Preserve the prior world and generated asset experiment for later inspection.
 -- The terrain snapshot and prior scenery are retained together.
 local old=workspace:FindFirstChild("PaperFlightWorld");if old then old.Name="BeforeExploration_"..os.time();old.Parent=backups end
@@ -363,4 +284,4 @@ atmosphere.Density=0.17;atmosphere.Haze=0.55;atmosphere.Glare=0.3;atmosphere.Col
 local clouds=terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds");clouds.Cover=0.48;clouds.Density=0.35;clouds.Color=Color3.fromRGB(249,238,219);clouds.Parent=terrain
 workspace.CurrentCamera.CFrame=CFrame.lookAt(V(-950,600,920),V(-400,140,-500))
 terrain:SetAttribute("PaperBuildProgress","Complete")
-return string.format("World: %d small rings, %d wildlife landmarks, varied ridges and a broad launch mesa.",#World.Rings,#World.Animals)
+return string.format("World: %d exploration rings, %d wildlife landmarks, varied ridges and a broad launch mesa.",#World.Rings,#World.Animals)

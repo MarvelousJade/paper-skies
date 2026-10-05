@@ -27,6 +27,7 @@ for parent,name,cls,path in [
  ("package","FlightCamera","ModuleScript","src/shared/FlightCamera.luau"),
  ("package","Landscape","ModuleScript","src/shared/Landscape.luau"),
  ("package","WorldData","ModuleScript","src/shared/WorldData.luau"),
+ ("package","ReferenceAnimals","ModuleScript","src/shared/ReferenceAnimals.luau"),
  ("package","Economy","ModuleScript","src/shared/Economy.luau"),
  ('game.ServerScriptService',"PaperFlightProfiles","ModuleScript","src/server/ProfileStore.luau"),
  ('game.ServerScriptService',"PaperFlightServer","Script","src/server/RaceServer.server.luau"),

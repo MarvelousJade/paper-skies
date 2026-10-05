@@ -89,12 +89,15 @@ local contents=Instance.new("Frame");contents.BackgroundTransparency=1;contents.
 local modalMode="Upgrades"
 local palette={Color3.fromRGB(255,249,228),Color3.fromRGB(125,212,255),Color3.fromRGB(255,183,153),Color3.fromRGB(189,229,160)}
 local wind=Instance.new("Sound");wind.Name="PaperFlightWind";wind.SoundId=Config.WindSoundId;wind.Looped=true;wind.Volume=0;wind.Parent=SoundService
--- A small pool allows nearby pickups to overlap without restarting one shared sound.
-local chimes={}
-local chimeIndex=0
-for i=1,4 do
- local s=Instance.new("Sound");s.Name="RingChime"..i;s.SoundId=Config.CollectSoundId
- s.Volume=0.45;s.Parent=SoundService;chimes[i]=s
+-- One dry click: fixed pitch, no overlapping voices, and a short faded tail.
+local coinClick=Instance.new("Sound");coinClick.Name="RingCoinClick"
+coinClick.SoundId=Config.CollectSoundId;coinClick.Volume=Config.CollectSoundVolume
+coinClick.Parent=SoundService
+local coinStarted=nil
+local music=nil
+if Config.MusicSoundId~="" then
+ music=Instance.new("Sound");music.Name="PaperSkiesMusic";music.SoundId=Config.MusicSoundId
+ music.Looped=true;music.Volume=Config.MusicVolume;music.Parent=SoundService;music:Play()
 end
 local function cursor(free)
  cursorFree=free
@@ -146,7 +149,12 @@ local function openModal(which) modalMode=which;modal.Visible=true;cursor(true);
 upgrades.Activated:Connect(function() openModal("Upgrades") end);wallet.Activated:Connect(function() openModal("Upgrades") end)
 customize.Activated:Connect(function() openModal("Colors") end);maps.Activated:Connect(function() openModal("Map") end)
 close.Activated:Connect(function() modal.Visible=false;if mode~="Ready" then cursor(false) end end)
-audioToggle.Activated:Connect(function() soundEnabled=not soundEnabled;audioToggle.Text=soundEnabled and "Sound ON" or "Sound OFF" end)
+audioToggle.Activated:Connect(function()
+ soundEnabled=not soundEnabled;audioToggle.Text=soundEnabled and "Sound ON" or "Sound OFF"
+ if not soundEnabled then coinClick:Stop();coinStarted=nil;wind.Volume=0 end
+ -- Keep the loop's musical position when muting instead of restarting the song.
+ if music then music.Volume=soundEnabled and Config.MusicVolume or 0 end
+end)
 local function cleanPreview()
  if heldPlane then heldPlane:Destroy();heldPlane=nil end
  if trajectory then trajectory:Destroy();trajectory=nil end
@@ -295,8 +303,8 @@ remote.OnClientEvent:Connect(function(kind,data)
   if collectedIds[data.id] then return end
   collectedIds[data.id]=true
   if soundEnabled then
-   chimeIndex=chimeIndex%#chimes+1
-   local chime=chimes[chimeIndex];chime.PlaybackSpeed=1+(data.id%4)*0.045;chime:Play()
+   coinClick:Stop();coinClick.TimePosition=0;coinClick.Volume=Config.CollectSoundVolume
+   coinClick:Play();coinStarted=os.clock()
   end
   local folder=workspace:FindFirstChild("PaperFlightWorld")
   local rings=folder and folder:FindFirstChild("Rings")
@@ -345,6 +353,11 @@ local function resize()
 end
 resize();camera:GetPropertyChangedSignal("ViewportSize"):Connect(resize)
 RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value+1,function(dt)
+ if coinStarted then
+  local remaining=Config.CollectSoundDuration-(os.clock()-coinStarted)
+  if remaining<=0 then coinClick:Stop();coinStarted=nil
+  else coinClick.Volume=Config.CollectSoundVolume*math.clamp(remaining/0.035,0,1) end
+ end
  local flying=mode=="Flying"
  local intensity=flying and math.clamp((telemetry.speed-80)/170,0,1) or 0
  wind.Volume=soundEnabled and (flying and 0.08+intensity*0.38 or 0) or 0

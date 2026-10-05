@@ -13,15 +13,19 @@ for _,t in L.Tunnels do
  end
 end
 for _,r in W.Rings do
- check(not workspace:Raycast(r.position-r.normal*16,r.normal*32,params),"Ring "..r.id.." opening is blocked")
+ local passage=r.position
+ check(not workspace:Raycast(passage-r.normal*16,r.normal*32,params),"Ring "..r.id.." opening is blocked")
  check((Vector2.new(r.position.X+550,r.position.Z-534)).Magnitude>1000,"No reward rail close to launch")
- if r.group:find("Meandering") then check(r.radius==6,"Sky rings must be 12 studs across") end
+ if r.group:find("Meandering") then check(r.radius==12,"Sky rings must be 24 studs across") end
 end
 local species={};local hidden=0;local visible=0
+local roster={Bear=true,SilverFox=true,Turtle=true,Raccoon=true,CandyCat=true,Gorilla=true,Mammoth=true}
 for _,a in W.Animals do
  local _,_,mountain=L.height(a.position.X,a.position.Z)
  check(not mountain,"Animals must stay off mountains")
  species[a.species]=true
+ local model=workspace.PaperFlightWorld.PaperAnimals:FindFirstChild(a.species..a.id)
+ check(roster[a.species] and model and model:GetAttribute("ReferenceStyle")=="LayeredBlock","Every encounter must use a reference model; no legacy animals")
  check(a.scale==0.62,"Wildlife must use the smaller scale")
  if a.behindPeak then
   hidden+=1;local occluded=false;local launch=Vector3.new(-550,370,534)
@@ -30,24 +34,25 @@ for _,a in W.Animals do
   end
   check(occluded,"Rear wildlife must be hidden by a mountain from launch")
  else visible+=1 end
- local cf=CFrame.Angles(0,a.heading,0);local center=a.position+Vector3.yAxis*9
- for _,off in {Vector3.zero,cf.RightVector*3.6,-cf.RightVector*3.6,Vector3.yAxis*1.5,-Vector3.yAxis*1.5} do
-  check(not workspace:Raycast(center-cf.LookVector*70+off,cf.LookVector*140,params),"Belly flight corridor blocked: "..a.species..a.id)
+ local cf=CFrame.Angles(0,a.heading,0);local center=a.position+Vector3.yAxis*18
+ local direction=cf.RightVector
+ for _,off in {Vector3.zero,cf.LookVector*3.6,-cf.LookVector*3.6,Vector3.yAxis*1.5,-Vector3.yAxis*1.5} do
+  check(not workspace:Raycast(center-direction*70+off,direction*140,params),"Belly flight corridor blocked: "..a.species..a.id)
  end
 end
-check(hidden==13 and visible==2,"Only two animals should occupy the introductory valley")
+check(hidden==13 and visible==4,"Four meadow animals complement thirteen hidden encounters")
 for _,summit in W.Summits do
  local ring
  for _,r in W.Rings do if r.group=="Summit "..summit.peak then ring=r;break end end
  check(ring~=nil,"Every mountain needs a summit reward")
- check(ring.position.Y-summit.position.Y>=10 and ring.position.Y-summit.position.Y<25,"Summit ring must sit close to the tip")
+ check(ring.position.Y-summit.position.Y>=17 and ring.position.Y-summit.position.Y<32,"Summit ring must sit close to the tip")
  local cf=CFrame.lookAt(ring.position,ring.position+ring.normal)
  for _,off in {Vector3.zero,cf.RightVector*3.6,-cf.RightVector*3.6,Vector3.yAxis*1.5,-Vector3.yAxis*1.5} do
   check(not workspace:Raycast(ring.position-ring.normal*90+off,ring.normal*180,params),"Summit approach must clear the rock")
  end
 end
 local kinds=0;for _ in species do kinds+=1 end
-check(kinds==5 and #W.Animals==15,"Five animal species must be scattered through the lowlands")
+check(kinds==7 and #W.Animals==17,"Seven animal species must be scattered through the lowlands")
 for _,p in {Vector2.new(-700,380),Vector2.new(-400,700),Vector2.new(-550,534)} do
  check(math.abs(L.height(p.X,p.Y)-349)<0.1,"Launch plateau must have a broad flat summit")
 end
@@ -55,10 +60,40 @@ local previous
 for _,r in W.Rings do
  if previous and previous.group==r.group and r.group:find("Meandering") then
   local gap=(r.position-previous.position).Magnitude
-  check(gap>25 and gap<48,"Curved sky clusters must stay close together")
+  check(gap>23 and gap<26,"Curved sky clusters must stay close together")
  end
  previous=r
 end
+-- Sample the full ring rim and a plane-width passage, not just the center.
+for _,ring in W.Rings do
+ local frame=CFrame.lookAt(ring.position,ring.position+ring.normal)
+ for i=0,11 do
+  local angle=i*math.pi/6
+  local offset=frame.RightVector*math.cos(angle)*(ring.radius+0.3)+Vector3.yAxis*math.sin(angle)*(ring.radius+0.3)
+  check(not workspace:Raycast(ring.position+offset-ring.normal,ring.normal*2,params),"Doubled ring rim intersects scenery: "..ring.id)
+ end
+end
+for _,animal in W.Animals do
+ local found
+ for _,ring in W.Rings do
+  if ring.animalId==animal.id then found=ring;break end
+ end
+ check(found~=nil,"Every animal needs a complete ring reward")
+ local side=CFrame.Angles(0,animal.heading,0).RightVector
+ check(math.abs(found.normal:Dot(side))>0.999,"Animal rewards must face sideways")
+ local crossing=found.position
+ check(require(package.Flight).crossedRing(crossing-side*30,crossing+side*30,found.position,found.normal,found.radius-require(package.Config).RingMargin),"A side-on belly flight must earn the belly reward")
+ local model=workspace.PaperFlightWorld.Rings:FindFirstChild("Ring"..found.id)
+ check(#model:GetChildren()==48,"Animal reward displays a complete ring")
+end
+local forward=0;local trails={}
+for _,a in W.Animals do
+ if a.forwardMeadow then forward+=1;check(a.position.Z<0 and a.position.Y<110,"New wildlife belongs in the forward meadow") end
+end
+for _,r in W.Rings do if r.group:find("Meandering") then trails[r.group]=true end end
+local trailCount=0;for _ in trails do trailCount+=1 end
+check(forward==2,"Add two new forward-meadow animals")
+check(trailCount>=18,"Reward trails must also fill gaps between landmarks")
 local bearings={};local front,back,left,right=0,0,0,0
 for _,peak in L.Peaks do
  local dx,dz=peak.x+550,peak.z-534

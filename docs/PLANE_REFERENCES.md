@@ -50,4 +50,4 @@ The held model, launched server model, local flight visual, and flight attribute
 
 Live Studio QA used a temporary 5000-gold starting profile: buying Delta left 4450, selecting Delta again kept that balance, and the held and server-launched models were Delta. A mid-flight change was rejected. Kestrel was purchased after landing. The temporary balance was removed; normal new profiles start at zero.
 
-Current assertions: 82 flight/stamina/camera/economy/profile/model checks plus 444 world checks. Live keyboard input verified boost consumption, camera throw/boost/release transitions, and subsequent stamina recovery in server telemetry and the HUD. Published persistence, full summit flights, and device performance remain unverified.
+Current assertions: 82 flight/stamina/camera/economy/profile/model checks plus 2875 world checks. Live keyboard input verified boost consumption, camera throw/boost/release transitions, and subsequent stamina recovery in server telemetry and the HUD. Published persistence, full summit flights, and device performance remain unverified.

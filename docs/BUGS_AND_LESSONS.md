@@ -433,3 +433,113 @@ The first keyboard sequence assumed the player was Ready, but recorded telemetry
 One immediate post-Stop diagnostic also reported an invalid require argument. A follow-up inspection confirmed the modules existed; explicitly resolving the Flight ModuleScript in a subsequent call succeeded. The exact reason for that transient tool execution failure was not isolated.
 
 All temporary telemetry recorders were discarded by stopping Play. The scene is left in Edit with the new production scripts installed. The separate distant-terrain rendering issue B08 remains open.
+
+
+## October 4 larger rings and meadow encounters follow up
+
+The stamina/flight/camera build was committed first as `644c261`, as requested. This world-layout revision remains uncommitted for playtesting.
+
+### D13 Larger rewards and closer curved routes
+
+The user requested rings about twice their previous size, more connected clusters, and more encounters before the mountains. Sky and summit ring diameter is now 24 studs (previously 12); foothill rings are 28 (previously 14). Sky routes increased from ten to eighteen, with seven or eight rings each. Center spacing is 23.98–24.12 studs instead of roughly 33–46. New route centers occupy intervening fields around the launch area while retaining the clear 1000-stud launch buffer and free choice of throwing direction.
+
+There are now 164 rewards: 136 sky rings, four foothill rings, seventeen animal arches, and seven summit rings. A fox at approximately (-1200, 47.5, -450) and a deer at (-300, 50.7, -550) bring forward lowland wildlife to four. The original thirteen hidden encounters retain their positions. Flat-site and separation checks prevent placing the new animals on mountains or on top of existing encounters.
+
+### D14 Animal rewards became sideways half-ring arches
+
+The first draft raised torsos and widened legs to fit a complete doubled ring. The user clarified that only half the ring should appear beneath the animal, with the opening facing sideways. The final builder restores original animal anatomy and the 0.62 scale. It renders 24 arc segments across the upper half of a 24-stud circle, centered one stud above the animal's ground position. The crossing normal uses the animal's right vector so the path goes between its front and rear legs.
+
+The collection plane and visible arch share the same center, normal, and radius. A representative crossing six studs above the ring center passes the existing server collection aperture with its 3.6-stud margin. The semicircle has no collision geometry in its opening.
+
+**Clearance consideration:** Doubling rings affects more than appearance. Summit centers were raised seven studs to keep the larger lower rim above the rock. New tests sample visible ring rims as well as the flight centerline. Animal tests check side orientation, 24-segment semicircle construction, an actual-scene passage with plane offsets, and the swept collection predicate.
+
+**Evidence:** 2773 geometry/layout assertions and all 82 flight/economy/camera assertions passed in Studio Edit. Close screenshots verified the sideways arch beneath the fox and the denser curved sky route. Geometry checks cover all seventeen animals and the default throws in eight directions. Full keyboard-flown collection of this new layout was not tested during this revision.
+
+The rebuilt scene contains 23,570 descendants, including 109 trees above elevation 180. Increased route density adds renderable parts; device profiling remains pending. The separate distant-terrain Play rendering issue B08 remains open. No new confirmed gameplay defect was encountered during this layout revision.
+
+
+### D15 Full sideways belly rings restored
+
+The user replaced the half-ring requirement with a complete circle. All seventeen animal rewards now render all 48 segments at radius 12, preserving their sideways orientation. Centers are 18 studs above the sampled ground. Torso/head geometry is lifted 24 unscaled studs and front/rear feet are spaced farther apart; model scale remains 0.62. Collection centers and visible hoops use the same data.
+
+**Visual issue found during revision:** With the first full-ring center at ground +14, the fox screenshot still hid part of the bottom rim even though raycast clearance checks passed. The exact render-surface discrepancy was not isolated. Raising centers another four studs, with corresponding torso clearance, produced a visibly complete circle in the repeated close-up. This shows why collision checks need a visual check too.
+
+**Verification:** Updated full-circle rim, sideways passage, and reward-crossing checks passed: 2858 geometry/layout assertions. The close screenshot shows the entire fox ring. The rebuilt scene contains 23,978 descendants. Source and installer were updated; this follow-up remains uncommitted. This revision does not include a new live flown-collection test.
+
+
+## October 4 reference-inspired gorilla and mammoth follow up
+
+### D16 Distinct reference models replaced two duplicate encounters
+
+The new screenshots were located in the old Documents project folder rather than the active G: repository. After inspecting all three, the icy animal was identified as the mammoth reference. Copies are retained under `references/`; see [Animal references](ANIMAL_REFERENCES.md).
+
+The existing shared quadruped builder could not produce a recognizable gorilla or the mammoth's layered coat. A separate `ReferenceAnimals` module now generates broad beveled bodies, heavy limbs, original face details, and model-specific features. The world builder calls it for Gorilla and Mammoth, and the installer includes the module so the scene remains reproducible.
+
+Slots 6 and 7 reuse validated hidden lowland positions. The final roster is seventeen animals across seven species, with the same thirteen-hidden/four-visible split. Full sideways rings remain aligned with the collection data.
+
+### B09 Gorilla arm plates appeared detached
+
+**Observed:** The first side-view screenshot showed three decorative plate rows floating in front of the upper arms.
+
+**Cause:** The plates used a fixed front offset and row heights without following the bent forearm's position.
+
+**Fix:** Position each plate along the elbow-to-wrist segment and rotate it to match the forearm slope. The corrected side screenshot shows the plates attached to the forearms.
+
+**Verification:** Geometry/layout checks passed again after the correction (2858 assertions). Front/three-quarter and side screenshots verified both model silhouettes and visible full belly rings. Gorilla uses 264 anchored parts; Mammoth uses 838. Total world descendants: 24,419. Device performance and live flown collection for these models are pending.
+
+**Interview lesson:** A model can pass collision tests and still have detached visual details. Side views reveal attachment problems that a front view can conceal.
+
+A diagnostic was initially sent to the Edit datamodel while Studio was in Play; the tool rejected it without changing the scene. Work continued in Edit after stopping Play. The scene is left in Edit with the final models installed. This revision remains uncommitted.
+
+
+## October 4 complete wildlife roster replacement
+
+### D17 All old animal instances now use the supplied reference style
+
+Three additional screenshots showed a bear, silver fox, turtle, raccoon, and a colorful square-headed cat-like creature. These supplied the shape and color references for five new builders, alongside the gorilla and mammoth already added. The project calls its original cat adaptation CandyCat.
+
+The final roster has seventeen encounters: two bears, three silver foxes, two turtles, three raccoons, three candy cats, two gorillas, and two mammoths. The legacy generic quadruped builder was removed. A deterministic roster replaces model types after the existing location sampling, retaining the same positions and thirteen-hidden/four-visible split.
+
+The complete sideways rings remain at the same positions. Existing tests verify their openings and approaches. Seventeen additional assertions ensure every encounter belongs to the new roster and actually has a reference-style model, preventing a missing or legacy model from silently passing empty-space collision checks.
+
+**Evidence:** 2875 geometry/layout assertions passed. Close screenshots inspected the new bear, turtle, silver fox, raccoon, and candy cat. The current world contains 22,152 descendants, down from 24,419 before the full replacement. Built-in stud surfaces avoid separate geometry for every small stud. Full device profiling and live flown collection remain pending.
+
+### B10 Silver fox eyes floated, then became hidden during refinement
+
+**Observed:** The first close view showed the fox's eyes offset from its tapering head. An initial adjustment moved them into the head and they disappeared in the next view.
+
+**Cause:** A fixed front-facing eye plane did not follow the fox head's changing cross-section.
+
+**Fix:** Add a forward face panel that intersects the head and place the eyes directly on its outer surface. The final close screenshot shows both eyes attached and visible.
+
+**Lesson:** Geometry edits should be checked from the intended viewing angles. Moving a detail closer without checking the surface can exchange a floating-detail bug for an occlusion bug.
+
+The raccoon's initially tall stepped ears were also shortened as an art refinement, to distinguish its silhouette from the fox. This was a design adjustment rather than a collision defect. All changes remain uncommitted for user review.
+
+
+## October 4 pickup audio and original background loop
+
+### B11 Rapid pickups produced a warbling multi-chime sound
+
+**Observed:** The user described ring pickup feedback as “blblbl” and requested a simple coin click.
+
+**Cause:** The source asset itself was a multi-chime sound. Four pooled Sound instances allowed adjacent rings to overlap, and the ring ID changed PlaybackSpeed, introducing several simultaneous pitches. The original mute toggle also prevented only new chimes; an already playing tail could continue.
+
+**Fix:** Replace the source with UI Tick (OrcaCreations, asset 99102731755541), use one fixed-pitch Sound, and fade/stop its tail after 140 ms. Rapid pickups restart that voice. Preserve the duplicate-ID guard. Sound OFF stops active click feedback immediately and mutes wind and configured music.
+
+**Verification:** In a fresh Studio Play session, the source loaded (0.340 seconds), one ring voice existed at pitch 1, duplicate feedback produced one start, a rapid pair produced two starts without extra voices, and the tail stopped. Clicking the actual Sound button suppressed the next pickup, muted wind, and restored playback when toggled ON. Tests injected synthetic feedback without changing the server wallet. Subjective listening approval and published asset permissions remain pending.
+
+**Interview lesson:** A valid reward event can still have poor feedback. Consider sample length, voice overlap, and pitch variation together, and verify mute behavior for sounds already playing.
+
+### D18 Original chill electronic music with an explicit upload boundary
+
+`tools/GenerateChillMusic.py` composes and synthesizes a sample-free 100 BPM, 76.8-second loop, exported to `assets/audio/PaperSkies.wav`. Numerical checks found no clipping and no PCM discontinuity at the loop boundary. The client supports quiet looped music and the existing Sound toggle, while an empty music ID safely disables the track until upload.
+
+Roblox requires an uploaded audio asset and appropriate experience permissions. The connected tools cannot upload audio; the WAV and integration are ready, but original music is not yet playing inside Roblox. See [audio setup and verification](AUDIO.md). Listening review and a full loop of the Roblox-encoded asset remain pending. This change is uncommitted.
+
+
+### D19 Uploaded PaperSkies track enabled and checked in Studio
+
+The user uploaded PaperSkies as asset `126932983544303`. Inventory lookup found the matching title under the user account, and preloading returned Success with duration 76.8 seconds, matching the local export. The repository Config and Studio Config now use that ID; the generated installer was refreshed.
+
+A fresh Play session started the track automatically at volume 0.16 with looping enabled. Seeking to half a second before the end triggered one DidLoop event and continued playback from the beginning. Clicking Sound OFF muted music while time continued advancing, and Sound ON restored the volume without restarting the song. This supersedes D18's upload blocker. A full listening pass and published-client permission check are still pending. The track is left playing in Studio; changes remain uncommitted.

@@ -39,13 +39,17 @@ Updraft strength was reduced from a previous mountain-zone maximum of 52 to 18 b
 
 The seven mountains, island lobes, ring trails, and thermals now surround the starting plateau. Tests require at least three mountains on either side of each main axis and no gap greater than 75 degrees between mountain bearings. Outer meadows remain behind the mountains.
 
-The world includes a broad flat launch plateau, varied mountain profiles, a lagoon, coastal water, four low foothill passages, and fifteen paper animals across five species. Two animals occupy introductory lowlands; thirteen sit behind mountain silhouettes. Animals remain at 62% of the previous linear size.
+The world includes a broad flat launch plateau, varied mountain profiles, a lagoon, coastal water, four low foothill passages, and seventeen stylized animals across seven species. Four animals occupy introductory lowlands, including a candy cat and raccoon in the forward meadow; thirteen sit behind mountain silhouettes. All wildlife uses a 0.62 authored model scale.
 
-There are 71 rings: 45 on ten short curved sky routes, four at foothill passages, fifteen beneath animals, and seven at mountain summits. No ring is within 1000 horizontal studs of launch. Sky rings are 12 studs across and roughly 33–46 studs apart within a cluster. Belly and summit rings are also 12 studs across; foothill rings are 14.
+There are 164 rewards: 136 rings on eighteen curved sky routes, four at foothill passages, seventeen rings beneath animals, and seven at mountain summits. No reward is within 1000 horizontal studs of launch. Sky rings are now 24 studs across and approximately 24 studs apart within each cluster. Summit rings are also 24 studs across; foothill rings are 28. Eight additional routes fill spaces between mountain approaches.
+
+All seventeen encounters now use the reference-inspired roster: two bears, three silver foxes, two turtles, three raccoons, three candy cats, two gorillas, and two ice mammoths. The legacy lion/elephant/deer/fox/giraffe builder has been replaced. Distinct block-built silhouettes, stepped shells/ears, layered coats, and expressive faces follow the supplied screenshots. Reference filenames and modeling decisions are recorded in [Animal references](docs/ANIMAL_REFERENCES.md).
+
+Animal rewards are complete 24-stud circles facing the animal's side. Fly sideways beneath its belly, between the front and rear legs. Ring centers sit 18 studs above the sampled ground. Raised torsos and a longer front-to-rear stance provide clearance while retaining the 0.62 model scale.
 
 The seven summit rewards remain replicated and have small screen-sized halos for visibility at distance. Halos hide near the physical ring and on collection. Both visual segments and the halo are hidden in the collection event handler.
 
-Meadows now use LeafyGrass terrain material. An earlier attempt to set the non-scriptable Decoration property had silently failed; the material change was visually verified to remove the dense blades. The current scene has about 18,600 descendants and 109 trees above elevation 180.
+Meadows now use LeafyGrass terrain material. An earlier attempt to set the non-scriptable Decoration property had silently failed; the material change was visually verified to remove the dense blades. The current scene has 22,152 descendants and 109 trees above elevation 180.
 
 **Open visual issue:** Far mountain terrain and its coarse proxies were absent in the Studio Play rear-view check, although the summit halos remained visible. The same rear mountains render correctly in Edit mode, and server terrain raycasts find them. Extra streaming focus made the rear terrain queryable on the client without resolving that screenshot. The exact rendering cause remains unconfirmed. This issue is tracked in the bug log; full distant-scene visibility is not claimed as verified.
 
@@ -77,8 +81,9 @@ The installer builds the five aircraft and world from source. Terrain uses the `
 - `src/client/FlightClient.client.luau`: camera, hangar, model selection, HUD, wind, streaks, pickup feedback, summit halos.
 - `tools/BuildPlaneModels.luau`: five reproducible folded-paper models.
 - `tools/BuildExplorationWorld.luau`: terrain, scenery, rings, wildlife.
+- `src/shared/ReferenceAnimals.luau`: all seven procedural wildlife models.
 - `tests/Flight.spec.luau`: 82 assertions.
-- `tests/World.spec.luau`: 444 assertions.
+- `tests/World.spec.luau`: 2875 assertions.
 
 ## Engineering decisions
 
@@ -90,14 +95,14 @@ A replication focus follows the plane while the avatar stays behind. Flight rend
 
 Published profile writes use UpdateAsync with ownership leases, retries, periodic saves, and departure/shutdown saves. Normalization retains valid plane ownership and selection; old profiles keep gold and existing bonuses. **Studio progress is session-only; published persistence has not been verified end to end.**
 
-Wind asset: 687874741. Pickup audio: [ding-ding stronger by The_Sink](https://create.roblox.com/store/asset/2415965014).
+Wind asset: 687874741. Pickup audio: [UI Tick by OrcaCreations](https://create.roblox.com/store/asset/99102731755541), played once at fixed pitch with a 140 ms limit. Original chill EDM loop: `assets/audio/PaperSkies.wav`; regeneration and Roblox setup are documented in `docs/AUDIO.md`. Background music uses the uploaded PaperSkies asset `126932983544303` at volume 0.16, with looping and the shared Sound toggle.
 
 ## Validation
 
 - 82 flight, stamina, camera, pickup, economy, profile-normalization, and model assertions passed.
 - A controlled 24-degree climb stalled the starter at 3.18 seconds; Kestrel remained unstalled at four seconds.
 - Live camera samples reached 79.45 degrees on throw and 83.99 on boost, then returned to 70 on release. Server telemetry and the HUD both showed stamina recovery during a suitable glide.
-- 444 actual-scene geometry/layout assertions passed, including eight default throw directions.
+- 2875 actual-scene geometry/layout assertions passed, including eight default throw directions, ring-rim clearance samples, and sideways animal-ring crossings. These are repeated geometric samples, not 2875 distinct play sessions.
 - Live purchase deducted Delta's real 550-gold price; repeat selection was free.
 - Held and server-launched models matched Delta; changing type during flight was rejected; Kestrel could be purchased after landing.
 - A fresh summit pickup presentation check received one event, hid 49 parts including the invisible anchor, and disabled the halo.
@@ -114,6 +119,6 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The latest requested checkpoint is **`b4a7299` — Add aircraft hangar and surround launch with exploration landmarks**. Earlier snapshots include `3cf87cc`, `5fd61e2`, and `d3fe27b`. Rechargeable stamina, aircraft flight limits, and throw/boost camera changes remain uncommitted for user testing.
+The latest requested checkpoint is **`644c261` — Add rechargeable boost, aircraft flight limits and camera effects**. Earlier snapshots include `b4a7299`, `3cf87cc`, `5fd61e2`, and `d3fe27b`. Larger rings, denser routes, two additional meadow animals, and sideways full belly rings, and the complete reference-inspired wildlife roster remain uncommitted for user testing.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.

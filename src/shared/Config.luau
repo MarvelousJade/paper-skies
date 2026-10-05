@@ -21,7 +21,13 @@ Config.WorldMax = Vector3.new(4900,2800,5900)
 Config.RingValue = 10
 Config.CollectionRadius = 12
 Config.RingMargin = 3.6
-Config.CollectSoundId = "rbxassetid://2415965014"
+Config.CollectSoundId = "rbxassetid://99102731755541"
+Config.CollectSoundVolume = 0.4
+Config.CollectSoundDuration = 0.14
+-- Original Paper Skies loop, uploaded by the project owner from assets/audio/PaperSkies.wav.
+-- Empty disables music without requesting a placeholder or inaccessible asset.
+Config.MusicSoundId = "rbxassetid://126932983544303"
+Config.MusicVolume = 0.16
 Config.BoostDuration = 4.5
 Config.BoostAcceleration = 65
 Config.BoostRechargeDelay = 0.85

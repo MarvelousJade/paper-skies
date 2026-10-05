@@ -18,7 +18,7 @@ World.Thermals={
  {center=Vector3.new(-2200,0,1350),radius=280,height=1000,strength=14},
  {center=Vector3.new(-1850,0,-2100),radius=300,height=1200,strength=15},
 }
--- Two visible lowland encounters; the remaining wildlife is hidden behind mountain silhouettes.
+-- Four visible lowland encounters; thirteen remain hidden behind mountain silhouettes.
 -- Seeded rejection sampling keeps every animal off slopes and makes discovery placement reproducible.
 World.Animals={}
 local random=Random.new(261004)
@@ -72,6 +72,34 @@ for attempt=1,60000 do
  end
 end
 assert(#World.Animals==15,"Could not place all wildlife on clear lowland sites")
+-- Two additional forward-meadow encounters, preserving the original seeded wildlife sites.
+for _,site in {{x=-1200,z=-450,species="Fox"},{x=-300,z=-550,species="Deer"}} do
+ local chosen
+ for radius=0,180,30 do
+  for step=0,11 do
+   local angle=step*math.pi/6
+   local x,z=site.x+math.cos(angle)*radius,site.z+math.sin(angle)*radius
+   local y,_,mountain=Landscape.height(x,z)
+   local clear=not mountain and y>25 and y<110 and Vector2.new(x-launch.X,z-launch.Z).Magnitude>1050
+   for _,offset in {Vector2.new(40,0),Vector2.new(-40,0),Vector2.new(0,50),Vector2.new(0,-50)} do
+    local h,_,slope=Landscape.height(x+offset.X,z+offset.Y)
+    if slope or math.abs(h-y)>2.5 then clear=false end
+   end
+   for _,other in World.Animals do
+    if Vector2.new(x-other.position.X,z-other.position.Z).Magnitude<330 then clear=false end
+   end
+   if clear then chosen=Vector3.new(x,y,z);break end
+  end
+  if chosen then break end
+ end
+ assert(chosen,"Additional meadow animal needs a flat, separated site")
+ table.insert(World.Animals,{id=#World.Animals+1,species=site.species,position=chosen,
+  heading=math.rad(20),scale=0.62,forwardMeadow=true})
+end
+-- Replace every old model while retaining the validated locations and discovery split.
+local referenceRoster={"Bear","Turtle","SilverFox","Raccoon","CandyCat","Gorilla","Mammoth",
+ "Bear","SilverFox","Turtle","Raccoon","CandyCat","Gorilla","Mammoth","SilverFox","CandyCat","Raccoon"}
+for index,animal in World.Animals do animal.species=referenceRoster[index] end
 World.Rings={}
 local palette={
  Color3.fromRGB(25,206,255),Color3.fromRGB(255,57,187),Color3.fromRGB(65,255,129),
@@ -82,37 +110,50 @@ local function add(position,normal,radius,color,value,group)
 end
 -- Short optional trails are separated by open space. They reward exploration, not ordered checkpoints.
 local routes={
- {center=Vector3.new(-1700,230,-1450),radius=270,start=0.2,count=5},
- {center=Vector3.new(400,210,-1650),radius=240,start=-1.3,count=4},
- {center=Vector3.new(-50,190,-2650),radius=300,start=0.6,count=5},
- {center=Vector3.new(2000,210,-500),radius=240,start=2.5,count=4},
- {center=Vector3.new(2200,240,2400),radius=280,start=-0.5,count=5},
- {center=Vector3.new(500,240,2250),radius=310,start=1.1,count=4},
- {center=Vector3.new(-850,210,3600),radius=250,start=0.4,count=5},
- {center=Vector3.new(-2500,200,2300),radius=230,start=1.8,count=4},
- {center=Vector3.new(-3200,230,0),radius=270,start=-1.6,count=5},
- {center=Vector3.new(-2700,210,-1750),radius=220,start=2.1,count=4},
+ {center=Vector3.new(-1700,230,-1450),radius=270,start=0.2,count=8},
+ {center=Vector3.new(400,210,-1650),radius=240,start=-1.3,count=8},
+ {center=Vector3.new(-50,190,-2650),radius=300,start=0.6,count=8},
+ {center=Vector3.new(2000,210,-500),radius=240,start=2.5,count=8},
+ {center=Vector3.new(2200,240,2400),radius=280,start=-0.5,count=8},
+ {center=Vector3.new(500,240,2250),radius=310,start=1.1,count=8},
+ {center=Vector3.new(-850,210,3600),radius=250,start=0.4,count=8},
+ {center=Vector3.new(-2500,200,2300),radius=230,start=1.8,count=8},
+ {center=Vector3.new(-3200,230,0),radius=270,start=-1.6,count=8},
+ {center=Vector3.new(-2700,210,-1750),radius=220,start=2.1,count=8},
 }
+-- Additional optional routes bridge the open fields between mountain approaches.
+for _,route in {
+ {center=Vector3.new(-1100,165,-850),radius=170,start=1.8,count=7},
+ {center=Vector3.new(220,145,-1050),radius=160,start=2.8,count=7},
+ {center=Vector3.new(-1550,155,-150),radius=170,start=1.2,count=7},
+ {center=Vector3.new(800,170,750),radius=170,start=-0.5,count=7},
+ {center=Vector3.new(150,145,1800),radius=180,start=2.5,count=7},
+ {center=Vector3.new(-1950,165,850),radius=170,start=-0.7,count=7},
+ {center=Vector3.new(-1950,145,1850),radius=160,start=0.4,count=7},
+ {center=Vector3.new(-650,165,2700),radius=180,start=0.3,count=7},
+} do table.insert(routes,route) end
 for group,route in routes do
  local points={};local raise=0
  for i=1,route.count do
-  local a=route.start+(i-1)*0.15
+  local a=route.start+(i-1)*24/route.radius
   local p=route.center+Vector3.new(math.cos(a)*route.radius,math.sin(i*0.5)*5,math.sin(a)*route.radius)
   points[i]=p;raise=math.max(raise,Landscape.height(p.X,p.Z)+60-p.Y)
  end
  for i,p in points do
-  local a=route.start+(i-1)*0.15
-  add(p+Vector3.yAxis*raise,Vector3.new(-math.sin(a),0,math.cos(a)),6,palette[(i+group-2)%#palette+1],10,"Meandering route "..group)
+  local a=route.start+(i-1)*24/route.radius
+  add(p+Vector3.yAxis*raise,Vector3.new(-math.sin(a),0,math.cos(a)),12,palette[(i+group-2)%#palette+1],10,"Meandering route "..group)
  end
 end
 for i,tunnel in Landscape.Tunnels do
- add(tunnel.center,tunnel.normal,7,palette[(i-1)%#palette+1],25,tunnel.name)
+ add(tunnel.center,tunnel.normal,14,palette[(i-1)%#palette+1],25,tunnel.name)
 end
 for i,animal in World.Animals do
- local normal=(CFrame.Angles(0,animal.heading,0)).LookVector
- add(animal.position+Vector3.new(0,9,0),normal,6,palette[(i+1)%#palette+1],35,animal.species.." belly")
+ -- A complete hoop faces the animal's side, between its front and rear legs.
+ local normal=(CFrame.Angles(0,animal.heading,0)).RightVector
+ add(animal.position+Vector3.new(0,18,0),normal,12,palette[(i+1)%#palette+1],35,animal.species.." belly")
+ World.Rings[#World.Rings].animalId=animal.id
 end
--- One small reward at each summit. It sits just above the tip, with no hole through the mountain.
+-- One reward at each summit. It sits just above the tip, with no hole through the mountain.
 World.Summits={}
 for index,peak in Landscape.Peaks do
  local top=Vector3.new(peak.x,Landscape.height(peak.x,peak.z),peak.z)
@@ -123,12 +164,12 @@ for index,peak in Landscape.Peaks do
   end
  end
  local normal=Vector3.new(math.cos(peak.angle),0,math.sin(peak.angle))
- local center=top+Vector3.yAxis*12
+ local center=top+Vector3.yAxis*19
  -- Account for the approach and wingspan as well as the exact summit sample.
  for step=-90,90,6 do
   for side=-4,4,4 do
    local p=top+normal*step+Vector3.new(-normal.Z,0,normal.X)*side
-   center=Vector3.new(center.X,math.max(center.Y,Landscape.height(p.X,p.Z)+10),center.Z)
+   center=Vector3.new(center.X,math.max(center.Y,Landscape.height(p.X,p.Z)+17),center.Z)
   end
  end
  -- Broad rising air along the near face makes high summit rewards reachable by gliding.
@@ -137,7 +178,7 @@ for index,peak in Landscape.Peaks do
  table.insert(World.Thermals,{center=Vector3.new(peak.x,0,peak.z)+towardLaunch*width*0.55,
   radius=width*0.85,height=center.Y+260,strength=18})
  table.insert(World.Summits,{position=top,ringPosition=center,peak=index})
- add(center,normal,6,palette[(index+2)%#palette+1],60,"Summit "..index)
+ add(center,normal,12,palette[(index+2)%#palette+1],60,"Summit "..index)
 end
 function World.lift(position:Vector3,planeId:string?): number
  -- Aircraft attributes change usable rising air; there is no hard positional ceiling.
