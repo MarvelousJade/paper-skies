@@ -65,7 +65,7 @@ local base=workspace:FindFirstChild("Baseplate")
 if base then base.Transparency=1; base.CanCollide=false; base.CanQuery=false end
 local sign=part("WelcomeSign",Vector3.new(28,13,1),CFrame.new(0,121,154),Color3.fromRGB(13,29,42))
 local surface=Instance.new("SurfaceGui"); surface.Face=Enum.NormalId.Front; surface.PixelsPerStud=40; surface.Parent=sign
-local title=Instance.new("TextLabel"); title.Size=UDim2.fromScale(1,1); title.BackgroundTransparency=1; title.Text="PAPER / FLIGHT\nCOASTAL RUN\n\nSPACE TO LAUNCH"
+local title=Instance.new("TextLabel"); title.Size=UDim2.fromScale(1,1); title.BackgroundTransparency=1; title.Text="PAPER / FLIGHT\nCOASTAL RUN\n\nAIM - CLICK TO THROW"
 title.Font=Enum.Font.GothamBold; title.TextSize=70; title.TextColor3=Color3.fromRGB(119,237,216); title.Parent=surface
 local checkpoints=Instance.new("Folder"); checkpoints.Name="Checkpoints"; checkpoints.Parent=world
 local Config=require(RS.PaperFlight.Config)
@@ -110,4 +110,3 @@ atmosphere.Name="PaperAtmosphere"; atmosphere.Density=0.22; atmosphere.Offset=0.
 local bloom=Lighting:FindFirstChild("PaperBloom") or Instance.new("BloomEffect"); bloom.Name="PaperBloom"; bloom.Intensity=0.2; bloom.Size=20; bloom.Threshold=1.5; bloom.Parent=Lighting
 workspace.CurrentCamera.CFrame=CFrame.lookAt(Vector3.new(170,180,260),Vector3.new(0,90,-170))
 return "Built coastal course, launch deck, six rings, and paper plane template."
-
