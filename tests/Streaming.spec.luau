@@ -69,7 +69,7 @@ local ok,result=xpcall(function()
   for _,p in model:GetChildren() do check(not p.CanCollide and not p.CanQuery,"Local decoration cannot change flight collisions") end
   model:Destroy()
  end
- check(patches==332,"All authored meadow patches are retained")
+ check(patches==344,"All authored meadow patches are retained")
  local details=Details.new(workspace,world)
  local success,err=xpcall(function()
   local eye=first:GetAttribute("BasePosition")+Vector3.yAxis*6

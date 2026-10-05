@@ -2778,6 +2778,9 @@ if staged then
  end
 end
 if not terrain:GetAttribute("PaperArchipelagoV5") then
+ -- A terrain rebuild also resets the two bounded pond migrations.
+ terrain:SetAttribute("PaperForestPondV1_1",nil)
+ terrain:SetAttribute("PaperForestPondV1_3",nil)
  -- Previous V2 terrain is reproducible from commit 5fd61e2; preserve the existing snapshot.
  -- Only clear the authored world bounds, in bounded operations.
  for x=-5632,4864-1,512 do for z=-8960,5632-1,512 do for y=-32,2304-1,512 do
@@ -3125,6 +3128,205 @@ return string.format("World: %d exploration rings, %d wildlife landmarks, varied
 
 end
 print(exploration())
+local function foothills()
+-- Give the four small tunnel hills grassy crowns without changing their collision shape.
+local package=game.ReplicatedStorage.PaperFlight
+local Landscape=require(package.Landscape)
+local Scenery=require(package.Scenery)
+local world=workspace.PaperFlightWorld
+local terrain=workspace.Terrain
+local V=Vector3.new
+local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Include
+params.FilterDescendantsInstances={terrain}
+local function ground(x,z)
+ local height=Landscape.height(x,z)
+ local hit=workspace:Raycast(V(x,height+24,z),V(0,-64,0),params)
+ assert(hit,"Foothill crown must have terrain beneath its vegetation")
+ return hit.Position.Y
+end
+-- Clear only this tool's previous decorations, including staged rear-side copies.
+for _,parent in {world.Woodlands,world.MeadowAccents,game.ServerStorage:FindFirstChild("PaperDeferredWorld")} do
+ if parent then for _,object in parent:GetChildren() do if object:GetAttribute("FoothillCrown") then object:Destroy() end end end
+end
+local painted,treeCount,patchCount=0,0,0
+for index,spur in Landscape.Spurs do
+ local bottom=Landscape.baseHeight(spur.x,spur.z)
+ local region=Region3.new(V(spur.x-spur.rx,bottom-8,spur.z-spur.rz),V(spur.x+spur.rx,bottom+spur.h+24,spur.z+spur.rz)):ExpandToGrid(4)
+ local materials,occupancy=terrain:ReadVoxels(region,4)
+ local minimum=region.CFrame.Position-region.Size/2
+ for ix=1,#materials do for iz=1,#materials[ix][1] do
+  local x,z=minimum.X+(ix-0.5)*4,minimum.Z+(iz-0.5)*4
+  local u,v=(x-spur.x)/spur.rx,(z-spur.z)/spur.rz
+  local angle=math.atan2(v,u)
+  -- Broad green crown with uneven fingers down the shoulders and a few rocky breaks.
+  local edge=0.66+0.09*math.sin(angle*3+index)+0.06*math.noise(x/42,z/48)
+  local radius=math.sqrt(u*u+v*v)
+  local rockyBreak=radius>0.32 and math.noise(x/24+index*3,z/28)>0.38
+  if radius<edge and not rockyBreak then
+   local surface
+   for iy=#materials[ix],1,-1 do if occupancy[ix][iy][iz]>0 then surface=iy;break end end
+   if surface then
+    for iy=surface,math.max(1,surface-2),-1 do
+     if occupancy[ix][iy][iz]>0 and materials[ix][iy][iz]==Enum.Material.Rock then
+      materials[ix][iy][iz]=Enum.Material.LeafyGrass;painted+=1
+     end
+    end
+   end
+  end
+ end end
+ -- Occupancies are passed through untouched: the tunnel and flight clearance stay intact.
+ terrain:WriteVoxels(region,4,materials,occupancy)
+ for i,spot in {{-0.25,0.09,29,"Broadleaf"},{0.26,-0.12,25,"Birch"},{0.07,0.35,23,"CherryBlossom"}} do
+  local x,z=spur.x+spot[1]*spur.rx,spur.z+spot[2]*spur.rz
+  local tree=Instance.new("Model");tree.Name="FoothillTree";tree.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
+  tree:SetAttribute("FoothillCrown",index);tree:SetAttribute("Elevation",ground(x,z))
+  Scenery.tree(tree,V(x,ground(x,z),z),spot[3],spot[4],index*1.4+i)
+  tree.Parent=world.Woodlands;treeCount+=1
+ end
+ for i,spot in {{-0.1,-0.26},{0.29,0.2},{-0.35,0.29}} do
+  local x,z=spur.x+spot[1]*spur.rx,spur.z+spot[2]*spur.rz
+  local patch=Instance.new("Model");patch.Name="FlowerPatch";patch.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
+  patch:SetAttribute("FoothillCrown",index)
+  Scenery.patch(patch,V(x,ground(x,z),z),ground,150000+index*100+i)
+  patch.Parent=world.MeadowAccents;patchCount+=1
+ end
+end
+terrain:SetAttribute("PaperFoothillCrownsV1",true)
+return string.format("Grassy foothill crowns: %d material cells painted, %d trees, %d flower/grass patches; terrain occupancy unchanged",painted,treeCount,patchCount)
+
+end
+print(foothills())
+local function forests()
+-- Preserve scattered trees and the six existing grove sites; spread grove crowns apart.
+local world=workspace.PaperFlightWorld
+local trees=world.Woodlands
+local storage=game.ServerStorage:FindFirstChild("PaperDeferredWorld")
+-- Work against the complete authored scenery, even after release preparation.
+if storage then for _,object in storage:GetChildren() do object.Parent=world[object:GetAttribute("TargetGroup")] end end
+local package=game.ReplicatedStorage.PaperFlight
+local Landscape=require(package.Landscape);local World=require(package.WorldData)
+local V=Vector3.new
+local groups,occupied={},{}
+for _,tree in trees:GetChildren() do
+ local group=tree:GetAttribute("ForestCluster")
+ if group then groups[group]=groups[group] or {};table.insert(groups[group],tree)
+ else table.insert(occupied,tree:GetAttribute("BasePosition")) end
+end
+local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Include;params.FilterDescendantsInstances={workspace.Terrain}
+local replacements={}
+for group=1,6 do
+ local previous=assert(groups[group],"Missing existing forest grove")
+ local center=trees:GetAttribute("ForestCenter"..group)
+ if not center then
+  center=Vector3.zero;for _,tree in previous do center+=tree:GetAttribute("BasePosition") end
+  center/=#previous;trees:SetAttribute("ForestCenter"..group,center)
+ end
+ -- Two offset clearings keep ponds away from existing scattered trees and flowers.
+ local pondOffset=({[1]=V(-20,0,100),[3]=V(-100,0,20)})[group]
+ local pond=pondOffset and center+pondOffset
+ if pond then trees:SetAttribute("ForestPond"..group,pond) end
+ local random=Random.new(61403+group*173);local fresh={}
+ for attempt=1,1200 do
+  if #fresh==14 then break end
+  local angle=random:NextNumber(0,math.pi*2);local radius=math.sqrt(random:NextNumber())*190
+  local x,z=center.X+math.cos(angle)*radius,center.Z+math.sin(angle)*radius
+  if pond and Vector2.new(x-pond.X,z-pond.Z).Magnitude<66 then continue end
+  local y,rock=Landscape.height(x,z)
+  if y<3 or y>980 or rock then continue end
+  local hit=workspace:Raycast(V(x,y+24,z),V(0,-64,0),params)
+  if not hit or hit.Normal.Y<0.68 then continue end
+  local base=hit.Position;local allowed=true
+  for _,other in occupied do if Vector2.new(x-other.X,z-other.Z).Magnitude<65 then allowed=false;break end end
+  if not allowed then continue end
+  for _,animal in World.Animals do if Vector2.new(x-animal.position.X,z-animal.position.Z).Magnitude<105 then allowed=false;break end end
+  if not allowed then continue end
+  for _,ring in World.Rings do
+   local offset=base-ring.position;local along=offset:Dot(ring.normal)
+   if math.abs(along)<110 and (offset-ring.normal*along).Magnitude<70 then allowed=false;break end
+  end
+  if not allowed then continue end
+  local original=previous[#fresh%#previous+1]
+  local clone=original:Clone();local oldBase=clone:GetAttribute("BasePosition")
+  clone:PivotTo(CFrame.new(base-oldBase)*clone:GetPivot())
+  clone:SetAttribute("BasePosition",base);clone:SetAttribute("Elevation",base.Y)
+  clone:SetAttribute("ForestSpacing",65)
+  table.insert(fresh,clone);table.insert(occupied,base)
+ end
+ assert(#fresh==14,"Could not place fourteen well-spaced trees in grove "..group)
+ replacements[group]=fresh
+end
+for group,fresh in replacements do
+ for _,tree in groups[group] do tree:Destroy() end
+ for _,tree in fresh do tree.Parent=trees end
+end
+return "Six open groves: 14 trees each, 65-stud minimum trunk spacing, 190-stud planting radius"
+
+end
+print(forests())
+local function ponds()
+-- Two small, fixed-seed discoveries among six groves; leave the other four dry.
+local world=workspace.PaperFlightWorld
+local terrain=workspace.Terrain
+local V=Vector3.new
+local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Include
+params.FilterDescendantsInstances={terrain};params.IgnoreWater=true
+local count=0
+for _,group in {1,3} do
+ local center=assert(world.Woodlands:GetAttribute("ForestPond"..group),"Run grove spacing before pond dressing")
+ local key="PaperForestPondV1_"..group
+ if terrain:GetAttribute(key) then count+=1;continue end
+ local waterY=math.huge
+ for i=0,11 do
+  local angle=i*math.pi/6
+  local hit=workspace:Raycast(V(center.X+math.cos(angle)*48,center.Y+40,center.Z+math.sin(angle)*40),V(0,-100,0),params)
+  assert(hit,"Pond shoreline must lie on existing terrain")
+  waterY=math.min(waterY,hit.Position.Y-1)
+ end
+ local region=Region3.new(V(center.X-52,waterY-16,center.Z-44),V(center.X+52,waterY+20,center.Z+44)):ExpandToGrid(4)
+ local materials,occupancy=terrain:ReadVoxels(region,4)
+ local minimum=region.CFrame.Position-region.Size/2
+ -- Only this small basin is changed. Keep a session-only undo snapshot.
+ local backup=game.ServerStorage:FindFirstChild("PaperFlightBackups")
+ if backup then
+  local first=minimum/4;local last=(minimum+region.Size)/4-Vector3.one
+  local saved=terrain:CopyRegion(Region3int16.new(Vector3int16.new(first.X,first.Y,first.Z),Vector3int16.new(last.X,last.Y,last.Z)))
+  saved.Name=key;saved.Parent=backup
+ end
+ for ix=1,#materials do for iz=1,#materials[ix][1] do
+  local x,z=minimum.X+(ix-.5)*4,minimum.Z+(iz-.5)*4
+  local u,v=(x-center.X)/48,(z-center.Z)/40
+  local angle=math.atan2(v,u)
+  local radius=math.sqrt(u*u+v*v)/(1+.035*math.sin(angle*3+group))
+  if radius>=1 then continue end
+  local surface
+  for iy=#materials[ix],1,-1 do
+   if occupancy[ix][iy][iz]>0 then surface=minimum.Y+(iy-1+occupancy[ix][iy][iz])*4;break end
+  end
+  assert(surface,"Pond basin must have a solid floor")
+  local blend=math.clamp((radius-.55)/.45,0,1)
+  blend=blend*blend*(3-2*blend)
+  local floorY=(waterY-6)*(1-blend)+surface*blend
+  for iy=1,#materials[ix] do
+   local bottom=minimum.Y+(iy-1)*4
+   if bottom>=floorY then
+    local water=math.clamp((waterY-bottom)/4,0,1)
+    materials[ix][iy][iz]=water>0 and Enum.Material.Water or Enum.Material.Air
+    occupancy[ix][iy][iz]=water
+   elseif bottom+4>floorY then
+    materials[ix][iy][iz]=radius<.7 and Enum.Material.Ground or Enum.Material.LeafyGrass
+    occupancy[ix][iy][iz]=math.clamp((floorY-bottom)/4,0,1)
+   end
+  end
+ end end
+ -- Clear existing solid channels before writing water into the basin.
+ terrain:FillRegion(region,4,Enum.Material.Air)
+ terrain:WriteVoxels(region,4,materials,occupancy)
+ terrain:SetAttribute(key,true);count+=1
+end
+return string.format("%d shallow forest ponds, four dry groves; terrain water and grassy banks",count)
+
+end
+print(ponds())
 local function optimize()
 -- Edit-time, repeatable release preparation; gameplay geometry is preserved.
 local RF=game:GetService("ReplicatedFirst")

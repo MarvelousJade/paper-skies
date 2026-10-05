@@ -69,6 +69,9 @@ if staged then
  end
 end
 if not terrain:GetAttribute("PaperArchipelagoV5") then
+ -- A terrain rebuild also resets the two bounded pond migrations.
+ terrain:SetAttribute("PaperForestPondV1_1",nil)
+ terrain:SetAttribute("PaperForestPondV1_3",nil)
  -- Previous V2 terrain is reproducible from commit 5fd61e2; preserve the existing snapshot.
  -- Only clear the authored world bounds, in bounded operations.
  for x=-5632,4864-1,512 do for z=-8960,5632-1,512 do for y=-32,2304-1,512 do

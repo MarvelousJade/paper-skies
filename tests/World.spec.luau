@@ -252,17 +252,17 @@ for _,tree in trees do
  for _,other in trees do
   if other==tree then continue end
   local b=other:GetAttribute("BasePosition")
-  check(Vector2.new(base.X-b.X,base.Z-b.Z).Magnitude>=29.9,"New grove trunks cannot crowd existing trees")
+  check(Vector2.new(base.X-b.X,base.Z-b.Z).Magnitude>=64.9,"Grove trunks stay at least 65 studs from every other tree")
  end
 end
 local clusterCount=0
 for _,positions in clusters do
  clusterCount+=1
- check(#positions>=12,"Each grove retains a substantial group of trees")
+ check(#positions==14,"Each open grove keeps fourteen trees")
  for _,position in positions do
   local neighbor=math.huge
   for _,other in positions do if other~=position then neighbor=math.min(neighbor,(position-other).Magnitude) end end
-  check(neighbor>=29.9 and neighbor<75,"Grove trees have breathing room while remaining grouped")
+  check(neighbor>=64.9 and neighbor<140,"Grove trees have breathing room while remaining grouped")
  end
 end
 check(clusterCount==6,"Six loose groves complement scattered trees")
