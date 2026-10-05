@@ -157,3 +157,12 @@ Six groves now keep 14 trees each within a 190-stud planting radius, with at lea
 Four tunnel hills have irregular grassy crowns, three small trees each, and three flower/grass patches each. The hill material pass retains voxel occupancy, tunnel openings, and collision shape. Tree styles, rocky sides, wildlife, ring rewards, and flight tuning are preserved. Tools/DressFoothills, SpaceForestGroves, and DressForestPonds are included in the generated installer. The approved AI-generated thumbnail is saved at `assets/marketing/summit-thumbnail-v1.png`.
 
 These visuals are applied in Studio Edit and saved in source; publishing is a separate step. Existing local meadow material warnings and published-device verification limitations remain as documented above.
+
+
+## Current model and visibility optimization
+
+See [geometry audit](docs/GEOMETRY_AUDIT.md) for before/after counts and measured limitations. Trees now use 5,424 Parts instead of 71,477; stones use 160 instead of 6,400. Reusable flat-faceted solids retain the scenery palette and silhouettes. The installer creates these templates in Edit before building scenery; clients do not generate CSG or require editable-mesh permission.
+
+All nine animal landmarks have been restored to their authored encounter positions with terrain-grounded paws. They and their belly rings are Persistent; 286 rear foliage/detail models (1,295 Parts) remain staged. A new own-plane visibility watcher handles late replication and stream-in replacement. Camera-view streaming remains off/default.
+
+The startup skyline uses complete mountain footprints and compact point data, replacing the old incomplete summit fragments. This is a fallback geometry fix, not a claim of instant detailed terrain or visibility at all graphics settings. Studio Automatic graphics still culled distant loaded content; high-quality Studio inspection showed it. Published cold-join timing and device FPS remain to be measured. Current validation: 85,734 world-layout, 29,360 loading/detail, and four plane-visibility checks passed. Applied in Studio; published-device validation remains pending.
