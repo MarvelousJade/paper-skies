@@ -543,3 +543,14 @@ Roblox requires an uploaded audio asset and appropriate experience permissions. 
 The user uploaded PaperSkies as asset `126932983544303`. Inventory lookup found the matching title under the user account, and preloading returned Success with duration 76.8 seconds, matching the local export. The repository Config and Studio Config now use that ID; the generated installer was refreshed.
 
 A fresh Play session started the track automatically at volume 0.16 with looping enabled. Seeking to half a second before the end triggered one DidLoop event and continued playback from the beginning. Clicking Sound OFF muted music while time continued advancing, and Sound ON restored the volume without restarting the song. This supersedes D18's upload blocker. A full listening pass and published-client permission check are still pending. The track is left playing in Studio; changes remain uncommitted.
+
+
+### D20 Longer connected ring trails and a quieter introductory field
+
+After checkpoint `04acf33`, the user clarified that music should begin on entering the game and that “rain” meant the existing collectible rings. Entry music was already implemented and remains unchanged; it is not gated by the green Launch button.
+
+The sky layout now has twenty-four curved trails of ten rings each (240 sky rings, up from 136). Eighteen existing trails were lengthened and six outer routes added. Rings retain a 24-stud diameter, approximately 24-stud spacing, mixed neon colors, and optional collection in either direction. The minimum 1000-stud launch exclusion remains intact.
+
+The two additional meadow encounters were removed, leaving a bear and turtle in the introductory field and thirteen animals at their existing hidden locations. All seven species remain represented. Complete sideways belly rings are retained for the fifteen animals. Total rewards: 266.
+
+The scenery rebuild reused existing terrain and regenerated trees against the new ring corridors. All 4481 geometry/layout assertions passed, including opening/rim clearance, plane-width belly approaches, ten-ring minimum trail length, and exactly two visible field encounters. Close screenshots show the longer curved chain and the open-field bear/turtle placement. The scene contains 26,936 descendants. This is a design iteration, not a newly discovered defect; device performance and full keyboard-flown collection of every route remain unverified. Changes remain uncommitted.

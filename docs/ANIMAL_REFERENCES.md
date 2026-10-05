@@ -18,16 +18,16 @@ The screenshots guide style and silhouette. All in-game geometry comes from the 
 | Bear | 2 | 161 | Brown beveled body, block ears, protruding muzzle, broad paws |
 | SilverFox | 3 | 416 | Silver body, pointed snout, tall ears, white ruff and raised plume tail |
 | Turtle | 2 | 75 | Green limbs and head, stepped brown shell, flippers |
-| Raccoon | 3 | 162 | Dark eye mask, compact ears, ringed tail, gray-blue body |
-| CandyCat | 3 | 51 | Orange square head, large eyes, whiskers, cyan body and pink fins |
+| Raccoon | 2 | 162 | Dark eye mask, compact ears, ringed tail, gray-blue body |
+| CandyCat | 2 | 51 | Orange square head, large eyes, whiskers, cyan body and pink fins |
 | Gorilla | 2 | 264 | Dark hunched torso, shoulder plates, brow, heavy knuckles and silver saddle |
 | Mammoth | 2 | 838 | Layered blue/white coat, segmented trunk, curved cyan tusks and ice crest |
 
-All seventeen old encounter instances have been replaced. The previous shared quadruped builder was removed from the active world builder. Built-in stud surfaces are assigned to suitable broad block faces rather than adding thousands of individual stud Parts.
+All fifteen current encounter instances use the new models. Two extra field encounters were removed in the latest layout pass. The previous shared quadruped builder was removed from the active world builder. Built-in stud surfaces are assigned to suitable broad block faces rather than adding thousands of individual stud Parts.
 
 ## Placement and gameplay
 
-Locations and the discovery split remain unchanged: thirteen animals are behind mountains and four occupy introductory fields. The front encounters are a bear, turtle, candy cat, and raccoon. The models use a 0.62 authored scale and retain complete 24-stud belly rings facing sideways.
+Thirteen animals retain their locations behind mountains, and two occupy the introductory field. The front encounters are a bear and turtle; the extra meadow candy cat and raccoon were removed to keep the field open. The models use a 0.62 authored scale and retain complete 24-stud belly rings facing sideways.
 
 The body and leg proportions provide clearance for the required full rings. All animals remain static exploration landmarks; animation is not implemented.
 
@@ -35,6 +35,6 @@ The body and leg proportions provide clearance for the required full rings. All 
 
 Close views were inspected for each of the five new types; the gorilla and mammoth had already been inspected from three-quarter and side views. A floating/occluded fox-eye iteration was corrected with a forward face panel. Raccoon ears were shortened to distinguish them from the fox.
 
-All 2875 geometry/layout assertions passed, including visible ring-rim clearance samples, plane-width belly passages, sideways reward crossings, eight launch directions, and a check that every encounter uses the new roster and model builder.
+All 4481 geometry/layout assertions passed for the expanded ring layout, including visible ring-rim clearance samples, plane-width belly passages, sideways reward crossings, eight launch directions, and a check that every encounter uses the new roster and model builder.
 
-The rebuilt world has 22,152 descendants. Device performance and live keyboard-flown collection beneath the new roster remain unverified. These models are original adaptations of the reference style, not exact replicas.
+The rebuilt world has 26,936 descendants, including the expanded ring trails. Device performance and live keyboard-flown collection beneath the new roster remain unverified. These models are original adaptations of the reference style, not exact replicas.

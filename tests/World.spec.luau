@@ -40,7 +40,7 @@ for _,a in W.Animals do
   check(not workspace:Raycast(center-direction*70+off,direction*140,params),"Belly flight corridor blocked: "..a.species..a.id)
  end
 end
-check(hidden==13 and visible==4,"Four meadow animals complement thirteen hidden encounters")
+check(hidden==13 and visible==2,"Only two field animals complement thirteen hidden encounters")
 for _,summit in W.Summits do
  local ring
  for _,r in W.Rings do if r.group=="Summit "..summit.peak then ring=r;break end end
@@ -52,7 +52,7 @@ for _,summit in W.Summits do
  end
 end
 local kinds=0;for _ in species do kinds+=1 end
-check(kinds==7 and #W.Animals==17,"Seven animal species must be scattered through the lowlands")
+check(kinds==7 and #W.Animals==15,"Seven animal species must be scattered through the lowlands")
 for _,p in {Vector2.new(-700,380),Vector2.new(-400,700),Vector2.new(-550,534)} do
  check(math.abs(L.height(p.X,p.Y)-349)<0.1,"Launch plateau must have a broad flat summit")
 end
@@ -88,11 +88,11 @@ for _,animal in W.Animals do
 end
 local forward=0;local trails={}
 for _,a in W.Animals do
- if a.forwardMeadow then forward+=1;check(a.position.Z<0 and a.position.Y<110,"New wildlife belongs in the forward meadow") end
+ if a.forwardMeadow then forward+=1;check(a.position.Z<0 and a.position.Y<110,"Visible wildlife belongs in the forward field") end
 end
-for _,r in W.Rings do if r.group:find("Meandering") then trails[r.group]=true end end
+for _,r in W.Rings do if r.group:find("Meandering") then trails[r.group]=(trails[r.group] or 0)+1 end end
 local trailCount=0;for _ in trails do trailCount+=1 end
-check(forward==2,"Add two new forward-meadow animals")
+check(forward==2,"Keep exactly two open-field animals")
 check(trailCount>=18,"Reward trails must also fill gaps between landmarks")
 local bearings={};local front,back,left,right=0,0,0,0
 for _,peak in L.Peaks do

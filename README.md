@@ -39,17 +39,17 @@ Updraft strength was reduced from a previous mountain-zone maximum of 52 to 18 b
 
 The seven mountains, island lobes, ring trails, and thermals now surround the starting plateau. Tests require at least three mountains on either side of each main axis and no gap greater than 75 degrees between mountain bearings. Outer meadows remain behind the mountains.
 
-The world includes a broad flat launch plateau, varied mountain profiles, a lagoon, coastal water, four low foothill passages, and seventeen stylized animals across seven species. Four animals occupy introductory lowlands, including a candy cat and raccoon in the forward meadow; thirteen sit behind mountain silhouettes. All wildlife uses a 0.62 authored model scale.
+The world includes a broad flat launch plateau, varied mountain profiles, a lagoon, coastal water, four low foothill passages, and fifteen stylized animals across seven species. A bear and turtle occupy the open introductory field; thirteen animals sit behind mountain silhouettes. All wildlife uses a 0.62 authored model scale.
 
-There are 164 rewards: 136 rings on eighteen curved sky routes, four at foothill passages, seventeen rings beneath animals, and seven at mountain summits. No reward is within 1000 horizontal studs of launch. Sky rings are now 24 studs across and approximately 24 studs apart within each cluster. Summit rings are also 24 studs across; foothill rings are 28. Eight additional routes fill spaces between mountain approaches.
+There are 266 rewards: 240 rings on twenty-four curved sky routes, four at foothill passages, fifteen rings beneath animals, and seven at mountain summits. No reward is within 1000 horizontal studs of launch. Sky rings are now 24 studs across and approximately 24 studs apart within each cluster. Summit rings are also 24 studs across; foothill rings are 28. Each sky trail now contains ten consecutive rings; six new outer trails extend the exploration routes. Earlier field trails still fill spaces between mountain approaches.
 
-All seventeen encounters now use the reference-inspired roster: two bears, three silver foxes, two turtles, three raccoons, three candy cats, two gorillas, and two ice mammoths. The legacy lion/elephant/deer/fox/giraffe builder has been replaced. Distinct block-built silhouettes, stepped shells/ears, layered coats, and expressive faces follow the supplied screenshots. Reference filenames and modeling decisions are recorded in [Animal references](docs/ANIMAL_REFERENCES.md).
+All fifteen encounters use the reference-inspired roster: two bears, three silver foxes, two turtles, two raccoons, two candy cats, two gorillas, and two ice mammoths. The legacy lion/elephant/deer/fox/giraffe builder has been replaced. Distinct block-built silhouettes, stepped shells/ears, layered coats, and expressive faces follow the supplied screenshots. Reference filenames and modeling decisions are recorded in [Animal references](docs/ANIMAL_REFERENCES.md).
 
 Animal rewards are complete 24-stud circles facing the animal's side. Fly sideways beneath its belly, between the front and rear legs. Ring centers sit 18 studs above the sampled ground. Raised torsos and a longer front-to-rear stance provide clearance while retaining the 0.62 model scale.
 
 The seven summit rewards remain replicated and have small screen-sized halos for visibility at distance. Halos hide near the physical ring and on collection. Both visual segments and the halo are hidden in the collection event handler.
 
-Meadows now use LeafyGrass terrain material. An earlier attempt to set the non-scriptable Decoration property had silently failed; the material change was visually verified to remove the dense blades. The current scene has 22,152 descendants and 109 trees above elevation 180.
+Meadows now use LeafyGrass terrain material. An earlier attempt to set the non-scriptable Decoration property had silently failed; the material change was visually verified to remove the dense blades. The rebuilt scene has 26,936 descendants. Expanded trails also influence tree placement so flight corridors remain clear.
 
 **Open visual issue:** Far mountain terrain and its coarse proxies were absent in the Studio Play rear-view check, although the summit halos remained visible. The same rear mountains render correctly in Edit mode, and server terrain raycasts find them. Extra streaming focus made the rear terrain queryable on the client without resolving that screenshot. The exact rendering cause remains unconfirmed. This issue is tracked in the bug log; full distant-scene visibility is not claimed as verified.
 
@@ -119,6 +119,6 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The latest requested checkpoint is **`644c261` — Add rechargeable boost, aircraft flight limits and camera effects**. Earlier snapshots include `b4a7299`, `3cf87cc`, `5fd61e2`, and `d3fe27b`. Larger rings, denser routes, two additional meadow animals, and sideways full belly rings, and the complete reference-inspired wildlife roster remain uncommitted for user testing.
+The latest requested checkpoint is **`04acf33` — Add reference wildlife, expanded ring routes and flight audio**. The newer 24-trail layout and two-animal open field remain uncommitted for user testing.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.
