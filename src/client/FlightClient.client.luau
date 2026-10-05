@@ -87,6 +87,13 @@ local contents=Instance.new("Frame");contents.BackgroundTransparency=1;contents.
 local modalMode="Upgrades"
 local palette={Color3.fromRGB(255,249,228),Color3.fromRGB(125,212,255),Color3.fromRGB(255,183,153),Color3.fromRGB(189,229,160)}
 local wind=Instance.new("Sound");wind.Name="PaperFlightWind";wind.SoundId=Config.WindSoundId;wind.Looped=true;wind.Volume=0;wind.Parent=SoundService
+-- A small pool allows nearby pickups to overlap without restarting one shared sound.
+local chimes={}
+local chimeIndex=0
+for i=1,4 do
+ local s=Instance.new("Sound");s.Name="RingChime"..i;s.SoundId=Config.CollectSoundId
+ s.Volume=0.45;s.Parent=SoundService;chimes[i]=s
+end
 local function cursor(free)
  cursorFree=free
  UIS.MouseBehavior=mode~="Ready" and not free and Enum.MouseBehavior.LockCenter or Enum.MouseBehavior.Default
@@ -143,9 +150,18 @@ local function preview()
  heldPlane=package.Plane:Clone();heldPlane.Name="HeldPaperPlane";heldPlane:ScaleTo(0.2);heldPlane.Parent=camera;colorPlane(heldPlane)
  for _,v in heldPlane:GetDescendants() do if v:IsA("Trail") then v.Enabled=false end end
  trajectory=Instance.new("Folder");trajectory.Name="ThrowTrajectory";trajectory.Parent=camera
- for i=1,24 do
-  local p=Instance.new("Part");p.Name="AimDot";p.Shape=Enum.PartType.Ball;p.Size=Vector3.one*(i==24 and 1.4 or 0.48)
-  p.Material=Enum.Material.Neon;p.Color=Color3.fromRGB(83,255,144);p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.Parent=trajectory;dots[i]=p
+ local previous
+ for i=1,25 do
+  local p=Instance.new("Part");p.Name="AimAnchor";p.Size=Vector3.one*0.1
+  p.Transparency=1;p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.Parent=trajectory;dots[i]=p
+  local anchor=Instance.new("Attachment");anchor.Parent=p
+  if previous then
+   local beam=Instance.new("Beam");beam.Name="ContinuousAimCurve"
+   beam.Attachment0=previous;beam.Attachment1=anchor;beam.Width0=0.3;beam.Width1=0.3
+   beam.FaceCamera=true;beam.Color=ColorSequence.new(Color3.fromRGB(83,255,144))
+   beam.Transparency=NumberSequence.new(0.08);beam.LightEmission=1;beam.Segments=1;beam.Parent=trajectory
+  end
+  previous=anchor
  end
 end
 local function restoreRings()
@@ -264,9 +280,14 @@ remote.OnClientEvent:Connect(function(kind,data)
   distance.Text=string.format("%d studs  |  %d rings",data.distance,data.rings)
   region.Text=string.upper(data.region)
  elseif kind=="Ring" then
+  if collectedIds[data.id] then return end
   collectedIds[data.id]=true
+  if soundEnabled then
+   chimeIndex=chimeIndex%#chimes+1
+   local chime=chimes[chimeIndex];chime.PlaybackSpeed=1+(data.id%4)*0.045;chime:Play()
+  end
   local folder=workspace:FindFirstChild("PaperFlightWorld")
-  local rings=folder and folder:FindFirstChild("Gold")
+  local rings=folder and folder:FindFirstChild("Rings")
   local ring=rings and rings:FindFirstChild("Ring"..data.id)
   if ring then
    for _,p in ring:GetDescendants() do if p:IsA("BasePart") then p.LocalTransparencyModifier=1;table.insert(hiddenRings,p) end end
@@ -333,8 +354,8 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
   if previewClock>1/30 then
    previewClock=0;local stats=Flight.stats(profile.levels);local state=Flight.new(Config.Launch,yaw,pitch,stats)
    for i=1,#dots do
-    for _=1,6 do state=Flight.step(state,Flight.aimInput(state,yaw,pitch),1/60,stats) end
-    dots[i].Position=state.position
+    if i>1 then for _=1,6 do state=Flight.step(state,Flight.aimInput(state,yaw,pitch),1/60,stats) end end
+    dots[i].Position=(i==1 and heldPlane) and heldPlane:GetPivot().Position or state.position
    end
   end
   local focus=Config.ThrowStand+Vector3.new(0,2,0)
@@ -370,6 +391,25 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
   fill.BackgroundColor3=telemetry.boosting and Color3.fromRGB(117,235,255) or Color3.fromRGB(91,166,251)
   boostLabel.Text=fuel>0.01 and string.format("BOOST  %.1fs",fuel) or "BOOST EMPTY"
   boostButton.Text=telemetry.boosting and "BOOSTING" or "HOLD BOOST"
+ end
+end)
+-- Coarse distant terrain stays visible beyond streamed detail, without loading every tree.
+task.spawn(function()
+ local world=workspace:WaitForChild("PaperFlightWorld")
+ local vista=world:WaitForChild("DistantLandscape")
+ local tiles={}
+ for _,tile in vista:GetChildren() do
+  local center=tile:GetAttribute("Center")
+  if center then table.insert(tiles,{center=center,parts=tile:GetDescendants()}) end
+ end
+ while gui.Parent do
+  local eye=camera.CFrame.Position
+  for _,tile in tiles do
+   local d=(tile.center-eye).Magnitude
+   local fade=1-math.clamp((d-1100)/550,0,1)
+   for _,p in tile.parts do if p:IsA("BasePart") then p.Transparency=fade end end
+  end
+  task.wait(0.5)
  end
 end)
 updateHud();remote:FireServer("Sync")

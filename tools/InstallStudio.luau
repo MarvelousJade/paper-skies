@@ -16,7 +16,7 @@ local Config = {}
 Config.Launch = Vector3.new(-548.6, 362, 530)
 Config.ThrowStand = Vector3.new(-550, 360, 534)
 Config.MouseSensitivity = 0.0025
-Config.MaxAimYaw = math.rad(80)
+Config.MaxAimYaw = math.pi
 Config.ThrowDelay = 0.4
 Config.MaxPitch = math.rad(48)
 Config.MinPitch = math.rad(-65)
@@ -27,10 +27,12 @@ Config.StallSpeed = 54
 Config.RecoverySpeed = 76
 Config.TrimPitch = math.rad(-6)
 Config.MaxDuration = 240
-Config.WorldMin = Vector3.new(-4700,-20,-7800)
-Config.WorldMax = Vector3.new(4700,1800,2000)
+Config.WorldMin = Vector3.new(-5600,-20,-9300)
+Config.WorldMax = Vector3.new(5100,2600,3200)
 Config.RingValue = 10
-Config.CollectionRadius = 80
+Config.CollectionRadius = 12
+Config.RingMargin = 3.6
+Config.CollectSoundId = "rbxassetid://2415965014"
 Config.BoostDuration = 4.5
 Config.BoostAcceleration = 65
 Config.MaxSpeed = 250
@@ -116,63 +118,108 @@ return Flight
 ]=])
 write(package,"Landscape","ModuleScript",[=[
 --!strict
--- Broad low-frequency slopes keep grassy ground smooth. Mountain detail is confined to rock.
+-- Shape references: NPS Rocky Mountain ridges/cirques and Monument Valley mesa silhouettes.
+-- Low-frequency meadow relief remains separate from broken mountain surfaces.
 local Landscape={}
 Landscape.Islands={
- {x=-350,z=-950,rx=2250,rz=2650},
- {x=1050,z=-4050,rx=2100,rz=2050},
- {x=-2950,z=-3500,rx=980,rz=1200},
- {x=3000,z=-1350,rx=950,rz=1350},
+ {x=-350,z=-950,rx=2250,rz=2650},{x=1050,z=-4050,rx=2100,rz=2050},
+ {x=-2950,z=-3500,rx=980,rz=1200},{x=3000,z=-1350,rx=950,rz=1350},
  {x=-950,z=-6500,rx=1380,rz=800},
+ -- Broad lowland extensions on the far sides of the mountains retain soft coastal edges.
+ {x=-2600,z=-1900,rx=1300,rz=1500},{x=2700,z=-2350,rx=1400,rz=1700},
+ {x=-700,z=-5300,rx=1500,rz=1500},{x=2700,z=-6300,rx=1450,rz=1750},
+ {x=-3900,z=-5000,rx=1100,rz=1400},{x=-1000,z=-7600,rx=1500,rz=1150},
+ {x=2250,z=1450,rx=1500,rz=1200},
 }
 Landscape.Peaks={
- {x=-1710,z=-850,rx=650,rz=950,h=650},
- {x=1530,z=-1150,rx=640,rz=1050,h=720},
- {x=-650,z=-4050,rx=690,rz=890,h=610},
- {x=2200,z=-4820,rx=650,rz=900,h=780},
- {x=-2980,z=-3650,rx=560,rz=650,h=430},
- {x=-800,z=-6520,rx=610,rz=520,h=480},
- {x=-650,z=-1500,rx=300,rz=330,h=220},
- {x=880,z=-3350,rx=360,rz=360,h=290},
+ {x=-1710,z=-850,rx=650,rz=950,h=1550,style="ridge",angle=-0.22,seed=11},
+ {x=1530,z=-1150,rx=640,rz=1050,h=880,style="massif",angle=0.3,seed=23},
+ {x=-650,z=-4050,rx=690,rz=890,h=620,style="table",angle=-0.45,seed=37},
+ {x=2200,z=-4820,rx=650,rz=900,h=1900,style="spire",angle=0.2,seed=51},
+ {x=-2980,z=-3650,rx=560,rz=650,h=430,style="broken",angle=0.65,seed=67},
+ {x=-800,z=-6520,rx=610,rz=520,h=730,style="massif",angle=-0.3,seed=79},
+ {x=980,z=780,rx=560,rz=660,h=560,style="broken",angle=-0.6,seed=91},
 }
-Landscape.Tunnels={
- {name="Meadow Arch",center=Vector3.new(-650,158,-1500),normal=Vector3.new(0,0,-1),length=720,radius=49,mouth=70},
- {name="Azure Mountain Pass",center=Vector3.new(1530,335,-1150),normal=Vector3.new(1,0,0),length=1600,radius=70,mouth=220},
- {name="Lake Stone Gate",center=Vector3.new(880,187,-3350),normal=Vector3.new(0,0,-1),length=820,radius=57,mouth=90},
-}
-function Landscape.height(x:number,z:number): (number,boolean)
+function Landscape.baseHeight(x:number,z:number): number
  local h=-30
  for _,island in Landscape.Islands do
   local d=math.sqrt(((x-island.x)/island.rx)^2+((z-island.z)/island.rz)^2)
-  local edge=math.clamp((1-d)/0.23,0,1)
-  local coast=edge*edge*(3-2*edge)
-  local rolling=61+math.noise(x/950,z/1050)*46+math.noise(x/470,z/510)*10
+  local edge=math.clamp((1-d)/0.23,0,1);local coast=edge*edge*(3-2*edge)
+  local rolling=61+math.noise(x/1400,z/1550)*28
   h=math.max(h,-24+coast*(rolling+24))
  end
- -- A broad lagoon connects to the open sea, instead of isolated puddles.
  local lake=math.sqrt(((x-90)/720)^2+((z+2120)/950)^2)
  if lake<1.18 then
   local t=math.clamp((lake-0.82)/0.36,0,1)
   h=math.min(h,-22+t*t*(3-2*t)*115)
  end
- local rocky=false
+ return h
+end
+-- Low foothill buttresses have ground-level openings, not bores through the main summits.
+Landscape.Spurs={
+ {name="Fern Arch",x=-980,z=-1100,rx=145,rz=150,h=105,normal=Vector3.zAxis},
+ {name="East Foothill Hollow",x=825,z=-700,rx=145,rz=160,h=130,normal=Vector3.zAxis},
+ {name="Western Ledge",x=-1450,z=-3850,rx=155,rz=145,h=95,normal=Vector3.xAxis},
+ {name="Highland Root Arch",x=1450,z=-5100,rx=155,rz=145,h=115,normal=Vector3.zAxis},
+}
+Landscape.Tunnels={}
+for _,spur in Landscape.Spurs do
+ table.insert(Landscape.Tunnels,{name=spur.name,center=Vector3.new(spur.x,Landscape.baseHeight(spur.x,spur.z)+18,spur.z),
+  normal=spur.normal,length=420,radius=28,mouth=65})
+end
+function Landscape.height(x:number,z:number): (number,boolean,boolean)
+ local h=Landscape.baseHeight(x,z);local rocky=false;local mountain=false
  for _,peak in Landscape.Peaks do
   local dx=(x-peak.x)/peak.rx;local dz=(z-peak.z)/peak.rz
-  local d=math.sqrt(dx*dx+dz*dz)
+  local u=dx*math.cos(peak.angle)-dz*math.sin(peak.angle)
+  local v=dx*math.sin(peak.angle)+dz*math.cos(peak.angle)
+  local d=math.sqrt(u*u+v*v)
   if d<1 then
-   local ridge=math.max(0,1-d)^1.4
-   local detail=math.noise(x/145,z/170)*38*ridge
-   local top=48+peak.h*ridge+detail
-   if top>h then h=top;rocky=ridge>0.085 end
+   local falloff=math.max(0,1-d)
+   local shape
+   if peak.style=="ridge" then
+    local crest=math.max(0,1-math.abs(u+0.12*math.sin(v*5))*2.5)
+    shape=falloff^0.7*(0.4+0.6*crest)*(0.86+0.14*math.cos(v*12))
+   elseif peak.style=="massif" then
+    local left=math.max(0,1-math.sqrt((u+0.26)^2*1.8+(v-0.1)^2*2))
+    local right=math.max(0,1-math.sqrt((u-0.25)^2*2+(v+0.18)^2*1.6))
+    shape=math.min(falloff*2.5,math.max(left,right)^0.75)
+   elseif peak.style=="table" then
+    shape=math.min(1,falloff*2.3)^0.65*(0.93+0.07*math.noise(u*4,v*4))
+   elseif peak.style=="spire" then
+    local rib=0.83+0.17*math.cos(math.atan2(v,u)*5+d*4)
+    shape=falloff^1.08*rib
+   else
+    shape=falloff^0.78*(0.7+0.3*math.abs(math.sin(u*7+v*4)))
+   end
+   -- Broad gullies and broken strata change the silhouette; small noise only accents rock.
+   local gully=(1-math.abs(math.noise(x/210+peak.seed,z/240)))*0.1
+   local detail=math.noise(x/72+peak.seed,z/95)*35+math.noise(x/31,z/43+peak.seed)*11
+   local top=48+peak.h*math.max(0,shape-gully*falloff)+detail*falloff
+   if top>h then
+    h=top;mountain=true
+    local shelf=math.noise(x/190+peak.seed,z/230)>-0.08
+    rocky=not ((d>0.38 and d<0.97 and h<1050 and shelf) or (peak.style=="table" and d<0.32))
+   end
   end
  end
- -- Retain the established launch position and support the stone deck.
- local cliff=(x+550)^2+(z-653)^2
- if cliff<188^2 then
-  local top=169+math.sqrt(188^2-cliff)
-  if top>h then h=top;rocky=true end
+ for _,spur in Landscape.Spurs do
+  local d=math.sqrt(((x-spur.x)/spur.rx)^2+((z-spur.z)/spur.rz)^2)
+  if d<1 then
+   local top=Landscape.baseHeight(spur.x,spur.z)+spur.h*math.max(0,1-d*d)^0.65
+   if top>h then h=top;rocky=true;mountain=true end
+  end
  end
- return h,rocky
+ -- Broad 520 x 540 summit with angular cliff shoulders. No spherical launch mound.
+ local dx=math.abs((x+550)/260);local dz=math.abs((z-805)/270)
+ local mesa=math.max(dx,dz)
+ if mesa<1.75 then
+  local slope=math.clamp((1.75-mesa)/0.75,0,1)
+  local top=42+307*slope^0.55
+  if mesa>1 then top+=math.noise(x/70,z/85)*13*(1-slope) end
+  if top>h then h=top;mountain=true;rocky=mesa>1.01 end
+ end
+ return h,rocky,mountain
 end
 return Landscape
 ]=])
@@ -196,6 +243,60 @@ World.Thermals={
  {center=Vector3.new(-2200,0,-3700),radius=280,height=1000,strength=42},
  {center=Vector3.new(-750,0,-5850),radius=300,height=1200,strength=44},
 }
+-- Two visible lowland encounters; the remaining wildlife is hidden behind mountain silhouettes.
+-- Seeded rejection sampling keeps every animal off slopes and makes discovery placement reproducible.
+World.Animals={}
+local random=Random.new(261004)
+local species={"Lion","Elephant","Deer","Fox","Giraffe"}
+local launch=Vector3.new(-550,370,534)
+local rearCounts={}
+local function hiddenBehind(x,z,y)
+ for index,peak in Landscape.Peaks do
+  if (rearCounts[index] or 0)>=3 then continue end
+  local toPeak=Vector2.new(peak.x-launch.X,peak.z-launch.Z)
+  local toAnimal=Vector2.new(x-launch.X,z-launch.Z)
+  local along=toAnimal:Dot(toPeak.Unit)
+  local side=math.abs(toAnimal.X*toPeak.Unit.Y-toAnimal.Y*toPeak.Unit.X)
+  if along>toPeak.Magnitude+math.min(peak.rx,peak.rz)*0.7
+   and side<math.min(peak.rx,peak.rz)*0.85
+   and (Vector2.new(x-peak.x,z-peak.z)).Magnitude<2200 then
+   local occluded=false
+   for step=1,19 do
+    local t=step/20
+    local sight=launch:Lerp(Vector3.new(x,y+35,z),t)
+    if Landscape.height(sight.X,sight.Z)>sight.Y+50 then occluded=true;break end
+   end
+   if occluded then return index end
+  end
+ end
+ return nil
+end
+for attempt=1,60000 do
+ if #World.Animals>=15 then break end
+ local x=random:NextNumber(-4700,4100);local z=random:NextNumber(-8400,2300)
+ local y,_,mountain=Landscape.height(x,z)
+ if y<25 or y>110 or mountain or (Vector2.new(x+550,z-534)).Magnitude<1050 then continue end
+ local behind
+ if #World.Animals<2 then
+  if x< -700 or x>800 or z< -1300 or z>200 then continue end
+ else
+  behind=hiddenBehind(x,z,y)
+  if not behind then continue end
+ end
+ local flat=true
+ for _,offset in {Vector2.new(35,0),Vector2.new(-35,0),Vector2.new(0,45),Vector2.new(0,-45)} do
+  local level,_,onMountain=Landscape.height(x+offset.X,z+offset.Y)
+  if onMountain or math.abs(level-y)>2.5 then flat=false;break end
+ end
+ if not flat then continue end
+ for _,other in World.Animals do if (Vector3.new(x,y,z)-other.position).Magnitude<360 then flat=false;break end end
+ if flat then
+  table.insert(World.Animals,{id=#World.Animals+1,species=species[#World.Animals%#species+1],
+   position=Vector3.new(x,y,z),heading=random:NextNumber(-math.pi,math.pi),scale=0.62,behindPeak=behind})
+  if behind then rearCounts[behind]=(rearCounts[behind] or 0)+1 end
+ end
+end
+assert(#World.Animals==15,"Could not place all wildlife on clear lowland sites")
 World.Rings={}
 local palette={
  Color3.fromRGB(25,206,255),Color3.fromRGB(255,57,187),Color3.fromRGB(65,255,129),
@@ -205,31 +306,63 @@ local function add(position,normal,radius,color,value,group)
  table.insert(World.Rings,{id=#World.Rings+1,position=position,normal=normal.Unit,radius=radius,color=color,value=value,group=group})
 end
 -- Short optional trails are separated by open space. They reward exploration, not ordered checkpoints.
-local groups={
- {start=Vector3.new(-548.6,342,345),step=Vector3.new(0,-11,-94),count=6},
- {start=Vector3.new(-1070,315,-1000),step=Vector3.new(-76,-5,-68),count=5},
- {start=Vector3.new(0,370,-1400),step=Vector3.new(92,5,-58),count=6},
- {start=Vector3.new(380,270,-2460),step=Vector3.new(-90,-2,-75),count=5},
- {start=Vector3.new(1450,425,-2750),step=Vector3.new(-45,9,-108),count=6},
- {start=Vector3.new(-2700,405,-3000),step=Vector3.new(-58,4,-95),count=5},
- {start=Vector3.new(900,440,-3900),step=Vector3.new(95,11,-70),count=6},
- {start=Vector3.new(-100,490,-5050),step=Vector3.new(-100,0,-95),count=5},
- {start=Vector3.new(-1480,355,-6140),step=Vector3.new(103,4,-60),count=6},
- {start=Vector3.new(2990,325,-1320),step=Vector3.new(10,-3,-110),count=5},
+local routes={
+ {center=Vector3.new(-1400,280,-1700),radius=270,start=0.2,count=5},
+ {center=Vector3.new(650,240,-1800),radius=240,start=-1.3,count=4},
+ {center=Vector3.new(-250,210,-2900),radius=300,start=0.6,count=5},
+ {center=Vector3.new(1300,360,-2900),radius=240,start=2.5,count=4},
+ {center=Vector3.new(-2750,310,-2850),radius=280,start=-0.5,count=5},
+ {center=Vector3.new(1200,400,-4150),radius=310,start=1.1,count=4},
+ {center=Vector3.new(-150,360,-5180),radius=250,start=0.4,count=5},
+ {center=Vector3.new(-1550,290,-6250),radius=230,start=1.8,count=4},
+ {center=Vector3.new(2970,300,-1750),radius=270,start=-1.6,count=5},
+ {center=Vector3.new(-2860,230,-4500),radius=220,start=2.1,count=4},
 }
-for group,route in groups do
+for group,route in routes do
+ local points={};local raise=0
  for i=1,route.count do
-  local p=route.start+route.step*(i-1)
-  -- Keep complete trails clear of slopes and peaks.
-  local ground=Landscape.height(p.X,p.Z)
-  p=Vector3.new(p.X,math.max(p.Y,ground+100),p.Z)
-  add(p,route.step,32,palette[(i+group-2)%#palette+1],10,"Sky trail "..group)
+  local a=route.start+(i-1)*0.15
+  local p=route.center+Vector3.new(math.cos(a)*route.radius,math.sin(i*0.5)*5,math.sin(a)*route.radius)
+  points[i]=p;raise=math.max(raise,Landscape.height(p.X,p.Z)+60-p.Y)
+ end
+ for i,p in points do
+  local a=route.start+(i-1)*0.15
+  add(p+Vector3.yAxis*raise,Vector3.new(-math.sin(a),0,math.cos(a)),6,palette[(i+group-2)%#palette+1],10,"Meandering route "..group)
  end
 end
 for i,tunnel in Landscape.Tunnels do
- for _,side in {-1,1} do
-  add(tunnel.center+tunnel.normal*tunnel.mouth*side,tunnel.normal,tunnel.radius-7,palette[(i-1)*2+1],25,tunnel.name)
+ add(tunnel.center,tunnel.normal,7,palette[(i-1)%#palette+1],25,tunnel.name)
+end
+for i,animal in World.Animals do
+ local normal=(CFrame.Angles(0,animal.heading,0)).LookVector
+ add(animal.position+Vector3.new(0,9,0),normal,6,palette[(i+1)%#palette+1],35,animal.species.." belly")
+end
+-- One small reward at each summit. It sits just above the tip, with no hole through the mountain.
+World.Summits={}
+for index,peak in Landscape.Peaks do
+ local top=Vector3.new(peak.x,Landscape.height(peak.x,peak.z),peak.z)
+ for dx=-peak.rx*0.55,peak.rx*0.55,20 do
+  for dz=-peak.rz*0.55,peak.rz*0.55,20 do
+   local y=Landscape.height(peak.x+dx,peak.z+dz)
+   if y>top.Y then top=Vector3.new(peak.x+dx,y,peak.z+dz) end
+  end
  end
+ local normal=Vector3.new(math.cos(peak.angle),0,math.sin(peak.angle))
+ local center=top+Vector3.yAxis*12
+ -- Account for the approach and wingspan as well as the exact summit sample.
+ for step=-90,90,6 do
+  for side=-4,4,4 do
+   local p=top+normal*step+Vector3.new(-normal.Z,0,normal.X)*side
+   center=Vector3.new(center.X,math.max(center.Y,Landscape.height(p.X,p.Z)+10),center.Z)
+  end
+ end
+ -- Broad rising air along the near face makes high summit rewards reachable by gliding.
+ local towardLaunch=Vector3.new(-550-peak.x,0,534-peak.z).Unit
+ local width=math.max(peak.rx,peak.rz)
+ table.insert(World.Thermals,{center=Vector3.new(peak.x,0,peak.z)+towardLaunch*width*0.55,
+  radius=width*0.85,height=center.Y+180,strength=52})
+ table.insert(World.Summits,{position=top,ringPosition=center,peak=index})
+ add(center,normal,6,palette[(index+2)%#palette+1],60,"Summit "..index)
 end
 function World.lift(position:Vector3): number
  local value=0
@@ -460,7 +593,7 @@ local function collect(player,s,a,b)
   for y=math.floor(lo.Y/cellSize),math.floor(hi.Y/cellSize) do
    for z=math.floor(lo.Z/cellSize),math.floor(hi.Z/cellSize) do
     for _,ring in bins[key(x,y,z)] or {} do
-     if not s.collected[ring.id] and Flight.crossedRing(a,b,ring.position,ring.normal,ring.radius-3) then
+     if not s.collected[ring.id] and Flight.crossedRing(a,b,ring.position,ring.normal,ring.radius-Config.RingMargin) then
       s.collected[ring.id]=true;s.gold+=ring.value;s.count+=1
       send(player,"Ring",{id=ring.id,value=ring.value})
      end
@@ -668,6 +801,13 @@ local contents=Instance.new("Frame");contents.BackgroundTransparency=1;contents.
 local modalMode="Upgrades"
 local palette={Color3.fromRGB(255,249,228),Color3.fromRGB(125,212,255),Color3.fromRGB(255,183,153),Color3.fromRGB(189,229,160)}
 local wind=Instance.new("Sound");wind.Name="PaperFlightWind";wind.SoundId=Config.WindSoundId;wind.Looped=true;wind.Volume=0;wind.Parent=SoundService
+-- A small pool allows nearby pickups to overlap without restarting one shared sound.
+local chimes={}
+local chimeIndex=0
+for i=1,4 do
+ local s=Instance.new("Sound");s.Name="RingChime"..i;s.SoundId=Config.CollectSoundId
+ s.Volume=0.45;s.Parent=SoundService;chimes[i]=s
+end
 local function cursor(free)
  cursorFree=free
  UIS.MouseBehavior=mode~="Ready" and not free and Enum.MouseBehavior.LockCenter or Enum.MouseBehavior.Default
@@ -724,9 +864,18 @@ local function preview()
  heldPlane=package.Plane:Clone();heldPlane.Name="HeldPaperPlane";heldPlane:ScaleTo(0.2);heldPlane.Parent=camera;colorPlane(heldPlane)
  for _,v in heldPlane:GetDescendants() do if v:IsA("Trail") then v.Enabled=false end end
  trajectory=Instance.new("Folder");trajectory.Name="ThrowTrajectory";trajectory.Parent=camera
- for i=1,24 do
-  local p=Instance.new("Part");p.Name="AimDot";p.Shape=Enum.PartType.Ball;p.Size=Vector3.one*(i==24 and 1.4 or 0.48)
-  p.Material=Enum.Material.Neon;p.Color=Color3.fromRGB(83,255,144);p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.Parent=trajectory;dots[i]=p
+ local previous
+ for i=1,25 do
+  local p=Instance.new("Part");p.Name="AimAnchor";p.Size=Vector3.one*0.1
+  p.Transparency=1;p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.Parent=trajectory;dots[i]=p
+  local anchor=Instance.new("Attachment");anchor.Parent=p
+  if previous then
+   local beam=Instance.new("Beam");beam.Name="ContinuousAimCurve"
+   beam.Attachment0=previous;beam.Attachment1=anchor;beam.Width0=0.3;beam.Width1=0.3
+   beam.FaceCamera=true;beam.Color=ColorSequence.new(Color3.fromRGB(83,255,144))
+   beam.Transparency=NumberSequence.new(0.08);beam.LightEmission=1;beam.Segments=1;beam.Parent=trajectory
+  end
+  previous=anchor
  end
 end
 local function restoreRings()
@@ -845,9 +994,14 @@ remote.OnClientEvent:Connect(function(kind,data)
   distance.Text=string.format("%d studs  |  %d rings",data.distance,data.rings)
   region.Text=string.upper(data.region)
  elseif kind=="Ring" then
+  if collectedIds[data.id] then return end
   collectedIds[data.id]=true
+  if soundEnabled then
+   chimeIndex=chimeIndex%#chimes+1
+   local chime=chimes[chimeIndex];chime.PlaybackSpeed=1+(data.id%4)*0.045;chime:Play()
+  end
   local folder=workspace:FindFirstChild("PaperFlightWorld")
-  local rings=folder and folder:FindFirstChild("Gold")
+  local rings=folder and folder:FindFirstChild("Rings")
   local ring=rings and rings:FindFirstChild("Ring"..data.id)
   if ring then
    for _,p in ring:GetDescendants() do if p:IsA("BasePart") then p.LocalTransparencyModifier=1;table.insert(hiddenRings,p) end end
@@ -914,8 +1068,8 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
   if previewClock>1/30 then
    previewClock=0;local stats=Flight.stats(profile.levels);local state=Flight.new(Config.Launch,yaw,pitch,stats)
    for i=1,#dots do
-    for _=1,6 do state=Flight.step(state,Flight.aimInput(state,yaw,pitch),1/60,stats) end
-    dots[i].Position=state.position
+    if i>1 then for _=1,6 do state=Flight.step(state,Flight.aimInput(state,yaw,pitch),1/60,stats) end end
+    dots[i].Position=(i==1 and heldPlane) and heldPlane:GetPivot().Position or state.position
    end
   end
   local focus=Config.ThrowStand+Vector3.new(0,2,0)
@@ -951,6 +1105,25 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
   fill.BackgroundColor3=telemetry.boosting and Color3.fromRGB(117,235,255) or Color3.fromRGB(91,166,251)
   boostLabel.Text=fuel>0.01 and string.format("BOOST  %.1fs",fuel) or "BOOST EMPTY"
   boostButton.Text=telemetry.boosting and "BOOSTING" or "HOLD BOOST"
+ end
+end)
+-- Coarse distant terrain stays visible beyond streamed detail, without loading every tree.
+task.spawn(function()
+ local world=workspace:WaitForChild("PaperFlightWorld")
+ local vista=world:WaitForChild("DistantLandscape")
+ local tiles={}
+ for _,tile in vista:GetChildren() do
+  local center=tile:GetAttribute("Center")
+  if center then table.insert(tiles,{center=center,parts=tile:GetDescendants()}) end
+ end
+ while gui.Parent do
+  local eye=camera.CFrame.Position
+  for _,tile in tiles do
+   local d=(tile.center-eye).Magnitude
+   local fade=1-math.clamp((d-1100)/550,0,1)
+   for _,p in tile.parts do if p:IsA("BasePart") then p.Transparency=fade end end
+  end
+  task.wait(0.5)
  end
 end)
 updateHud();remote:FireServer("Sync")
@@ -1353,8 +1526,8 @@ end
 local function beam(parent,name,a,b,width,col)
  return part(parent,name,V(width,width,(b-a).Magnitude),CFrame.lookAt((a+b)/2,b),col)
 end
-local function shell(parent,name,cf,size,color)
- local m=model(name,parent);local rings={};local n=16;local bands=5
+local function shell(parent,name,cf,size,color,segments,latitudes)
+ local m=model(name,parent);local rings={};local n=segments or 16;local bands=latitudes or 5
  for j=1,bands-1 do
   rings[j]={};local latitude=-math.pi/2+j/bands*math.pi
   for i=1,n do local a=(i-1)/n*math.pi*2
@@ -1373,18 +1546,15 @@ end
 local terrain=workspace.Terrain
 local backups=SS:FindFirstChild("PaperFlightBackups") or Instance.new("Folder")
 backups.Name="PaperFlightBackups";backups.Parent=SS
-if not terrain:GetAttribute("PaperArchipelagoV2") then
- if terrain:GetAttribute("PaperArchipelagoV1") and not backups:FindFirstChild("TerrainBeforeV2") then
-  local saved=terrain:CopyRegion(Region3int16.new(Vector3int16.new(-650,-150,-1000),Vector3int16.new(650,225,400)))
-  saved.Name="TerrainBeforeV2";saved.Parent=backups
- end
- -- Clear only the previous authored footprint; preserve unrelated terrain outside it.
- for x=-2600,2600-1,512 do for z=-4000,1600-1,512 do for y=-32,900-1,512 do
-  local size=V(math.min(512,2600-x),math.min(512,900-y),math.min(512,1600-z))
+if not terrain:GetAttribute("PaperArchipelagoV4") then
+ -- Previous V2 terrain is reproducible from commit 5fd61e2; preserve the existing snapshot.
+ -- Only clear the authored world bounds, in bounded operations.
+ for x=-5376,4864-1,512 do for z=-8960,2816-1,512 do for y=-32,2304-1,512 do
+  local size=V(math.min(512,4864-x),math.min(512,2304-y),math.min(512,2816-z))
   terrain:FillBlock(CF(V(x,y,z)+size/2),size,Enum.Material.Air)
  end end;task.wait() end
  local chunk=256;local cells=64;local completed=0
- for x0=-4352,4096,chunk do for z0=-7424,1280,chunk do
+ for x0=-5376,4608,chunk do for z0=-8960,2560,chunk do
   local heights,surfaces={},{};local low,high=math.huge,-math.huge
   for ix=1,cells do
    heights[ix]={};surfaces[ix]={}
@@ -1420,7 +1590,7 @@ if not terrain:GetAttribute("PaperArchipelagoV2") then
    end
    terrain:WriteVoxels(Region3.new(V(x0,bottom,z0),V(x0+chunk,top,z0+chunk)),4,materials,occupancy)
   end
-  completed+=1;terrain:SetAttribute("PaperBuildProgress",completed.."/1190 terrain tiles")
+  completed+=1;terrain:SetAttribute("PaperBuildProgress",completed.."/1840 terrain tiles")
   if completed%8==0 then task.wait() end
  end end
  -- Carve actual open corridors through terrain, including both ends of each mountain.
@@ -1429,16 +1599,16 @@ if not terrain:GetAttribute("PaperArchipelagoV2") then
    terrain:FillBall(tunnel.center+tunnel.normal*offset,tunnel.radius,Enum.Material.Air)
   end
  end
- terrain:SetAttribute("PaperArchipelagoV2",true)
+ terrain:SetAttribute("PaperArchipelagoV4",true)
 end
 terrain:SetMaterialColor(Enum.Material.Grass,Color3.fromRGB(73,143,105))
 terrain:SetMaterialColor(Enum.Material.Rock,Color3.fromRGB(112,116,125))
 terrain:SetMaterialColor(Enum.Material.Sand,Color3.fromRGB(214,197,160))
 -- Flat water and smooth grass match the reference's broad, readable surfaces.
 pcall(function() terrain.Decoration=false end)
-local sea=model("Sea")
+local sea=model("Sea");sea.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
 -- Roblox caps individual Part dimensions, so use aligned tiles for the full ocean.
-for x=-5000,5000,2000 do for z=-7800,2200,2000 do
+for x=-5000,5000,2000 do for z=-9800,4200,2000 do
  local water=part(sea,"Water",V(2000,12,2000),CF(x,-7,z),Color3.fromRGB(101,151,186),Enum.Material.SmoothPlastic)
  water.Reflectance=0.08
 end end
@@ -1455,8 +1625,19 @@ local function crown(parent,center,size,color)
 end
 local function treeAt(x,z,index)
  local y,rock=ground(x,z)
- if y<3 or y>180 or rock or (V(x,0,z)-V(-550,0,580)).Magnitude<200 then return end
- local tree=model("Tree",trees);tree.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
+ -- Keep smaller wildlife and reward approaches clear of randomly placed trees.
+ for _,animal in World.Animals do
+  if Vector2.new(x-animal.position.X,z-animal.position.Z).Magnitude<95 then return end
+ end
+ for _,ring in World.Rings do
+  local offset=V(x,y,z)-ring.position;local along=offset:Dot(ring.normal)
+  local sideways=(offset-ring.normal*along).Magnitude
+  if math.abs(along)<100 and sideways<65 then return end
+ end
+ if y<3 or y>980 or rock or (V(x,0,z)-V(-550,0,580)).Magnitude<200 then return end
+ local slope=math.max(math.abs(ground(x+8,z)-ground(x-8,z)),math.abs(ground(x,z+8)-ground(x,z-8)))/16
+ if slope>1.1 then return end
+ local tree=model("Tree",trees);tree:SetAttribute("Elevation",y);tree.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
  local h=rng:NextNumber(28,49)
  local brown=Color3.fromRGB(99,78,63)
  if y<22 then
@@ -1480,11 +1661,35 @@ local function treeAt(x,z,index)
   crown(tree,tip,V(h*0.92,h*0.43,h*0.73),Color3.fromRGB(42+index%4*5,117+index%3*7,79))
  end
 end
-for i=1,760 do
- treeAt(rng:NextNumber(-3800,3800),rng:NextNumber(-7150,1050),i)
+for i=1,420 do
+ treeAt(rng:NextNumber(-4900,4500),rng:NextNumber(-8550,2450),i)
 end
 -- A few nearby groves keep the introductory valley visually grounded.
-for i=1,100 do treeAt(rng:NextNumber(-1250,600),rng:NextNumber(-1750,150),i) end
+for i=1,60 do treeAt(rng:NextNumber(-1250,600),rng:NextNumber(-1750,150),i) end
+for _,peak in Landscape.Peaks do
+ for i=1,90 do
+  local a=rng:NextNumber(0,math.pi*2);local r=rng:NextNumber(0.45,0.98)
+  treeAt(peak.x+math.cos(a)*peak.rx*r,peak.z+math.sin(a)*peak.rz*r,i*3)
+ end
+end
+-- Persistent coarse silhouettes make the whole archipelago readable beyond streaming range.
+-- Detailed terrain occludes these lower surfaces nearby; the client fades close proxy tiles.
+local vista=model("DistantLandscape");vista.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
+for x=-5376,4864-256,256 do for z=-8960,2816-256,256 do
+ local centerY,_,isMountain=Landscape.height(x+128,z+128)
+ if isMountain and centerY>170 then
+  local tile=model("VistaTile",vista);tile:SetAttribute("Center",V(x+128,centerY,z+128))
+  local function point(px,pz)
+   local h=ground(px,pz)
+   local low=math.min(h,ground(px+48,pz),ground(px-48,pz),ground(px,pz+48),(ground(px,pz-48)))
+   return V(px,math.max(-8,low-28),pz)
+  end
+  local a,b,c,d=point(x,z),point(x+256,z),point(x+256,z+256),point(x,z+256)
+  local _,rock=Landscape.height(x+128,z+128)
+  quad(tile,"DistantSurface",a,b,c,d,rock and Color3.fromRGB(105,113,123) or Color3.fromRGB(73,137,101))
+  for _,p in tile:GetDescendants() do if p:IsA("BasePart") then decor(p);p.CastShadow=false;p.Transparency=1 end end
+ end
+end end
 local deck=model("LaunchCliff")
 part(deck,"StoneDeck",V(110,8,125),CF(-550,353,586),Color3.fromRGB(132,142,152),Enum.Material.Slate)
 for _,x in {-606,-494} do
@@ -1510,7 +1715,7 @@ for _,ring in World.Rings do
   local a=(j-1)/48*math.pi*2;local b=j/48*math.pi*2
   local pa=cf:PointToWorldSpace(V(math.cos(a)*ring.radius,math.sin(a)*ring.radius,0))
   local pb=cf:PointToWorldSpace(V(math.cos(b)*ring.radius,math.sin(b)*ring.radius,0))
-  local segment=decor(beam(m,"NeonArc",pa,pb,0.9,ring.color));segment.Material=Enum.Material.Neon
+  local segment=decor(beam(m,"NeonArc",pa,pb,0.28,ring.color));segment.Material=Enum.Material.Neon
  end
 end
 local currents=model("ThermalMarkers")
@@ -1522,56 +1727,90 @@ for _,zone in World.Thermals do
  end
 end
 local animals=model("PaperAnimals")
-local function lion(name,origin,scale,heading)
- local m=model(name,animals);local cf=CF(origin)*CFrame.Angles(0,heading,0)
- local function p(v) return cf:PointToWorldSpace(v*scale) end
- local yellow=Color3.fromRGB(246,212,96);local pale=Color3.fromRGB(255,234,146)
- shell(m,"FoldedTorso",cf*CF(0,13*scale,0),V(13,12,24)*scale,yellow)
- shell(m,"FoldedHead",cf*CF(0,23*scale,-16*scale),V(12,12,10)*scale,pale)
- for i=1,20 do local a=i/20*math.pi*2;local b=(i+1)/20*math.pi*2
-  local top=V(math.cos(a)*10,23+math.sin(a)*10,-13)
-  local next=V(math.cos(b)*10,23+math.sin(b)*10,-13)
-  local innerA=V(math.cos(a)*5,23+math.sin(a)*5,-18)
-  local innerB=V(math.cos(b)*5,23+math.sin(b)*5,-18)
-  local ridge=V(math.cos((a+b)/2)*8,23+math.sin((a+b)/2)*8,-20)
-  triangle(m,"ManeFold",p(top),p(next),p(ridge),yellow)
-  triangle(m,"ManeFold",p(next),p(innerB),p(ridge),pale)
-  triangle(m,"ManeFold",p(innerB),p(innerA),p(ridge),yellow)
-  triangle(m,"ManeFold",p(innerA),p(top),p(ridge),pale)
+-- Shared folded construction with distinct silhouettes; open leg spacing is intentional.
+local function foldedAnimal(animal)
+ local m=model(animal.species..animal.id,animals);m.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
+ m:SetAttribute("Species",animal.species);m:SetAttribute("AnimalId",animal.id)
+ local cf=CF(animal.position)*CFrame.Angles(0,animal.heading,0)
+ local function p(v) return cf:PointToWorldSpace(v) end
+ local colors={Lion=Color3.fromRGB(242,202,78),Elephant=Color3.fromRGB(173,192,208),
+  Deer=Color3.fromRGB(202,161,117),Fox=Color3.fromRGB(230,133,71),Giraffe=Color3.fromRGB(233,196,101)}
+ local color=colors[animal.species];local light=color:Lerp(Color3.fromRGB(255,246,216),0.3)
+ local function shape(name,center,size,col)
+  return shell(m,name,cf*CF(center),size,col or color,8,4)
  end
- for _,x in {-4.5,4.5} do for _,z in {-8,8} do
-  local top=V(x,13,z);local bottom=V(x*1.13,1,z-1)
-  local t={top+V(-2,0,-2),top+V(2,0,-2),top+V(2,0,2),top+V(-2,0,2)}
-  local b={bottom+V(-1,0,-2),bottom+V(1,0,-2),bottom+V(1,0,1),bottom+V(-1,0,1)}
-  for k=1,4 do local n=k%4+1;quad(m,"LegFold",p(t[k]),p(t[n]),p(b[n]),p(b[k]),k%2==0 and yellow or pale) end
+ local bodySize=animal.species=="Elephant" and V(39,32,65) or V(32,25,58)
+ shape("FoldedBody",V(0,43,0),bodySize)
+ -- Tapered legs touch their actual terrain samples and leave a wide longitudinal corridor.
+ for _,x in {-15,15} do for _,z in {-20,20} do
+  local foot=p(V(x,0,z));local scaledFoot=animal.position+(foot-animal.position)*animal.scale
+  local y=animal.position.Y+(ground(scaledFoot.X,scaledFoot.Z)-animal.position.Y)/animal.scale
+  local a=p(V(x,42,z));local b=V(foot.X,y,foot.Z)
+  local right=cf.RightVector*3;local back=cf.LookVector*3
+  local t={a-right-back,a+right-back,a+right+back,a-right+back}
+  local q={b-right*0.7-back,b+right*0.7-back,b+right*0.7+back,b-right*0.7+back}
+  for j=1,4 do local k=j%4+1;quad(m,"LegFold",t[j],t[k],q[k],q[j],j%2==0 and color or light) end
  end end
+ local head=V(0,55,-36)
+ if animal.species=="Giraffe" then
+  shape("LongNeck",V(0,78,-24),V(13,70,14),light);head=V(0,113,-35)
+  for j=1,6 do
+   decor(part(m,"PaperSpot",V(13.2,5,5),cf*CF(0,55+j*8,-25),Color3.fromRGB(158,107,58)))
+  end
+ end
+ shape("FoldedHead",head,animal.species=="Elephant" and V(29,30,28) or V(23,22,27),light)
  for _,side in {-1,1} do
-  triangle(m,"Ear",p(V(side*3,27,-15)),p(V(side*6,33,-15)),p(V(side*6,26,-18)),yellow)
-  decor(part(m,"Eye",V(0.6,0.9,0.4)*scale,CF(p(V(side*3.2,24,-20.5))),Color3.fromRGB(70,58,39)))
+  decor(part(m,"Eye",V(1.1,1.5,0.6),cf*CF(head+V(side*7,2,-12.5)),Color3.fromRGB(42,45,47)))
  end
- triangle(m,"Nose",p(V(-1.5,22,-22)),p(V(1.5,22,-22)),p(V(0,20.5,-22)),Color3.fromRGB(112,82,43))
- local tail={V(0,16,11),V(0,13,21),V(0,16,28),V(0,21,30)}
- for i=1,#tail-1 do
-  quad(m,"TailFold",p(tail[i]+V(-0.8,0,0)),p(tail[i]+V(0.8,0,0)),p(tail[i+1]+V(0.4,0,0)),p(tail[i+1]+V(-0.4,0,0)),pale)
+ if animal.species=="Lion" then
+  for i=1,16 do
+   local a=i/16*math.pi*2;local b=(i+1)/16*math.pi*2;local mid=(a+b)/2
+   local a1=head+V(math.cos(a)*21,math.sin(a)*23,1)
+   local b1=head+V(math.cos(b)*21,math.sin(b)*23,1)
+   local a2=head+V(math.cos(a)*10,math.sin(a)*11,-9)
+   local b2=head+V(math.cos(b)*10,math.sin(b)*11,-9)
+   local ridge=head+V(math.cos(mid)*17,math.sin(mid)*18,-13)
+   triangle(m,"ManeFold",p(a1),p(b1),p(ridge),color)
+   triangle(m,"ManeFold",p(b1),p(b2),p(ridge),light)
+   triangle(m,"ManeFold",p(b2),p(a2),p(ridge),color)
+   triangle(m,"ManeFold",p(a2),p(a1),p(ridge),light)
+  end
+ elseif animal.species=="Elephant" then
+  for _,side in {-1,1} do
+   quad(m,"BroadEar",p(head+V(side*8,10,0)),p(head+V(side*30,8,3)),p(head+V(side*29,-19,1)),p(head+V(side*10,-13,-5)),light)
+  end
+  -- Trunk curls forward above the fly-through path.
+  local points={head+V(0,-3,-13),V(0,34,-54),V(0,29,-66),V(0,39,-72)}
+  for i=1,#points-1 do beam(m,"FoldedTrunk",p(points[i]),p(points[i+1]),6-i,color) end
+ elseif animal.species=="Deer" then
+  for _,side in {-1,1} do
+   local root=head+V(side*7,8,1);local tip=root+V(side*10,29,5)
+   beam(m,"Antler",p(root),p(tip),1.7,Color3.fromRGB(124,98,72))
+   for j=1,3 do
+    local at=root:Lerp(tip,j/4)
+    beam(m,"AntlerTine",p(at),p(at+V(side*8,9,-3)),1.2,Color3.fromRGB(139,114,82))
+   end
+  end
+ elseif animal.species=="Fox" then
+  for _,side in {-1,1} do
+   triangle(m,"PointedEar",p(head+V(side*5,5,0)),p(head+V(side*11,29,1)),p(head+V(side*14,3,-6)),color)
+  end
+  shape("WhiteMuzzle",head+V(0,-6,-12),V(17,10,16),Color3.fromRGB(246,233,207))
+  shape("BushyTail",V(7,45,43),V(20,18,39),color)
+  shape("TailTip",V(7,46,61),V(14,13,14),Color3.fromRGB(247,237,214))
+ else
+  for _,side in {-1,1} do
+   beam(m,"Ossicone",p(head+V(side*6,8,0)),p(head+V(side*6,20,0)),2,color)
+   triangle(m,"Ear",p(head+V(side*8,3,0)),p(head+V(side*23,9,0)),p(head+V(side*12,-3,-2)),light)
+  end
  end
- m.WorldPivot=cf;m.ModelStreamingMode=Enum.ModelStreamingMode.Atomic;m:SetAttribute("Style","Folded paper");return m
+ if animal.species~="Fox" then
+  beam(m,"Tail",p(V(0,48,27)),p(V(5,34,47)),2,color)
+ end
+ m.WorldPivot=cf;m:ScaleTo(animal.scale);m:SetAttribute("WildlifeScale",animal.scale)
+ if animal.behindPeak then m:SetAttribute("BehindPeak",animal.behindPeak) end
 end
-lion("GoldenPaperLion",V(760,ground(760,-750),-750),4.2,-0.5)
-lion("PaperLionCub",V(930,ground(930,-630),-630),1.6,-0.2)
-local function crane(origin,scale,heading)
- local m=model("OrigamiCrane",animals);local cf=CF(origin)*CFrame.Angles(0,heading,0)
- local function p(v) return cf:PointToWorldSpace(v*scale) end
- local ivory=Color3.fromRGB(250,244,224);local shadow=Color3.fromRGB(218,224,212)
- for _,side in {-1,1} do
-  triangle(m,"WingFold",p(V(0,7,0)),p(V(side*20,15,4)),p(V(side*4,5,10)),ivory)
-  triangle(m,"UnderFold",p(V(0,7,0)),p(V(side*4,5,10)),p(V(0,3,9)),shadow)
-  triangle(m,"Neck",p(V(0,7,0)),p(V(side*1,19,-4)),p(V(side*1,10,-1)),ivory)
-  triangle(m,"Beak",p(V(side*1,19,-4)),p(V(0,17,-13)),p(V(0,17,-3)),shadow)
-  triangle(m,"Tail",p(V(0,7,6)),p(V(side*1,19,18)),p(V(0,4,10)),ivory)
- end
-end
-crane(V(-1120,ground(-1120,-1200)+6,-1200),3.2,0.8)
-crane(V(160,ground(160,-2950)+20,-2950),4,-0.4)
+for _,animal in World.Animals do foldedAnimal(animal) end
 -- Preserve the prior world and generated asset experiment for later inspection.
 -- The terrain snapshot and prior scenery are retained together.
 local old=workspace:FindFirstChild("PaperFlightWorld");if old then old.Name="BeforeExploration_"..os.time();old.Parent=backups end
@@ -1596,7 +1835,7 @@ atmosphere.Density=0.17;atmosphere.Haze=0.55;atmosphere.Glare=0.3;atmosphere.Col
 local clouds=terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds");clouds.Cover=0.48;clouds.Density=0.35;clouds.Color=Color3.fromRGB(249,238,219);clouds.Parent=terrain
 workspace.CurrentCamera.CFrame=CFrame.lookAt(V(-950,600,920),V(-400,140,-500))
 terrain:SetAttribute("PaperBuildProgress","Complete")
-return string.format("Exploration world: %d neon rings, six regions, three fly-through rock passages.",#World.Rings)
+return string.format("World: %d small rings, %d wildlife landmarks, varied ridges and a broad launch mesa.",#World.Rings,#World.Animals)
 
 end
 print(exploration())

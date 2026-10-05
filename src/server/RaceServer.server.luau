@@ -108,7 +108,7 @@ local function collect(player,s,a,b)
   for y=math.floor(lo.Y/cellSize),math.floor(hi.Y/cellSize) do
    for z=math.floor(lo.Z/cellSize),math.floor(hi.Z/cellSize) do
     for _,ring in bins[key(x,y,z)] or {} do
-     if not s.collected[ring.id] and Flight.crossedRing(a,b,ring.position,ring.normal,ring.radius-3) then
+     if not s.collected[ring.id] and Flight.crossedRing(a,b,ring.position,ring.normal,ring.radius-Config.RingMargin) then
       s.collected[ring.id]=true;s.gold+=ring.value;s.count+=1
       send(player,"Ring",{id=ring.id,value=ring.value})
      end

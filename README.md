@@ -4,93 +4,100 @@ A Roblox paper-plane exploration prototype built with AI assistance for a softwa
 
 ## Play
 
-Press **F** to aim, move the mouse to aim the green trajectory, then click or press **F** again to throw. The visible character stays on the launch deck while a separate plane flies.
+Press **F** to aim, move the mouse to aim the continuous green trajectory, then click or press **F** again to throw. The character stays on the launch deck while a separate paper plane flies. Aiming supports all directions.
 
 - Mouse: steer the camera and plane.
-- **Hold Space: boost.** The blue bottom-right bar and seconds label show remaining boost time.
-- F: aim, throw, or end the current run and bank its gold.
+- Hold Space: boost. The bottom-right bar displays the remaining 4.5-second supply.
+- F: aim, throw, or end the run and bank gold.
 - Shift or Q: release/recapture the cursor.
 - R: end/reset the run.
 - Controller: left stick aims, A activates, B resets, R2 boosts.
-- Touch: drag to aim and hold the boost button. Actual device testing is pending.
+- Touch: drag to aim and hold the boost button. Device testing is pending.
 
-The base plane launches at **165 SPS**, settles toward roughly **150 SPS** in a shallow glide, and can reach **250 SPS** with boost or a dive. Boost provides **4.5 seconds per throw**; releasing Space preserves the remaining time, and holding it after depletion provides no thrust. Space no longer sets the glide angle.
+The base plane launches at 165 SPS, settles toward roughly 150 SPS in a shallow glide, and can reach 250 SPS with boost or a dive. Climbing spends speed; prolonged climbing causes a stall and nose drop. Diving rebuilds speed, and rising air supports exploration of high mountains. This is a tuned kinematic glider.
 
-Climbing spends speed. Continuing to pull up eventually causes a stall and automatic nose drop. Lowering the nose rebuilds speed. Spiraling air markers identify thermals that extend flights. This is a tuned kinematic glider, not a full aerodynamic simulation.
+Optional rings award gold once per flight. Collection hides the ring locally and plays a short chime; the next flight restores it. Spend gold through **Planes** on better folds, stronger throws, or faster turning. Customize selects a paper color; Explore lists the six regions.
 
-Pass through optional neon rings to collect gold. Sky trails contain five or six thin, large rings, with open space between groups. Ring colors vary across cyan, pink, green, violet, amber, and white. Six additional rings mark rock passages. These are reward routes, not an ordered race or required completion objective.
+## Current world
 
-Spend gold through **Planes** on better folds, stronger throws, or faster turning. The wallet also opens upgrades. Customize selects a paper color; Explore lists the six regions.
+Project: `G:\Roblox Projects\Roblox Paper Plane`. User screenshots are in `references/`.
 
-## Current world and references
+- Seven mountains with distinct ridges, broken slopes, table tops, and a tall spire. The tallest summit is about 1,765 studs high.
+- A broad 520 by 540 stud launch plateau, with a flat top at elevation 349.
+- Expanded lowlands behind the mountains, with coastal edges, water channels, and a central lagoon.
+- Fifteen folded animals across five species: lion, elephant, deer, fox, and giraffe. They use 62% of the previous linear size. Two occupy the introductory valley; thirteen sit on flat ground behind mountain silhouettes.
+- Seventy-one rings: 45 on ten short curved sky routes, four at low foothill passages, fifteen beneath animals, and seven just above mountain tips. No ring sits within 1,000 horizontal studs of launch.
+- Sky rings are 12 studs across with approximately 33–46 studs between neighbors. Belly and summit rings are also 12 studs across; foothill rings are 14. Rims are thin and use varied neon colors.
+- Thirteen thermal zones, including rising air near the mountain faces to support summit exploration.
+- Simplified broad grass surfaces with decorative grass blades disabled. This build has 143 trees above elevation 180.
+- Coarse persistent mountain silhouettes remain visible beyond detailed terrain streaming range. Nearby proxies fade out; the engine streaming-radius property is unchanged.
 
-The project is `G:\Roblox Projects\Roblox Paper Plane`. Reference screenshots are in `references/`, including the new 20:24–20:26 images.
+The current world contains about 18,700 descendants. Actual mobile performance, multiplayer streaming, and complete summit-route playtests remain pending.
 
-The expanded archipelago has broad grassy slopes, exposed rock patches, sandy shorelines, a lagoon, outlying islands, angular trees and palms, folded paper animals, and three actual passages carved through rock. The previous overlapping-ball grass terrain has been replaced by a continuous height field.
-
-There are 61 rings, six regions, six thermal zones, and 387 procedural trees in the current deterministic build. Water uses adjacent sections so individual part-size limits cannot truncate the ocean. The world contains around 12,000 descendants; mobile performance and production optimization remain unverified.
+Mountain silhouettes were informed by [NPS mountain geology photographs](https://www.nps.gov/romo/learn/nature/geologicactivity.htm) and this [Monument Valley photograph](https://upload.wikimedia.org/wikipedia/commons/9/9b/Over_Monument_Valley%2C_Navajo_Nation.jpg). These informed general shapes; no photographic textures were imported.
 
 ## Recreate in Studio
 
 1. Run `python tools/GenerateExplorationInstaller.py`.
-2. In Studio **Edit mode**, run `tools/InstallStudio.luau` through the command bar or Studio MCP.
-3. Enter Play mode to load fresh modules and test.
+2. In Studio Edit mode, run `tools/InstallStudio.luau` through the command bar or Studio MCP.
+3. Enter Play mode to load fresh modules.
 4. Save a local place file in Studio to retain the complete scene.
 
-Source files do not automatically sync with Studio. Studio place saving or publishing has not been performed by the assistant.
+Source files do not automatically sync with Studio. The assistant installed this revision in the active Studio scene; saving a place file and publishing were not performed.
 
-The installer updates the scripts and exploration world. On a fresh place it first creates the plane template using the earlier art builder. It archives existing scenery under `ServerStorage.PaperFlightBackups`, updates Lighting, hides the Baseplate, and relocates the spawn.
+The installer updates scripts and scenery. On a fresh place it creates the plane template with the earlier art builder. Previous scenery is archived under `ServerStorage.PaperFlightBackups`.
 
-Terrain generation is guarded by `PaperArchipelagoV2`. When replacing the previous terrain revision, the builder preserves a `TerrainBeforeV2` snapshot, clears the old authored footprint in bounded chunks, writes the new height field, then carves the tunnels. Terrain generation can take a few minutes. The active generator uses a fixed seed.
+Terrain generation is guarded by `PaperArchipelagoV4`. It clears only the authored footprint in bounded chunks, writes 1,840 height-field tiles, then carves four low foothill passages. The earlier terrain snapshot is retained; the V2 build is reproducible from commit `5fd61e2`. Generation can take several minutes. Re-running the same revision skips terrain regeneration and rebuilds scenery deterministically.
 
-The old `GenerateInstaller.py`, `InstallDreamValley.luau`, and `InstallModels.luau` are earlier iterations. Use **GenerateExplorationInstaller.py + InstallStudio.luau** for the current game.
+Earlier installers are retained for history. Use **GenerateExplorationInstaller.py + InstallStudio.luau** for the current game.
 
 ## Source layout
 
-- `src/shared/Config.luau`: speed, boost budget, bounds, wind sound, upgrades.
+- `src/shared/Config.luau`: speed, boost, world bounds, audio, upgrades.
 - `src/shared/Flight.luau`: gliding, stalls, finite boost, steering, swept ring crossing.
-- `src/shared/Landscape.luau`: island height field, peaks, and passage coordinates.
-- `src/shared/WorldData.luau`: ring trails, regions, and thermals.
+- `src/shared/Landscape.luau`: island extensions, mountain surfaces, launch plateau, foothill passages.
+- `src/shared/WorldData.luau`: reproducible wildlife placement, curved routes, summit rewards, thermals.
 - `src/shared/Economy.luau`: prices, level limits, balance validation.
-- `src/server/RaceServer.server.luau`: authoritative flights, collision, rewards, input validation, streaming prefetch, and cleanup. Filename retained from the original prototype.
+- `src/server/RaceServer.server.luau`: authoritative simulation, collision, rewards, input validation, streaming prefetch, cleanup.
 - `src/server/ProfileStore.luau`: Studio session progress and published-server persistence.
-- `src/client/FlightClient.client.luau`: mouse camera, throw pose, trajectory, HUD, upgrades, wind, streaks, boost input/meter.
-- `tools/BuildExplorationWorld.luau`: terrain, scenery, rings, and paper wildlife.
-- `tests/Flight.spec.luau`: 27 flight, boost, ring, and economy assertions.
-- `tests/World.spec.luau`: 76 clearance checks against actual terrain and scenery.
+- `src/client/FlightClient.client.luau`: camera, trajectory, HUD, wind, streaks, boost, collection feedback, distant silhouettes.
+- `tools/BuildExplorationWorld.luau`: terrain, scenery, rings, folded wildlife.
+- `tests/Flight.spec.luau`: 27 flight, pickup, and economy assertions.
+- `tests/World.spec.luau`: 414 geometry and discovery-layout assertions against actual scenery.
 
 ## Engineering decisions
 
-The client sends bounded steering axes and a boost-held boolean at 15 Hz, never claimed positions, speed, remaining fuel, or rewards. The server simulates at 60 Hz, validates input types/ranges, limits requests, and clears stale steering and boost requests after 0.5 seconds.
+The client sends bounded steering axes and a boost-held boolean at 15 Hz. The server simulates at 60 Hz, validates inputs, rate-limits requests, and clears stale steering and boost requests after 0.5 seconds. Positions, fuel, and rewards are computed on the server.
 
-Boost duration and acceleration are computed inside the same deterministic simulation as flight. Consumption is proportional to simulation time and cannot go below zero. The client renders the server's remaining-time value.
+Ring collection uses spatial bins and swept crossing through the ring opening, reserving a 3.6-stud margin for the plane. Each ring pays once per run. Clearing the session before banking prevents repeated resets from paying twice. Distance also awards a small amount of gold.
 
-Ring rewards use spatial bins and a swept crossing of the ring plane inside its opening. Touching a rim or merely approaching a ring does not pay. Each ring pays once per run. Clearing the session before banking its reward prevents repeated reset requests from paying twice. Rewards combine ring gold with a small distance bonus; upgrades are checked on the server.
+A replication focus follows the plane while the avatar stays behind. Bounded streaming requests preload scenery ahead of flight. The client interpolates a local visual plane. Wind and side streaks vary with speed. Collected rings remain hidden if they stream back during the same run.
 
-A replication focus follows the plane while the avatar stays behind. Bounded, non-blocking streaming requests preload scenery ahead of kinematic flight. Streaming quality still depends on device memory and network conditions.
+Wind asset: 687874741. Collection sound: [ding-ding stronger by The_Sink, asset 2415965014](https://create.roblox.com/store/asset/2415965014).
 
-The client interpolates a visual plane and hides the replicated copy locally. Wind and side streaks vary with speed. Collected rings remain hidden if they stream back in during that run. Wind asset: 687874741.
-
-Published servers use UpdateAsync with session ownership, a renewable lease, retries, periodic saves, and departure/shutdown saves. Failed profile loads do not create replacement empty profiles. **Studio progress is session-only; published persistence has not been end-to-end tested.**
+Published servers use UpdateAsync, session ownership, renewable leases, retries, periodic saves, and departure/shutdown saves. Failed loads do not create empty replacement profiles. **Studio progress is session-only; published persistence is not end-to-end verified.**
 
 ## Validation
 
-Verified on this revision:
+Current revision:
 
-- All 27 flight, boost, ring, and economy assertions passed.
-- The base plane reached 250 SPS during live keyboard-controlled boost.
-- Holding Space emptied the boost supply; the server stopped boosting and the HUD displayed an empty bar and BOOST EMPTY.
-- A live flight passed six rings and banked gold.
-- All three rock passages were clear along five parallel paths each, including margins 20 studs from the center.
-- All 61 ring centers were clear of terrain and scenery.
-- Terrain, water, angular trees, colored rings, and the live boost HUD were visually inspected.
+- All 27 flight, pickup, and economy assertions passed.
+- All 414 geometry/layout assertions passed: ring openings, foothill passages, belly flight envelopes, summit approaches, wildlife concealment, plateau flatness, and sky-route spacing.
+- Runtime presentation check: sending one server pickup event hid all 48 ring segments and played one loaded chime. Repeating the event did not replay it. This checks client feedback separately from physical flight collection.
+- Visually inspected expanded rear meadows, smaller wildlife, the highest summit ring, and the continuous aiming line.
+- Latest Play session started without console errors.
+- Generated installer and source whitespace checks passed.
 
-Earlier revision checks also verified correct upgrade deductions, rejection of malformed launch values, reset cleanup, no duplicate reset payouts, wind playback, and the avatar remaining at the deck during flight.
+Earlier revision checks verified 250 SPS boost, fuel exhaustion, live collection and banking, upgrade deductions, malformed launch rejection, reset cleanup, duplicate-payout prevention, wind playback, and the avatar remaining on the deck.
 
-Pending: user approval of handling/art, multiplayer tests, phone/tablet/controller testing, high latency/load profiling, and published streaming/audio/persistence verification. Collision currently sweeps the plane center rather than its full wingspan. Interpolation is implemented; client prediction/reconciliation is not.
+Pending: user approval of art/handling, complete flights to the new summit rewards, multiplayer, phone/tablet/controller, high-latency/load profiling, and published streaming/audio/persistence verification. Terrain collision sweeps the plane center rather than its full wingspan. Client prediction/reconciliation is not implemented.
+
+## Bugs and interview preparation
+
+See [Bugs and engineering lessons](docs/BUGS_AND_LESSONS.md) for observed failures, root causes, fixes, verification evidence, open limitations, and three interview stories. Confirmed bugs are distinguished from design iterations and preventive safeguards.
 
 ## Portfolio and Git
 
-The baseline commit is `d3fe27b`. The user approved a snapshot commit of the exploration revision. Future commits require user approval after playtesting.
+Baseline: `d3fe27b`. Last user-approved snapshot: `5fd61e2` (exploration, finite boost, neon trails). The current mountain/discovery revision remains uncommitted for playtesting.
 
-Keep readable source, reproducible builders, tests, and real development history. Place files are currently ignored by Git. Describe AI assistance accurately and be prepared to explain flight energy, boost budgeting, server validation, ring crossing, reward banking, streaming, and persistence tradeoffs.
+Keep readable source, reproducible builders, tests, and real development history. Place files are ignored by Git. Describe AI assistance accurately and be prepared to explain flight energy, boost budgeting, server validation, collection, reward banking, streaming, and persistence tradeoffs.

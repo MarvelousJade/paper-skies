@@ -36,8 +36,8 @@ end
 local function beam(parent,name,a,b,width,col)
  return part(parent,name,V(width,width,(b-a).Magnitude),CFrame.lookAt((a+b)/2,b),col)
 end
-local function shell(parent,name,cf,size,color)
- local m=model(name,parent);local rings={};local n=16;local bands=5
+local function shell(parent,name,cf,size,color,segments,latitudes)
+ local m=model(name,parent);local rings={};local n=segments or 16;local bands=latitudes or 5
  for j=1,bands-1 do
   rings[j]={};local latitude=-math.pi/2+j/bands*math.pi
   for i=1,n do local a=(i-1)/n*math.pi*2
@@ -56,18 +56,15 @@ end
 local terrain=workspace.Terrain
 local backups=SS:FindFirstChild("PaperFlightBackups") or Instance.new("Folder")
 backups.Name="PaperFlightBackups";backups.Parent=SS
-if not terrain:GetAttribute("PaperArchipelagoV2") then
- if terrain:GetAttribute("PaperArchipelagoV1") and not backups:FindFirstChild("TerrainBeforeV2") then
-  local saved=terrain:CopyRegion(Region3int16.new(Vector3int16.new(-650,-150,-1000),Vector3int16.new(650,225,400)))
-  saved.Name="TerrainBeforeV2";saved.Parent=backups
- end
- -- Clear only the previous authored footprint; preserve unrelated terrain outside it.
- for x=-2600,2600-1,512 do for z=-4000,1600-1,512 do for y=-32,900-1,512 do
-  local size=V(math.min(512,2600-x),math.min(512,900-y),math.min(512,1600-z))
+if not terrain:GetAttribute("PaperArchipelagoV4") then
+ -- Previous V2 terrain is reproducible from commit 5fd61e2; preserve the existing snapshot.
+ -- Only clear the authored world bounds, in bounded operations.
+ for x=-5376,4864-1,512 do for z=-8960,2816-1,512 do for y=-32,2304-1,512 do
+  local size=V(math.min(512,4864-x),math.min(512,2304-y),math.min(512,2816-z))
   terrain:FillBlock(CF(V(x,y,z)+size/2),size,Enum.Material.Air)
  end end;task.wait() end
  local chunk=256;local cells=64;local completed=0
- for x0=-4352,4096,chunk do for z0=-7424,1280,chunk do
+ for x0=-5376,4608,chunk do for z0=-8960,2560,chunk do
   local heights,surfaces={},{};local low,high=math.huge,-math.huge
   for ix=1,cells do
    heights[ix]={};surfaces[ix]={}
@@ -103,7 +100,7 @@ if not terrain:GetAttribute("PaperArchipelagoV2") then
    end
    terrain:WriteVoxels(Region3.new(V(x0,bottom,z0),V(x0+chunk,top,z0+chunk)),4,materials,occupancy)
   end
-  completed+=1;terrain:SetAttribute("PaperBuildProgress",completed.."/1190 terrain tiles")
+  completed+=1;terrain:SetAttribute("PaperBuildProgress",completed.."/1840 terrain tiles")
   if completed%8==0 then task.wait() end
  end end
  -- Carve actual open corridors through terrain, including both ends of each mountain.
@@ -112,16 +109,16 @@ if not terrain:GetAttribute("PaperArchipelagoV2") then
    terrain:FillBall(tunnel.center+tunnel.normal*offset,tunnel.radius,Enum.Material.Air)
   end
  end
- terrain:SetAttribute("PaperArchipelagoV2",true)
+ terrain:SetAttribute("PaperArchipelagoV4",true)
 end
 terrain:SetMaterialColor(Enum.Material.Grass,Color3.fromRGB(73,143,105))
 terrain:SetMaterialColor(Enum.Material.Rock,Color3.fromRGB(112,116,125))
 terrain:SetMaterialColor(Enum.Material.Sand,Color3.fromRGB(214,197,160))
 -- Flat water and smooth grass match the reference's broad, readable surfaces.
 pcall(function() terrain.Decoration=false end)
-local sea=model("Sea")
+local sea=model("Sea");sea.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
 -- Roblox caps individual Part dimensions, so use aligned tiles for the full ocean.
-for x=-5000,5000,2000 do for z=-7800,2200,2000 do
+for x=-5000,5000,2000 do for z=-9800,4200,2000 do
  local water=part(sea,"Water",V(2000,12,2000),CF(x,-7,z),Color3.fromRGB(101,151,186),Enum.Material.SmoothPlastic)
  water.Reflectance=0.08
 end end
@@ -138,8 +135,19 @@ local function crown(parent,center,size,color)
 end
 local function treeAt(x,z,index)
  local y,rock=ground(x,z)
- if y<3 or y>180 or rock or (V(x,0,z)-V(-550,0,580)).Magnitude<200 then return end
- local tree=model("Tree",trees);tree.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
+ -- Keep smaller wildlife and reward approaches clear of randomly placed trees.
+ for _,animal in World.Animals do
+  if Vector2.new(x-animal.position.X,z-animal.position.Z).Magnitude<95 then return end
+ end
+ for _,ring in World.Rings do
+  local offset=V(x,y,z)-ring.position;local along=offset:Dot(ring.normal)
+  local sideways=(offset-ring.normal*along).Magnitude
+  if math.abs(along)<100 and sideways<65 then return end
+ end
+ if y<3 or y>980 or rock or (V(x,0,z)-V(-550,0,580)).Magnitude<200 then return end
+ local slope=math.max(math.abs(ground(x+8,z)-ground(x-8,z)),math.abs(ground(x,z+8)-ground(x,z-8)))/16
+ if slope>1.1 then return end
+ local tree=model("Tree",trees);tree:SetAttribute("Elevation",y);tree.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
  local h=rng:NextNumber(28,49)
  local brown=Color3.fromRGB(99,78,63)
  if y<22 then
@@ -163,11 +171,35 @@ local function treeAt(x,z,index)
   crown(tree,tip,V(h*0.92,h*0.43,h*0.73),Color3.fromRGB(42+index%4*5,117+index%3*7,79))
  end
 end
-for i=1,760 do
- treeAt(rng:NextNumber(-3800,3800),rng:NextNumber(-7150,1050),i)
+for i=1,420 do
+ treeAt(rng:NextNumber(-4900,4500),rng:NextNumber(-8550,2450),i)
 end
 -- A few nearby groves keep the introductory valley visually grounded.
-for i=1,100 do treeAt(rng:NextNumber(-1250,600),rng:NextNumber(-1750,150),i) end
+for i=1,60 do treeAt(rng:NextNumber(-1250,600),rng:NextNumber(-1750,150),i) end
+for _,peak in Landscape.Peaks do
+ for i=1,90 do
+  local a=rng:NextNumber(0,math.pi*2);local r=rng:NextNumber(0.45,0.98)
+  treeAt(peak.x+math.cos(a)*peak.rx*r,peak.z+math.sin(a)*peak.rz*r,i*3)
+ end
+end
+-- Persistent coarse silhouettes make the whole archipelago readable beyond streaming range.
+-- Detailed terrain occludes these lower surfaces nearby; the client fades close proxy tiles.
+local vista=model("DistantLandscape");vista.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
+for x=-5376,4864-256,256 do for z=-8960,2816-256,256 do
+ local centerY,_,isMountain=Landscape.height(x+128,z+128)
+ if isMountain and centerY>170 then
+  local tile=model("VistaTile",vista);tile:SetAttribute("Center",V(x+128,centerY,z+128))
+  local function point(px,pz)
+   local h=ground(px,pz)
+   local low=math.min(h,ground(px+48,pz),ground(px-48,pz),ground(px,pz+48),(ground(px,pz-48)))
+   return V(px,math.max(-8,low-28),pz)
+  end
+  local a,b,c,d=point(x,z),point(x+256,z),point(x+256,z+256),point(x,z+256)
+  local _,rock=Landscape.height(x+128,z+128)
+  quad(tile,"DistantSurface",a,b,c,d,rock and Color3.fromRGB(105,113,123) or Color3.fromRGB(73,137,101))
+  for _,p in tile:GetDescendants() do if p:IsA("BasePart") then decor(p);p.CastShadow=false;p.Transparency=1 end end
+ end
+end end
 local deck=model("LaunchCliff")
 part(deck,"StoneDeck",V(110,8,125),CF(-550,353,586),Color3.fromRGB(132,142,152),Enum.Material.Slate)
 for _,x in {-606,-494} do
@@ -193,7 +225,7 @@ for _,ring in World.Rings do
   local a=(j-1)/48*math.pi*2;local b=j/48*math.pi*2
   local pa=cf:PointToWorldSpace(V(math.cos(a)*ring.radius,math.sin(a)*ring.radius,0))
   local pb=cf:PointToWorldSpace(V(math.cos(b)*ring.radius,math.sin(b)*ring.radius,0))
-  local segment=decor(beam(m,"NeonArc",pa,pb,0.9,ring.color));segment.Material=Enum.Material.Neon
+  local segment=decor(beam(m,"NeonArc",pa,pb,0.28,ring.color));segment.Material=Enum.Material.Neon
  end
 end
 local currents=model("ThermalMarkers")
@@ -205,56 +237,90 @@ for _,zone in World.Thermals do
  end
 end
 local animals=model("PaperAnimals")
-local function lion(name,origin,scale,heading)
- local m=model(name,animals);local cf=CF(origin)*CFrame.Angles(0,heading,0)
- local function p(v) return cf:PointToWorldSpace(v*scale) end
- local yellow=Color3.fromRGB(246,212,96);local pale=Color3.fromRGB(255,234,146)
- shell(m,"FoldedTorso",cf*CF(0,13*scale,0),V(13,12,24)*scale,yellow)
- shell(m,"FoldedHead",cf*CF(0,23*scale,-16*scale),V(12,12,10)*scale,pale)
- for i=1,20 do local a=i/20*math.pi*2;local b=(i+1)/20*math.pi*2
-  local top=V(math.cos(a)*10,23+math.sin(a)*10,-13)
-  local next=V(math.cos(b)*10,23+math.sin(b)*10,-13)
-  local innerA=V(math.cos(a)*5,23+math.sin(a)*5,-18)
-  local innerB=V(math.cos(b)*5,23+math.sin(b)*5,-18)
-  local ridge=V(math.cos((a+b)/2)*8,23+math.sin((a+b)/2)*8,-20)
-  triangle(m,"ManeFold",p(top),p(next),p(ridge),yellow)
-  triangle(m,"ManeFold",p(next),p(innerB),p(ridge),pale)
-  triangle(m,"ManeFold",p(innerB),p(innerA),p(ridge),yellow)
-  triangle(m,"ManeFold",p(innerA),p(top),p(ridge),pale)
+-- Shared folded construction with distinct silhouettes; open leg spacing is intentional.
+local function foldedAnimal(animal)
+ local m=model(animal.species..animal.id,animals);m.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
+ m:SetAttribute("Species",animal.species);m:SetAttribute("AnimalId",animal.id)
+ local cf=CF(animal.position)*CFrame.Angles(0,animal.heading,0)
+ local function p(v) return cf:PointToWorldSpace(v) end
+ local colors={Lion=Color3.fromRGB(242,202,78),Elephant=Color3.fromRGB(173,192,208),
+  Deer=Color3.fromRGB(202,161,117),Fox=Color3.fromRGB(230,133,71),Giraffe=Color3.fromRGB(233,196,101)}
+ local color=colors[animal.species];local light=color:Lerp(Color3.fromRGB(255,246,216),0.3)
+ local function shape(name,center,size,col)
+  return shell(m,name,cf*CF(center),size,col or color,8,4)
  end
- for _,x in {-4.5,4.5} do for _,z in {-8,8} do
-  local top=V(x,13,z);local bottom=V(x*1.13,1,z-1)
-  local t={top+V(-2,0,-2),top+V(2,0,-2),top+V(2,0,2),top+V(-2,0,2)}
-  local b={bottom+V(-1,0,-2),bottom+V(1,0,-2),bottom+V(1,0,1),bottom+V(-1,0,1)}
-  for k=1,4 do local n=k%4+1;quad(m,"LegFold",p(t[k]),p(t[n]),p(b[n]),p(b[k]),k%2==0 and yellow or pale) end
+ local bodySize=animal.species=="Elephant" and V(39,32,65) or V(32,25,58)
+ shape("FoldedBody",V(0,43,0),bodySize)
+ -- Tapered legs touch their actual terrain samples and leave a wide longitudinal corridor.
+ for _,x in {-15,15} do for _,z in {-20,20} do
+  local foot=p(V(x,0,z));local scaledFoot=animal.position+(foot-animal.position)*animal.scale
+  local y=animal.position.Y+(ground(scaledFoot.X,scaledFoot.Z)-animal.position.Y)/animal.scale
+  local a=p(V(x,42,z));local b=V(foot.X,y,foot.Z)
+  local right=cf.RightVector*3;local back=cf.LookVector*3
+  local t={a-right-back,a+right-back,a+right+back,a-right+back}
+  local q={b-right*0.7-back,b+right*0.7-back,b+right*0.7+back,b-right*0.7+back}
+  for j=1,4 do local k=j%4+1;quad(m,"LegFold",t[j],t[k],q[k],q[j],j%2==0 and color or light) end
  end end
+ local head=V(0,55,-36)
+ if animal.species=="Giraffe" then
+  shape("LongNeck",V(0,78,-24),V(13,70,14),light);head=V(0,113,-35)
+  for j=1,6 do
+   decor(part(m,"PaperSpot",V(13.2,5,5),cf*CF(0,55+j*8,-25),Color3.fromRGB(158,107,58)))
+  end
+ end
+ shape("FoldedHead",head,animal.species=="Elephant" and V(29,30,28) or V(23,22,27),light)
  for _,side in {-1,1} do
-  triangle(m,"Ear",p(V(side*3,27,-15)),p(V(side*6,33,-15)),p(V(side*6,26,-18)),yellow)
-  decor(part(m,"Eye",V(0.6,0.9,0.4)*scale,CF(p(V(side*3.2,24,-20.5))),Color3.fromRGB(70,58,39)))
+  decor(part(m,"Eye",V(1.1,1.5,0.6),cf*CF(head+V(side*7,2,-12.5)),Color3.fromRGB(42,45,47)))
  end
- triangle(m,"Nose",p(V(-1.5,22,-22)),p(V(1.5,22,-22)),p(V(0,20.5,-22)),Color3.fromRGB(112,82,43))
- local tail={V(0,16,11),V(0,13,21),V(0,16,28),V(0,21,30)}
- for i=1,#tail-1 do
-  quad(m,"TailFold",p(tail[i]+V(-0.8,0,0)),p(tail[i]+V(0.8,0,0)),p(tail[i+1]+V(0.4,0,0)),p(tail[i+1]+V(-0.4,0,0)),pale)
+ if animal.species=="Lion" then
+  for i=1,16 do
+   local a=i/16*math.pi*2;local b=(i+1)/16*math.pi*2;local mid=(a+b)/2
+   local a1=head+V(math.cos(a)*21,math.sin(a)*23,1)
+   local b1=head+V(math.cos(b)*21,math.sin(b)*23,1)
+   local a2=head+V(math.cos(a)*10,math.sin(a)*11,-9)
+   local b2=head+V(math.cos(b)*10,math.sin(b)*11,-9)
+   local ridge=head+V(math.cos(mid)*17,math.sin(mid)*18,-13)
+   triangle(m,"ManeFold",p(a1),p(b1),p(ridge),color)
+   triangle(m,"ManeFold",p(b1),p(b2),p(ridge),light)
+   triangle(m,"ManeFold",p(b2),p(a2),p(ridge),color)
+   triangle(m,"ManeFold",p(a2),p(a1),p(ridge),light)
+  end
+ elseif animal.species=="Elephant" then
+  for _,side in {-1,1} do
+   quad(m,"BroadEar",p(head+V(side*8,10,0)),p(head+V(side*30,8,3)),p(head+V(side*29,-19,1)),p(head+V(side*10,-13,-5)),light)
+  end
+  -- Trunk curls forward above the fly-through path.
+  local points={head+V(0,-3,-13),V(0,34,-54),V(0,29,-66),V(0,39,-72)}
+  for i=1,#points-1 do beam(m,"FoldedTrunk",p(points[i]),p(points[i+1]),6-i,color) end
+ elseif animal.species=="Deer" then
+  for _,side in {-1,1} do
+   local root=head+V(side*7,8,1);local tip=root+V(side*10,29,5)
+   beam(m,"Antler",p(root),p(tip),1.7,Color3.fromRGB(124,98,72))
+   for j=1,3 do
+    local at=root:Lerp(tip,j/4)
+    beam(m,"AntlerTine",p(at),p(at+V(side*8,9,-3)),1.2,Color3.fromRGB(139,114,82))
+   end
+  end
+ elseif animal.species=="Fox" then
+  for _,side in {-1,1} do
+   triangle(m,"PointedEar",p(head+V(side*5,5,0)),p(head+V(side*11,29,1)),p(head+V(side*14,3,-6)),color)
+  end
+  shape("WhiteMuzzle",head+V(0,-6,-12),V(17,10,16),Color3.fromRGB(246,233,207))
+  shape("BushyTail",V(7,45,43),V(20,18,39),color)
+  shape("TailTip",V(7,46,61),V(14,13,14),Color3.fromRGB(247,237,214))
+ else
+  for _,side in {-1,1} do
+   beam(m,"Ossicone",p(head+V(side*6,8,0)),p(head+V(side*6,20,0)),2,color)
+   triangle(m,"Ear",p(head+V(side*8,3,0)),p(head+V(side*23,9,0)),p(head+V(side*12,-3,-2)),light)
+  end
  end
- m.WorldPivot=cf;m.ModelStreamingMode=Enum.ModelStreamingMode.Atomic;m:SetAttribute("Style","Folded paper");return m
+ if animal.species~="Fox" then
+  beam(m,"Tail",p(V(0,48,27)),p(V(5,34,47)),2,color)
+ end
+ m.WorldPivot=cf;m:ScaleTo(animal.scale);m:SetAttribute("WildlifeScale",animal.scale)
+ if animal.behindPeak then m:SetAttribute("BehindPeak",animal.behindPeak) end
 end
-lion("GoldenPaperLion",V(760,ground(760,-750),-750),4.2,-0.5)
-lion("PaperLionCub",V(930,ground(930,-630),-630),1.6,-0.2)
-local function crane(origin,scale,heading)
- local m=model("OrigamiCrane",animals);local cf=CF(origin)*CFrame.Angles(0,heading,0)
- local function p(v) return cf:PointToWorldSpace(v*scale) end
- local ivory=Color3.fromRGB(250,244,224);local shadow=Color3.fromRGB(218,224,212)
- for _,side in {-1,1} do
-  triangle(m,"WingFold",p(V(0,7,0)),p(V(side*20,15,4)),p(V(side*4,5,10)),ivory)
-  triangle(m,"UnderFold",p(V(0,7,0)),p(V(side*4,5,10)),p(V(0,3,9)),shadow)
-  triangle(m,"Neck",p(V(0,7,0)),p(V(side*1,19,-4)),p(V(side*1,10,-1)),ivory)
-  triangle(m,"Beak",p(V(side*1,19,-4)),p(V(0,17,-13)),p(V(0,17,-3)),shadow)
-  triangle(m,"Tail",p(V(0,7,6)),p(V(side*1,19,18)),p(V(0,4,10)),ivory)
- end
-end
-crane(V(-1120,ground(-1120,-1200)+6,-1200),3.2,0.8)
-crane(V(160,ground(160,-2950)+20,-2950),4,-0.4)
+for _,animal in World.Animals do foldedAnimal(animal) end
 -- Preserve the prior world and generated asset experiment for later inspection.
 -- The terrain snapshot and prior scenery are retained together.
 local old=workspace:FindFirstChild("PaperFlightWorld");if old then old.Name="BeforeExploration_"..os.time();old.Parent=backups end
@@ -279,4 +345,4 @@ atmosphere.Density=0.17;atmosphere.Haze=0.55;atmosphere.Glare=0.3;atmosphere.Col
 local clouds=terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds");clouds.Cover=0.48;clouds.Density=0.35;clouds.Color=Color3.fromRGB(249,238,219);clouds.Parent=terrain
 workspace.CurrentCamera.CFrame=CFrame.lookAt(V(-950,600,920),V(-400,140,-500))
 terrain:SetAttribute("PaperBuildProgress","Complete")
-return string.format("Exploration world: %d neon rings, six regions, three fly-through rock passages.",#World.Rings)
+return string.format("World: %d small rings, %d wildlife landmarks, varied ridges and a broad launch mesa.",#World.Rings,#World.Animals)
