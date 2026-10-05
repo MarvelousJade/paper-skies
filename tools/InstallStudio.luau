@@ -1948,7 +1948,6 @@ end)
 local hint=label(gui,"Controls","Mouse - Aim / steer\nF - Launch / throw",UDim2.fromOffset(330,68),UDim2.new(0,24,1,-158),18)
 hint.TextXAlignment=Enum.TextXAlignment.Left;hint.TextYAlignment=Enum.TextYAlignment.Bottom
 local message=label(gui,"Message","Collect gold. Unlock new planes. Explore higher.",UDim2.new(0.8,0,0,36),UDim2.new(0.1,0,0,165),20)
-local reticle=label(gui,"AimReticle","+",UDim2.fromOffset(32,32),UDim2.new(0.5,-16,0.5,-16),32);reticle.Visible=false
 local nav=Instance.new("Frame");nav.Name="Menu";nav.BackgroundTransparency=1;nav.Size=UDim2.fromOffset(100,270);nav.Position=UDim2.new(0,24,0.5,-95);nav.Parent=gui
 local upgrades=button(nav,"Upgrades","UP\nPlanes",UDim2.fromOffset(86,82),UDim2.fromOffset(0,0))
 local customize=button(nav,"Customize","COLOR\nCustomize",UDim2.fromOffset(86,82),UDim2.fromOffset(0,92));customize.TextSize=17
@@ -1980,7 +1979,7 @@ end
 local function cursor(free)
  cursorFree=free
  UIS.MouseBehavior=mode~="Ready" and not free and Enum.MouseBehavior.LockCenter or Enum.MouseBehavior.Default
- UIS.MouseIconEnabled=mode=="Ready" or free;reticle.Visible=mode~="Ready" and not free
+ UIS.MouseIconEnabled=mode=="Ready" or free
 end
 local function renderModal()
  contents:ClearAllChildren()
