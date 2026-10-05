@@ -64,13 +64,13 @@ local top=Flight.new(Vector3.new(0,1000,0),0,Config.TrimPitch,stats)
 for _=1,270 do top=Flight.step(top,Vector2.zero,1/60,stats,0,true) end
 check(top.speed==Config.MaxSpeed,"base plane reaches 250 SPS with boost")
 local idle=Flight.step(top,Vector2.zero,0.25,stats,0,false)
-check(idle.boostRemaining==top.boostRemaining,"release delay prevents immediate recharge")
+check(idle.boostRemaining==top.boostRemaining and not idle.recharging,"short release pause precedes stamina recovery")
 local f30=Flight.new(Vector3.new(0,1000,0),0,Config.TrimPitch,stats)
 local f120=Flight.new(Vector3.new(0,1000,0),0,Config.TrimPitch,stats)
 for _=1,90 do f30=Flight.step(f30,Vector2.zero,1/30,stats,0,true) end
 for _=1,360 do f120=Flight.step(f120,Vector2.zero,1/120,stats,0,true) end
 check(math.abs(f30.boostRemaining-f120.boostRemaining)<0.0001,"boost duration is timestep-independent")
-check(stats.launchSpeed==100 and glide.speed>95 and glide.speed<105,"starter launch and ordinary glide remain near 100 SPS")
+check(stats.launchSpeed==120 and glide.speed>100 and glide.speed<120,"starter launches at 120 and gradually settles into ordinary glide")
 local hangar=Economy.new()
 check(hangar.planeId=="Dart" and hangar.ownedPlanes.Dart,"new players own and equip the starter")
 check(not Economy.selectPlane(hangar,"Kestrel") and hangar.planeId=="Dart","cannot buy without funds")
@@ -108,7 +108,7 @@ for _,id in Config.PlaneOrder do
  check(model and model.PrimaryPart and model:GetAttribute("PlaneType")==id,"every aircraft type has a matching model")
 end
 
--- Recharge tests use an in-envelope height; altitude pressure has its own fixtures below.
+-- Stamina recovery follows released input, independently of flight attitude.
 local function drained(id)
  local s=Flight.new(Vector3.new(0,400,0),0,Config.TrimPitch,Flight.stats({},id))
  s.boostRemaining=0
@@ -120,23 +120,36 @@ local function coast(s,seconds,hz,settings,held)
 end
 local emptyHeld=coast(drained("Dart"),10,60,stats,true)
 check(emptyHeld.boostRemaining==0 and not emptyHeld.boosting,"holding empty boost cannot regenerate or pulse")
-local delayed=coast(drained("Dart"),0.75,60,stats,false)
-check(delayed.boostRemaining==0,"stable glide waits before recharge")
+local firstRelease=coast(drained("Dart"),1/60,60,stats,false)
+check(firstRelease.boostRemaining==0 and not firstRelease.recharging,"first released tick begins the short recovery pause")
+local waiting=coast(drained("Dart"),0.3,60,stats,false)
+check(waiting.boostRemaining==0,"no recovery before the pause ends")
+local acrossDelay=Flight.step(waiting,Vector2.zero,0.1,stats,0,false)
+check(math.abs(acrossDelay.boostRemaining-0.045)<0.0001,"a tick across 0.35 seconds recharges only its eligible fraction")
 local recharge=coast(drained("Dart"),3,60,stats,false)
-check(math.abs(recharge.boostRemaining-(3-Config.BoostRechargeDelay)*stats.boostRecharge)<0.001 and recharge.recharging,"stable glide refills stamina at the aircraft rate")
+check(math.abs(recharge.boostRemaining-(3-Config.BoostRechargeDelay)*stats.boostRecharge)<0.001 and recharge.recharging,"released input refills stamina at the aircraft rate")
 local full=coast(drained("Dart"),12,60,stats,false)
 check(full.boostRemaining==Config.BoostDuration and not full.recharging,"recharge stops at capacity")
 local reused=Flight.step(recharge,Vector2.zero,0.1,stats,0,true)
-check(reused.boosting and reused.boostRemaining<recharge.boostRemaining and reused.boostRest==0,"recovered stamina powers another boost and resets delay")
+check(reused.boosting and reused.boostRemaining<recharge.boostRemaining,"recovered stamina powers another boost and stops recharging")
 local r30=coast(drained("Dart"),3,30,stats,false)
 local r120=coast(drained("Dart"),3,120,stats,false)
-check(math.abs(r30.boostRemaining-r120.boostRemaining)<0.0001,"recharge delay and rate are timestep-independent")
+check(math.abs(r30.boostRemaining-r120.boostRemaining)<0.0001,"recharge is timestep-independent")
 local steep=drained("Dart");steep.pitch=math.rad(20)
-steep=Flight.step(steep,Vector2.new(0,0.1),0.1,stats,0,false)
-check(steep.boostRemaining==0 and steep.boostRest==0,"pulling uphill cannot recharge stamina")
+steep=Flight.step(steep,Vector2.new(0,0.1),0.4,stats,0,false)
+check(steep.boostRemaining>0 and steep.recharging,"stamina also recovers while climbing with boost released")
 local falling=drained("Dart");falling.speed=20;falling.stalled=true
-falling=Flight.step(falling,Vector2.zero,0.1,stats,0,false)
-check(falling.boostRemaining==0,"a stall cannot recharge stamina")
+falling=Flight.step(falling,Vector2.zero,0.4,stats,0,false)
+check(falling.boostRemaining>0 and falling.recharging,"released stamina recovers during a stall")
+local refilled=coast(drained("Dart"),5.35,60,stats,false)
+check(math.abs(refilled.boostRemaining-Config.BoostDuration)<0.001,"starter refills in five seconds after the brief release pause")
+local almostFull=drained("Dart");almostFull.boostRemaining=Config.BoostDuration-0.01;almostFull.boostRest=Config.BoostRechargeDelay
+almostFull=Flight.step(almostFull,Vector2.zero,0.1,stats,0,false)
+check(almostFull.boostRemaining==Config.BoostDuration,"recovery cannot overflow the bar")
+local restart=Flight.step(recharge,Vector2.zero,1/60,stats,0,true)
+check(restart.boosting and not restart.recharging and restart.boostRemaining<recharge.boostRemaining and restart.boostRest==0,"pressing boost immediately switches from recovery to spending")
+local unchanged=Flight.step(drained("Dart"),Vector2.zero,0,stats,0,false)
+check(unchanged.boostRemaining==0 and not unchanged.recharging,"zero elapsed time grants no stamina")
 local upgraded=Flight.stats({},"Kestrel")
 local fastRecharge=coast(drained("Kestrel"),3,60,upgraded,false)
 check(fastRecharge.boostRemaining>recharge.boostRemaining,"better aircraft recover stamina faster")
@@ -213,7 +226,7 @@ local freshStall,freshHeight,early,fresh=steepThrow(60)
 local normalStall,normalHeight=steepThrow(60,10)
 check(freshStall>0.4 and freshStall>normalStall+0.3,"steep throw gets time to leave the hand before stalling")
 check(early.speed<stats.launchSpeed and early.speed>90,"throw keeps initial momentum but gravity still spends speed")
-check(freshHeight>normalHeight+15 and freshHeight<60,"throw grace gives a small launch arc, not mountain-scale free height")
+check(freshHeight>normalHeight+15 and freshHeight<90,"throw grace gives a small launch arc, not mountain-scale free height")
 check(freshStall<1.5 and fresh.pitch<0,"continued steep launch eventually stalls and drops its nose")
 check(math.abs(fresh.age-2)<0.0001,"simulation time consumes the throw transition once")
 local t30,h30=steepThrow(30);local t120,h120=steepThrow(120)
@@ -232,4 +245,29 @@ check(boostedLate.age>40 and boostedLate.boostRemaining<longFlight.boostRemainin
 local lowEnergy=Flight.new(Vector3.new(0,400,0),0,Config.MaxPitch,stats);lowEnergy.speed=20
 check(Flight.step(lowEnergy,Vector2.zero,1/60,stats).stalled,"launch assistance cannot keep an already slow plane flying")
 
+-- Full feedback-loop regression: stale aim previously caused repeated climb/stall cycles.
+for _,boostSeconds in {0,3} do
+ local s=Flight.new(Vector3.new(0,350,0),0,math.rad(24),stats)
+ local aim=math.rad(24);local stalls=0
+ for i=1,12*60 do
+  -- Match the client's 10 Hz telemetry-driven clearing of stale upward aim.
+  if i%6==0 then aim=Flight.settleAim(aim,s.stalled) end
+  local next=Flight.step(s,Flight.aimInput(s,0,aim),1/60,stats,0,i<=boostSeconds*60)
+  if next.stalled and not s.stalled then stalls+=1 end
+  s=next
+ end
+ check(stalls==1,"a held upward aim must not restart a climb/stall cycle after recovery")
+ check(not s.stalled and s.speed>Config.RecoverySpeed,"plane settles into a moving glide after its stall")
+ check(s.pitch<0 and s.pitch>math.rad(-12),"recovered plane settles into shallow glide instead of diving indefinitely")
+end
+local level=Flight.new(Vector3.new(0,400,0),0,0,stats)
+local powered=Flight.step(level,Vector2.zero,0.1,stats,0,true)
+local unpowered=Flight.step(level,Vector2.zero,0.1,stats,0,false)
+check(powered.pitch==unpowered.pitch and powered.speed>unpowered.speed,"boost adds forward speed without pitching up")
+local release=Flight.step(powered,Vector2.zero,0.1,stats,0,false)
+check(release.speed>powered.speed-2,"boost release preserves momentum rather than resetting speed")
+check(Flight.settleAim(math.rad(-25),true)==math.rad(-25),"stall recovery preserves an intentional dive aim")
+local freshControl=Flight.new(Vector3.new(0,400,0),0,Config.TrimPitch,stats)
+local directed=Flight.step(freshControl,Flight.aimInput(freshControl,0,math.rad(20)),0.1,stats)
+check(directed.pitch>freshControl.pitch,"the player can deliberately pitch up again after recovery")
 return string.format("%d flight, pickup, upgrade, and camera assertions passed",passed)

@@ -326,6 +326,7 @@ remote.OnClientEvent:Connect(function(kind,data)
   telemetry.gold=0;telemetry.distance=0;telemetry.boostRemaining=Config.BoostDuration;telemetry.boosting=false;telemetry.recharging=false;telemetry.speed=Flight.stats(profile.levels,profile.planeId).launchSpeed;wind:Play()
  elseif kind=="Flying" then mode="Flying"
  elseif kind=="Telemetry" then
+  pitch=Flight.settleAim(pitch,data.stalled)
   telemetry=data;earned.Text="$"..data.gold
   distance.Text=string.format("%d studs  |  %d rings",data.distance,data.rings)
   region.Text=string.upper(data.region)
@@ -453,7 +454,7 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
   fill.BackgroundColor3=telemetry.boosting and Color3.fromRGB(117,235,255) or telemetry.recharging and Color3.fromRGB(115,231,158) or Color3.fromRGB(91,166,251)
   local boostStatus=telemetry.recharging and "RECHARGING" or fuel>=Config.BoostDuration-0.01 and "BOOST READY"
    or boostHeld and fuel<=0.01 and "RELEASE BOOST"
-   or not boostHeld and not telemetry.boosting and "GLIDE TO RECHARGE" or "BOOST"
+   or not boostHeld and not telemetry.boosting and "RECOVERING SOON" or "BOOST"
   boostLabel.Text=string.format("%s  %.1fs",boostStatus,fuel)
   boostButton.Text=telemetry.boosting and "BOOSTING" or "HOLD BOOST"
  end

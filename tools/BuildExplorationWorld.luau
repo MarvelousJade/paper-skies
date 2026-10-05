@@ -179,7 +179,7 @@ local function treeAt(x,z,index,extra,forestId)
  if extra then
   for _,existing in trees:GetChildren() do
    local base=existing:GetAttribute("BasePosition")
-   if Vector2.new(x-base.X,z-base.Z).Magnitude<(forestId and 12 or 26) then return end
+   if Vector2.new(x-base.X,z-base.Z).Magnitude<(forestId and 30 or 26) then return end
   end
  end
  local y,rock=ground(x,z)
@@ -220,7 +220,7 @@ end
 rng=Random.new(90817)
 for i=1,360 do treeAt(rng:NextNumber(-5300,4250),rng:NextNumber(-5100,5300),2000+i,true) end
 for i=1,160 do treeAt(rng:NextNumber(-1900,1300),rng:NextNumber(-1800,2400),3000+i,true) end
--- Six compact forests have overlapping crowns and 12-stud trunk spacing.
+-- Six loose groves leave 30 studs between new trunks, with room between crowns.
 -- Use accepted lowland tree sites; all normal wildlife/route exclusions still apply.
 local forestCenters={}
 local candidates=trees:GetChildren()
@@ -233,7 +233,7 @@ for _,tree in candidates do
  if not separated then continue end
  local cluster=#forestCenters+1;local planted=0
  for attempt=1,180 do
-  local a=rng:NextNumber(0,math.pi*2);local r=math.sqrt(rng:NextNumber())*48
+  local a=rng:NextNumber(0,math.pi*2);local r=math.sqrt(rng:NextNumber())*100
   local added=treeAt(base.X+math.cos(a)*r,base.Z+math.sin(a)*r,4000+attempt,true,cluster)
   if added then planted+=1 end
   if planted>=20 then break end

@@ -8,14 +8,14 @@ Press **F** to aim, move the mouse to rotate the smooth green aiming arc, then c
 
 - Mouse: aim and steer.
 - Hold Space: spend boost stamina (4.5-second capacity).
-- Release boost and glide level/downward: recharge after 0.85 seconds. The bar turns green while recovering.
+- Release boost: stamina recovers after a 0.35-second pause, including while climbing or stalled. The starter then refills from empty in five seconds (5.35 seconds total); stronger planes refill faster. The bar turns green while recovering.
 - F: aim, throw, or end the run and bank gold.
 - Shift or Q: release/recapture the cursor.
 - R: end/reset the run.
 - Controller: left stick aims, A activates, B resets, R2 boosts.
 - Touch: drag to aim and hold boost. Device testing is pending.
 
-The starter launches and naturally glides at approximately 100 SPS. Diving and boost can still exceed that speed, up to the existing 250 SPS cap. Climbing spends speed, prolonged climbing causes a stall and nose drop, and diving rebuilds speed. Fresh throws start with 10% of the extra steep-climb drag and pitch-dependent stall threshold, easing smoothly to normal over 1.2 seconds. Gravity, base stall speed, ordinary drag, altitude pressure, and boost costs remain active throughout; this is a short launch transition, not stall immunity. The starter loses energy sharply beyond a 12-degree climb; stronger types tolerate steeper climbs (up to a 28-degree comfort threshold on Kestrel). Above each type's air ceiling, additional drag and sink gradually make further climbing harder. Range comes from energy, drag, sink, and flying technique; there is no per-type distance cutoff. This is a tuned kinematic glider. Collect optional neon rings and distance gold to buy different plane types through **Planes**. Customize changes paper color; Explore lists regions.
+The starter launches at 120 SPS and gradually settles toward its approximately 100-SPS natural glide speed. Diving and boost can still exceed that speed, up to the existing 250 SPS cap. Climbing spends speed, prolonged climbing causes a stall and nose drop, and diving rebuilds speed. Fresh throws start with 10% of the extra steep-climb drag and pitch-dependent stall threshold, easing smoothly to normal over 1.2 seconds. Gravity, base stall speed, ordinary drag, altitude pressure, and boost costs remain active throughout; this is a short launch transition, not stall immunity. Extra climb drag is now gentler, and the stall nose target is −32° instead of −52°. After a stall, the controls clear any stale upward aim to a shallow glide so recovery does not immediately trigger another climb/stall cycle. Fresh mouse input can still request a climb. The starter begins spending extra energy beyond a 12-degree climb; stronger types tolerate steeper climbs (up to a 28-degree comfort threshold on Kestrel). Above each type's air ceiling, additional drag and sink gradually make further climbing harder. Range comes from energy, drag, sink, and flying technique; there is no per-type distance cutoff. This is a tuned kinematic glider. Collect optional neon rings and distance gold to buy different plane types through **Planes**. Customize changes paper color; Explore lists regions.
 
 The camera orbits above the plane independently of steep aim and shortens its follow distance when a volume sweep hits scenery. This applies while aiming, during the throw countdown, and in flight. The maximum aim angle remains 48 degrees. A throw briefly widens the camera to about 80 degrees and increases follow distance. It settles back to the normal 70-degree view. Active boost smoothly widens to 77 degrees and moves the camera from 29 to 34.5 studs back (half the previous boost effect); releasing boost returns to normal even while speed remains high.
 
@@ -23,11 +23,11 @@ The camera orbits above the plane independently of steep aim and shortens its fo
 
 | Type | Gold | Launch speed | Rising air fades out by |
 | --- | ---: | ---: | ---: |
-| Paper Dart | Free | 100 SPS | 650 studs |
-| Lockwing | 180 | 107 SPS | 950 studs |
-| Delta | 550 | 115 SPS | 1300 studs |
-| Sailwing | 1400 | 123 SPS | 1750 studs |
-| Kestrel | 3200 | 133 SPS | 2250 studs |
+| Paper Dart | Free | 120 SPS | 650 studs |
+| Lockwing | 180 | 128 SPS | 950 studs |
+| Delta | 550 | 136 SPS | 1300 studs |
+| Sailwing | 1400 | 144 SPS | 1750 studs |
+| Kestrel | 3200 | 154 SPS | 2250 studs |
 
 The five models have different wing shapes and folds. Higher types reduce drag and sink while improving handling. The hangar has 3D previews, server-validated purchases, permanent ownership within the saved profile, and free switching between owned types. Switching during flight is rejected.
 
@@ -49,7 +49,7 @@ Bears, foxes, raccoons, turtles, and candy cats now have shorter legs and lowere
 
 The nine summit rewards use warm golden neon cores, a soft outer glow, local light, sparse rim sparkles, and larger distant halos. Rewards stay at 10 gold for regular sky rings, 25 for foothill passages, 35 for animal belly rings, and 60–120 for summit rings (60 below 750 studs, 80 at 750+, 100 at 1100+, 120 at 1600+). All new consecutive route rings remain 10 gold. Summit effects hide locally on collection and return for the next run, including nested effects that arrive after collection. The nine summit models remain replicated at distance; their halos hide near the actual opening.
 
-Meadows use a smooth matte PaperMeadow override on LeafyGrass terrain plus a client-only layer of angular grass blades that becomes visible near the ground. An earlier attempt to set the non-scriptable Decoration property had silently failed; the material change was visually verified to remove the dense blades. The authored scene has 141,716 descendants after the scenery update. Close grass adds at most 8,400 non-colliding blade Parts locally per client, recycled around the camera rather than stored across the whole map. Expanded trails also influence tree placement so flight corridors remain clear. The 870 trees include six compact forests with 20 new trees each, overlapping crowns, and a 12-stud minimum spacing for added forest trunks. A warm green meadow palette now matches the foliage, with cooler gray stone colors. Meadow accents add 161 small angular stones and 333 fuller patches of cream/lavender flowers and simple grass, each with nine flowers and nine low-poly tufts. The deterministic scenery pass respects the new ring approaches and existing animal clearances; denser forests occupy six separated lowland sites. This uses more primitives than the previous simple crowns; target-device performance has not been benchmarked.
+Meadows use a smooth matte PaperMeadow override on LeafyGrass terrain plus a client-only layer of angular grass blades that becomes visible near the ground. An earlier attempt to set the non-scriptable Decoration property had silently failed; the material change was visually verified to remove the dense blades. The authored scene has 141,533 descendants after the scenery update. Close grass adds at most 8,400 non-colliding blade Parts locally per client, recycled around the camera rather than stored across the whole map. Expanded trails also influence tree placement so flight corridors remain clear. The 870 trees include six loose groves with 20 new trees each, 100-stud planting radii, and at least 30 studs between added trunks and other trees. A warm green meadow palette now matches the foliage, with cooler gray stone colors. Meadow accents add 160 small angular stones and 332 fuller patches of cream/lavender flowers and simple grass, each with nine flowers and nine low-poly tufts. The deterministic scenery pass respects the new ring approaches and existing animal clearances; groves occupy six separated lowland sites. This uses more primitives than the previous simple crowns; target-device performance has not been benchmarked.
 
 **Open visual issue:** Far mountain terrain and its coarse proxies were absent in the Studio Play rear-view check, although the summit halos remained visible. The same rear mountains render correctly in Edit mode, and server terrain raycasts find them. Extra streaming focus made the rear terrain queryable on the client without resolving that screenshot. The exact rendering cause remains unconfirmed. This issue is tracked in the bug log; full distant-scene visibility is not claimed as verified.
 
@@ -84,7 +84,7 @@ The installer builds the five aircraft and world from source. Terrain uses the `
 - `tools/BuildPlaneModels.luau`: five reproducible folded-paper models.
 - `tools/BuildExplorationWorld.luau`: terrain, scenery, rings, wildlife.
 - `src/shared/ReferenceAnimals.luau`: all seven procedural wildlife models.
-- `tests/Flight.spec.luau`: 82 assertions.
+- `tests/Flight.spec.luau`: 113 assertions.
 - `tests/World.spec.luau`: terrain-backed geometry and discovery-layout assertions.
 
 ## Engineering decisions
@@ -101,7 +101,7 @@ Wind asset: 687874741. Pickup audio: [coin_pickup_1 by thienbao2109](https://cre
 
 ## Validation
 
-- 82 flight, stamina, camera, pickup, economy, profile-normalization, and model assertions passed.
+- 113 flight, stamina, camera, pickup, economy, profile-normalization, and model assertions passed.
 - A controlled 24-degree climb stalled the starter at 3.18 seconds; Kestrel remained unstalled at four seconds.
 - Earlier camera samples reached 79.45 degrees on throw and 83.99 on boost, then returned to 70 on release; boost now targets 77 degrees. Server telemetry and the HUD both showed stamina recovery during a suitable glide.
 - 2875 actual-scene geometry/layout assertions passed, including eight default throw directions, ring-rim clearance samples, and sideways animal-ring crossings. These are repeated geometric samples, not 2875 distinct play sessions.
@@ -121,14 +121,16 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The latest requested checkpoint is **`f5fa574` — Add mountain ring routes and compact forest clusters**. The wildlife layout, softened launch transition, compact starting mountain, and camera collision fixes remain uncommitted for user testing.
+The previous checkpoint is **`974d8b5` — Refine mountain wildlife and fix steep launch camera and terrain**. This checkpoint fixes repeated climb/stall motion, improves launch momentum, adds the short stamina recovery pause, and spreads forest trees apart. The root cause, reproduction, and interview explanation are recorded in bug B17.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.
 
-Scenery verification: 44,421 geometry/layout assertions passed after rebuilding Woodlands, MeadowAccents, Rings, and PaperAnimals, including mountain route spacing, continuous ascent, tilted collection planes, forest neighbors, and terrain clearance. Green/blossom trees and grounded meadow details were visually inspected. Tree models are limited to 130 primitives (current maximum 124); flower/grass accents do not collide with planes.
+Scenery verification: 148,611 geometry/layout assertions passed after rebuilding Woodlands, MeadowAccents, Rings, and PaperAnimals, including mountain route spacing, continuous ascent, tilted collection planes, forest neighbors, and terrain clearance. Green/blossom trees and grounded meadow details were visually inspected. Tree models are limited to 130 primitives (current maximum 124); flower/grass accents do not collide with planes.
 
 Close grass: three triangular blades per clump, 4.2-stud spacing with jitter, 1.6–3.1 studs tall. Interleaved detail layers reach 58, 80, and 160 studs, fading from 40, 52, and 105 studs respectively. The sparse outer layer doubles the prior range while retaining dense near coverage. Water, rock, steep surfaces, and high flight are excluded. Checks verified 1252 pooled clumps and 5256 visible blade parts in the test meadow, visible grass beyond 120 studs, release at altitude/water, reuse on return, and cleanup. The per-client cap is 1400 clumps / 8400 blade Parts. Device frame-rate testing remains pending.
 
 Material limitation found in fresh Play: Roblox rejects the bundled local PNGs used by PaperMeadow's PBR maps, even though those files can preload and the Edit preview renders. The custom material is not verified in a published client. Replace these maps with uploaded texture assets before claiming the matte override is production ready; see the bug log.
 
-Launch regression: 6,444 checks passed for 10°, 30°, and maximum 48° throws in eight directions over three seconds, camera clearance while aiming/counting down/flying, removal of old plateau terrain, and camera shortening in front of a wall. Minimum sampled camera clearance was 2.89 studs. These deterministic checks supplement user flight testing; they do not guarantee unlimited survival when continuously pulling upward.
+Launch regression: 6,337 checks passed for 10°, 30°, and maximum 48° throws in eight directions over three seconds, camera clearance while aiming/counting down/flying, removal of old plateau terrain, and camera shortening in front of a wall. Minimum sampled camera clearance with the current flight tuning was 10.00 studs. These deterministic checks supplement user flight testing; they do not guarantee unlimited survival when continuously pulling upward.
+
+Boost stamina: releasing boost recovers 0.9/0.98/1.05/1.12/1.2 seconds of charge per second for Dart/Lockwing/Delta/Sailwing/Kestrel. The 4.5-second bar takes 5.0/4.59/4.29/4.02/3.75 seconds of active recovery respectively, plus the 0.35-second release pause. A 0.35-second released-input delay precedes recovery; there is no flight-attitude requirement. Held boost consumes charge and blocks recharge even when empty; the bar cannot exceed capacity.

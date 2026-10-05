@@ -33,8 +33,12 @@ Config.MinPitch = math.rad(-65)
 Config.TurnRate = math.rad(52)
 Config.PitchRate = math.rad(42)
 Config.Gravity = 36
-Config.StallSpeed = 54
-Config.RecoverySpeed = 76
+Config.StallSpeed = 50
+Config.RecoverySpeed = 68
+Config.ClimbStallRise = 24
+Config.StallPitch = math.rad(-32)
+Config.StallNoseRate = 1.8
+Config.StallSinkMultiplier = 4
 Config.TrimPitch = math.rad(-6)
 Config.MaxDuration = 240
 Config.WorldMin = Vector3.new(-5900,-20,-5600)
@@ -59,19 +63,19 @@ Config.MusicSoundId = "rbxassetid://126932983544303"
 Config.MusicVolume = 0.16
 Config.BoostDuration = 4.5
 Config.BoostAcceleration = 65
-Config.BoostRechargeDelay = 0.85
-Config.BoostRechargePitch = math.rad(5)
+-- A short release pause makes stamina recovery readable without requiring a glide.
+Config.BoostRechargeDelay = 0.35
 Config.AltitudeSoftBand = 220
 Config.MaxSpeed = 250
 Config.WindSoundId = "rbxassetid://687874741"
 -- Costs and performance are game balance values, not claims about real folded designs.
 Config.PlaneOrder={"Dart","Lockwing","Delta","Sailwing","Kestrel"}
 Config.Planes={
- Dart={name="Paper Dart",price=0,launchSpeed=100,drag=0.000376,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,climbComfort=math.rad(12),climbLoss=110,boostRecharge=0.6,rank=1},
- Lockwing={name="Lockwing",price=180,launchSpeed=107,drag=0.000342,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,climbComfort=math.rad(16),climbLoss=95,boostRecharge=0.65,rank=2},
- Delta={name="Delta",price=550,launchSpeed=115,drag=0.000308,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,climbComfort=math.rad(20),climbLoss=80,boostRecharge=0.7,rank=3},
- Sailwing={name="Sailwing",price=1400,launchSpeed=123,drag=0.000274,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,climbComfort=math.rad(24),climbLoss=65,boostRecharge=0.78,rank=4},
- Kestrel={name="Kestrel",price=3200,launchSpeed=133,drag=0.000239,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,climbComfort=math.rad(28),climbLoss=50,boostRecharge=0.85,rank=5},
+ Dart={name="Paper Dart",price=0,launchSpeed=120,drag=0.000376,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,climbComfort=math.rad(12),climbLoss=70,boostRecharge=0.9,rank=1},
+ Lockwing={name="Lockwing",price=180,launchSpeed=128,drag=0.000342,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,climbComfort=math.rad(16),climbLoss=60,boostRecharge=0.98,rank=2},
+ Delta={name="Delta",price=550,launchSpeed=136,drag=0.000308,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,climbComfort=math.rad(20),climbLoss=50,boostRecharge=1.05,rank=3},
+ Sailwing={name="Sailwing",price=1400,launchSpeed=144,drag=0.000274,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,climbComfort=math.rad(24),climbLoss=40,boostRecharge=1.12,rank=4},
+ Kestrel={name="Kestrel",price=3200,launchSpeed=154,drag=0.000239,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,climbComfort=math.rad(28),climbLoss=30,boostRecharge=1.2,rank=5},
 }
 -- Retained for existing profile bonuses; new purchases use named plane types.
 Config.Upgrades = {
@@ -91,7 +95,7 @@ local Config = require(script.Parent.Config)
 export type Stats = {launchSpeed:number, drag:number, sink:number, turnRate:number,
  climbComfort:number, climbLoss:number, airCeiling:number, boostRecharge:number}
 export type State = {position:Vector3, yaw:number, pitch:number, speed:number, stalled:boolean, bank:number,
- boostRemaining:number?, boosting:boolean?, boostRest:number?, recharging:boolean?, age:number?}
+ boostRemaining:number?, boosting:boolean?, recharging:boolean?, age:number?, boostRest:number?}
 local Flight = {}
 function Flight.stats(levels: {[string]:number}?,planeId:string?): Stats
  local l=levels or {};local plane=Config.Planes[planeId or "Dart"] or Config.Planes.Dart
@@ -101,7 +105,7 @@ function Flight.stats(levels: {[string]:number}?,planeId:string?): Stats
 end
 function Flight.new(position:Vector3, yaw:number, pitch:number, stats:Stats): State
  return {position=position,yaw=yaw,pitch=pitch,speed=stats.launchSpeed,stalled=false,bank=0,
-  boostRemaining=Config.BoostDuration,boosting=false,boostRest=0,recharging=false,age=0}
+  boostRemaining=Config.BoostDuration,boosting=false,recharging=false,age=0,boostRest=0}
 end
 function Flight.step(state:State, steer:Vector2, dt:number, stats:Stats?, updraft:number?, boostHeld:boolean?): State
  local settings=stats or Flight.stats()
@@ -114,13 +118,13 @@ function Flight.step(state:State, steer:Vector2, dt:number, stats:Stats?, updraf
  local speed=state.speed
  local stalled=state.stalled
  -- Pulling up raises the speed needed to retain lift. Recovery has a separate threshold.
- local stallThreshold=Config.StallSpeed+math.max(0,math.sin(state.pitch))*35*climbScale
+ local stallThreshold=Config.StallSpeed+math.max(0,math.sin(state.pitch))*Config.ClimbStallRise*climbScale
  if speed<stallThreshold then stalled=true end
  if stalled and speed>Config.RecoverySpeed and state.pitch<0 then stalled=false end
  local pitch=state.pitch
  if stalled then
   -- A stalled paper plane drops its nose even while the player continues pulling up.
-  pitch += (math.rad(-52)-pitch)*(1-math.exp(-2.8*step))
+  pitch += (Config.StallPitch-pitch)*(1-math.exp(-Config.StallNoseRate*step))
  else
   pitch=math.clamp(pitch+steer.Y*Config.PitchRate*step,Config.MinPitch,Config.MaxPitch)
   if math.abs(steer.Y)<0.01 then pitch+=(Config.TrimPitch-pitch)*(1-math.exp(-0.65*step)) end
@@ -138,19 +142,23 @@ function Flight.step(state:State, steer:Vector2, dt:number, stats:Stats?, updraf
  local acceleration=-Config.Gravity*math.sin(pitch)-drag
  speed=math.clamp(speed+acceleration*step+Config.BoostAcceleration*used,12,Config.MaxSpeed)
  local direction=(CFrame.Angles(0,yaw,0)*CFrame.Angles(pitch,0,0)).LookVector
- local sink=settings.sink+(Config.StallSpeed/math.max(speed,12))^2*(stalled and 8 or 1)+altitudeLoad*10
+ local sink=settings.sink+(Config.StallSpeed/math.max(speed,12))^2*(stalled and Config.StallSinkMultiplier or 1)+altitudeLoad*10
  local position=state.position+(direction*speed+Vector3.new(0,(updraft or 0)-sink,0))*step
- -- Recharge requires released input and a stable glide. Empty held boost cannot pulse forever.
- local canRest=not boostHeld and not stalled and pitch<=Config.BoostRechargePitch and speed>=Config.RecoverySpeed
+ -- Recovery starts after a short released interval, regardless of flight attitude.
+ -- Integrate only time beyond the delay, including ticks that straddle its end.
  local oldRest=state.boostRest or 0
- local rest=canRest and oldRest+step or 0
- -- Integrate only the fraction of this tick beyond the delay, independent of tick size.
- local rechargeTime=math.max(0,rest-Config.BoostRechargeDelay)-math.max(0,oldRest-Config.BoostRechargeDelay)
- local restored=canRest and math.max(0,rechargeTime)*settings.boostRecharge or 0
+ local rest=not boostHeld and oldRest+step or 0
+ local recoveryTime=not boostHeld and math.max(0,rest-Config.BoostRechargeDelay)-math.max(0,oldRest-Config.BoostRechargeDelay) or 0
+ local restored=recoveryTime*settings.boostRecharge
  local afterUse=math.max(0,remaining-used)
  local fuel=math.min(Config.BoostDuration,afterUse+restored)
  return {position=position,yaw=yaw,pitch=pitch,speed=speed,stalled=stalled,bank=bank,
-  boostRemaining=fuel,boosting=used>0,boostRest=rest,recharging=fuel>afterUse,age=age+step}
+  boostRemaining=fuel,boosting=used>0,recharging=fuel>afterUse,age=age+step,boostRest=rest}
+end
+-- Drop a stale upward aim after a stall so recovery leads into a glide instead
+-- of immediately pulling up and stalling again. Intentional dive aims are retained.
+function Flight.settleAim(pitch:number,stalled:boolean): number
+ return stalled and math.min(pitch,Config.TrimPitch) or pitch
 end
 function Flight.aimInput(state:State, yaw:number, pitch:number): Vector2
  local difference=(yaw-state.yaw+math.pi)%(2*math.pi)-math.pi
@@ -1867,6 +1875,7 @@ remote.OnClientEvent:Connect(function(kind,data)
   telemetry.gold=0;telemetry.distance=0;telemetry.boostRemaining=Config.BoostDuration;telemetry.boosting=false;telemetry.recharging=false;telemetry.speed=Flight.stats(profile.levels,profile.planeId).launchSpeed;wind:Play()
  elseif kind=="Flying" then mode="Flying"
  elseif kind=="Telemetry" then
+  pitch=Flight.settleAim(pitch,data.stalled)
   telemetry=data;earned.Text="$"..data.gold
   distance.Text=string.format("%d studs  |  %d rings",data.distance,data.rings)
   region.Text=string.upper(data.region)
@@ -1994,7 +2003,7 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
   fill.BackgroundColor3=telemetry.boosting and Color3.fromRGB(117,235,255) or telemetry.recharging and Color3.fromRGB(115,231,158) or Color3.fromRGB(91,166,251)
   local boostStatus=telemetry.recharging and "RECHARGING" or fuel>=Config.BoostDuration-0.01 and "BOOST READY"
    or boostHeld and fuel<=0.01 and "RELEASE BOOST"
-   or not boostHeld and not telemetry.boosting and "GLIDE TO RECHARGE" or "BOOST"
+   or not boostHeld and not telemetry.boosting and "RECOVERING SOON" or "BOOST"
   boostLabel.Text=string.format("%s  %.1fs",boostStatus,fuel)
   boostButton.Text=telemetry.boosting and "BOOSTING" or "HOLD BOOST"
  end
@@ -2685,7 +2694,7 @@ local function treeAt(x,z,index,extra,forestId)
  if extra then
   for _,existing in trees:GetChildren() do
    local base=existing:GetAttribute("BasePosition")
-   if Vector2.new(x-base.X,z-base.Z).Magnitude<(forestId and 12 or 26) then return end
+   if Vector2.new(x-base.X,z-base.Z).Magnitude<(forestId and 30 or 26) then return end
   end
  end
  local y,rock=ground(x,z)
@@ -2726,7 +2735,7 @@ end
 rng=Random.new(90817)
 for i=1,360 do treeAt(rng:NextNumber(-5300,4250),rng:NextNumber(-5100,5300),2000+i,true) end
 for i=1,160 do treeAt(rng:NextNumber(-1900,1300),rng:NextNumber(-1800,2400),3000+i,true) end
--- Six compact forests have overlapping crowns and 12-stud trunk spacing.
+-- Six loose groves leave 30 studs between new trunks, with room between crowns.
 -- Use accepted lowland tree sites; all normal wildlife/route exclusions still apply.
 local forestCenters={}
 local candidates=trees:GetChildren()
@@ -2739,7 +2748,7 @@ for _,tree in candidates do
  if not separated then continue end
  local cluster=#forestCenters+1;local planted=0
  for attempt=1,180 do
-  local a=rng:NextNumber(0,math.pi*2);local r=math.sqrt(rng:NextNumber())*48
+  local a=rng:NextNumber(0,math.pi*2);local r=math.sqrt(rng:NextNumber())*100
   local added=treeAt(base.X+math.cos(a)*r,base.Z+math.sin(a)*r,4000+attempt,true,cluster)
   if added then planted+=1 end
   if planted>=20 then break end

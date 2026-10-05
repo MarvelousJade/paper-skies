@@ -240,15 +240,25 @@ for _,tree in trees do
  local cluster=tree:GetAttribute("ForestCluster")
  if cluster then clusters[cluster]=clusters[cluster] or {};table.insert(clusters[cluster],tree:GetAttribute("BasePosition")) end
 end
+-- Check spacing from every other tree, including the original grove anchor.
+for _,tree in trees do
+ if not tree:GetAttribute("ForestCluster") then continue end
+ local base=tree:GetAttribute("BasePosition")
+ for _,other in trees do
+  if other==tree then continue end
+  local b=other:GetAttribute("BasePosition")
+  check(Vector2.new(base.X-b.X,base.Z-b.Z).Magnitude>=29.9,"New grove trunks cannot crowd existing trees")
+ end
+end
 local clusterCount=0
 for _,positions in clusters do
  clusterCount+=1
- check(#positions>=12,"Each small forest needs a dense group of trees")
+ check(#positions>=12,"Each grove retains a substantial group of trees")
  for _,position in positions do
   local neighbor=math.huge
   for _,other in positions do if other~=position then neighbor=math.min(neighbor,(position-other).Magnitude) end end
-  check(neighbor<35,"Forest crowns should have close neighbors")
+  check(neighbor>=29.9 and neighbor<75,"Grove trees have breathing room while remaining grouped")
  end
 end
-check(clusterCount==6,"Six compact forests complement scattered trees")
+check(clusterCount==6,"Six loose groves complement scattered trees")
 return string.format("%d geometry and discovery-layout checks passed",passed)
