@@ -88,9 +88,10 @@ local contents=Instance.new("Frame");contents.BackgroundTransparency=1;contents.
 local modalMode="Upgrades"
 local palette={Color3.fromRGB(255,249,228),Color3.fromRGB(125,212,255),Color3.fromRGB(255,183,153),Color3.fromRGB(189,229,160)}
 local wind=Instance.new("Sound");wind.Name="PaperFlightWind";wind.SoundId=Config.WindSoundId;wind.Looped=true;wind.Volume=0;wind.Parent=SoundService
--- One softened arcade ring chime: fixed pitch, no overlapping voices, short faded tail.
+-- One mellow coin voice with a gentle envelope; rapid pickups never stack.
 local ringChime=Instance.new("Sound");ringChime.Name="RingPickupChime"
-ringChime.SoundId=Config.CollectSoundId;ringChime.Volume=Config.CollectSoundVolume
+ringChime.SoundId=Config.CollectSoundId;ringChime.Volume=0
+ringChime.PlaybackSpeed=Config.CollectSoundPlaybackSpeed
 ringChime.Parent=SoundService
 -- Tame the sharp click without darkening wind or background music.
 local pickupTone=Instance.new("EqualizerSoundEffect");pickupTone.Name="SoftPickupTone"
@@ -316,7 +317,7 @@ remote.OnClientEvent:Connect(function(kind,data)
   if collectedIds[data.id] then return end
   collectedIds[data.id]=true
   if soundEnabled then
-   ringChime:Stop();ringChime.TimePosition=0;ringChime.Volume=Config.CollectSoundVolume
+   ringChime:Stop();ringChime.TimePosition=0;ringChime.Volume=0
    ringChime:Play();chimeStarted=os.clock()
   end
   local folder=workspace:FindFirstChild("PaperFlightWorld")
@@ -367,9 +368,14 @@ end
 resize();camera:GetPropertyChangedSignal("ViewportSize"):Connect(resize)
 RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value+1,function(dt)
  if chimeStarted then
-  local remaining=Config.CollectSoundDuration-(os.clock()-chimeStarted)
+  local elapsed=os.clock()-chimeStarted
+  local remaining=Config.CollectSoundDuration-elapsed
   if remaining<=0 then ringChime:Stop();chimeStarted=nil
-  else ringChime.Volume=Config.CollectSoundVolume*math.clamp(remaining/0.06,0,1) end
+  else
+   local attack=math.clamp(elapsed/Config.CollectSoundAttack,0,1)
+   local release=math.clamp(remaining/Config.CollectSoundRelease,0,1)
+   ringChime.Volume=Config.CollectSoundVolume*attack*release
+  end
  end
  local flying=mode=="Flying"
  local intensity=flying and math.clamp((telemetry.speed-80)/170,0,1) or 0

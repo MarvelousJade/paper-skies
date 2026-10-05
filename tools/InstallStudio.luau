@@ -41,11 +41,15 @@ Config.RingValue = 10
 Config.DistanceGoldStuds = 200
 Config.CollectionRadius = 12
 Config.RingMargin = 3.6
-Config.CollectSoundId = "rbxassetid://111940732857414"
-Config.CollectSoundVolume = 0.2
-Config.CollectSoundHighGain = -8
+-- Quiet coin pickup with a softened attack and release, separate from the music mix.
+Config.CollectSoundId = "rbxassetid://4612374807"
+Config.CollectSoundVolume = 0.14
+Config.CollectSoundHighGain = -12
 Config.CollectSoundMidGain = -2
-Config.CollectSoundDuration = 0.45
+Config.CollectSoundDuration = 0.5
+Config.CollectSoundAttack = 0.025
+Config.CollectSoundRelease = 0.18
+Config.CollectSoundPlaybackSpeed = 0.92
 -- Original Paper Skies loop, uploaded by the project owner from assets/audio/PaperSkies.wav.
 -- Empty disables music without requesting a placeholder or inaccessible asset.
 Config.MusicSoundId = "rbxassetid://126932983544303"
@@ -308,7 +312,7 @@ World.Thermals={
  {center=Vector3.new(-2200,0,1350),radius=280,height=1000,strength=14},
  {center=Vector3.new(-1850,0,-2100),radius=300,height=1200,strength=15},
 }
--- Two visible field encounters; thirteen remain hidden behind mountain silhouettes.
+-- One field encounter ahead and one behind launch; thirteen stay hidden behind mountains.
 -- Seeded rejection sampling keeps every animal off slopes and makes discovery placement reproducible.
 World.Animals={}
 local random=Random.new(261004)
@@ -362,12 +366,18 @@ for attempt=1,60000 do
  end
 end
 assert(#World.Animals==15,"Could not place all wildlife on clear lowland sites")
--- Replace every old model while retaining the validated locations and discovery split.
+-- Relocate only the second field encounter after sampling, preserving every other site.
+-- Default launch faces -Z; +Z places this turtle in the meadow behind the player.
+local rearField=World.Animals[2]
+rearField.position=Vector3.new(-550,Landscape.height(-550,1850),1850)
+rearField.heading=0
+-- Keep the reference roster and derive field markers from the final positions.
 local referenceRoster={"Bear","Turtle","SilverFox","Raccoon","CandyCat","Gorilla","Mammoth",
  "Bear","SilverFox","Turtle","Raccoon","CandyCat","Gorilla","Mammoth","SilverFox"}
 for index,animal in World.Animals do
  animal.species=referenceRoster[index]
- animal.forwardMeadow=animal.behindPeak==nil
+ animal.forwardMeadow=animal.behindPeak==nil and animal.position.Z<launch.Z
+ animal.rearMeadow=animal.behindPeak==nil and animal.position.Z>launch.Z
 end
 World.Rings={}
 local palette={
@@ -1249,9 +1259,10 @@ local contents=Instance.new("Frame");contents.BackgroundTransparency=1;contents.
 local modalMode="Upgrades"
 local palette={Color3.fromRGB(255,249,228),Color3.fromRGB(125,212,255),Color3.fromRGB(255,183,153),Color3.fromRGB(189,229,160)}
 local wind=Instance.new("Sound");wind.Name="PaperFlightWind";wind.SoundId=Config.WindSoundId;wind.Looped=true;wind.Volume=0;wind.Parent=SoundService
--- One softened arcade ring chime: fixed pitch, no overlapping voices, short faded tail.
+-- One mellow coin voice with a gentle envelope; rapid pickups never stack.
 local ringChime=Instance.new("Sound");ringChime.Name="RingPickupChime"
-ringChime.SoundId=Config.CollectSoundId;ringChime.Volume=Config.CollectSoundVolume
+ringChime.SoundId=Config.CollectSoundId;ringChime.Volume=0
+ringChime.PlaybackSpeed=Config.CollectSoundPlaybackSpeed
 ringChime.Parent=SoundService
 -- Tame the sharp click without darkening wind or background music.
 local pickupTone=Instance.new("EqualizerSoundEffect");pickupTone.Name="SoftPickupTone"
@@ -1477,7 +1488,7 @@ remote.OnClientEvent:Connect(function(kind,data)
   if collectedIds[data.id] then return end
   collectedIds[data.id]=true
   if soundEnabled then
-   ringChime:Stop();ringChime.TimePosition=0;ringChime.Volume=Config.CollectSoundVolume
+   ringChime:Stop();ringChime.TimePosition=0;ringChime.Volume=0
    ringChime:Play();chimeStarted=os.clock()
   end
   local folder=workspace:FindFirstChild("PaperFlightWorld")
@@ -1528,9 +1539,14 @@ end
 resize();camera:GetPropertyChangedSignal("ViewportSize"):Connect(resize)
 RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value+1,function(dt)
  if chimeStarted then
-  local remaining=Config.CollectSoundDuration-(os.clock()-chimeStarted)
+  local elapsed=os.clock()-chimeStarted
+  local remaining=Config.CollectSoundDuration-elapsed
   if remaining<=0 then ringChime:Stop();chimeStarted=nil
-  else ringChime.Volume=Config.CollectSoundVolume*math.clamp(remaining/0.06,0,1) end
+  else
+   local attack=math.clamp(elapsed/Config.CollectSoundAttack,0,1)
+   local release=math.clamp(remaining/Config.CollectSoundRelease,0,1)
+   ringChime.Volume=Config.CollectSoundVolume*attack*release
+  end
  end
  local flying=mode=="Flying"
  local intensity=flying and math.clamp((telemetry.speed-80)/170,0,1) or 0

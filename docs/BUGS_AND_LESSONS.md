@@ -627,3 +627,24 @@ The shared four-leg builder now uses smooth vertical cylinders and rounded paws 
 **Interview lesson:** Reported geometry dimensions and visible shape can differ. Review the rendered silhouette as well as collision clearance, especially when changing primitive types. These changes remain uncommitted.
 
 The final Play audio check verified volume 0.20 and enabled EQ (-8 dB high / -2 dB mid). Three unique synthetic pickup notifications produced three starts, a duplicate was suppressed, and the tail stopped. Wind/music were not filtered; music continued playing. The test listener was removed and no server gold was awarded.
+
+
+## October 5 rear-field turtle placement
+
+### D25 Split the introductory animals around the starting point
+
+The softer sound and rounded limbs were committed first as `ba1ca74`, as requested. The bear stays in front of launch. Turtle2 moved from approximately (-471.8, 50.8, -1055.7) to (-550, 56.5, 1850), around 1316 horizontal studs behind the starting point in the +Z direction. Its heading is zero so it faces the starting area, and belly ring 316 moved and rotated with it.
+
+The relocation happens after seeded placement so it does not alter the random sequence or move any other animal. A direct before/after comparison verified that the other fourteen animals retained both position and heading. The rear site is flat, off the mountains, and about 186 studs from the nearest existing tree. The animal was rebuilt to resample foot heights; the existing ring model was moved to match the new authoritative collection data.
+
+All 5770 geometry/layout assertions passed, including exactly one forward and one rear field encounter, the turtle's footprint, complete belly-ring opening, and sideways flight clearance. The moved ring's rendered center agrees with the collection position within 0.001 stud. A side screenshot confirms the visible complete ring beneath the turtle. This is a layout refinement; no new defect was encountered. The move remains uncommitted for user testing.
+
+## October 5 calm exploration pickup
+
+### D26 Replace the arcade sample rather than only turning it down
+
+The user found the Sonic-style sound unsuitable for the relaxed scenery and music even after attenuation. Replace it with free Creator Store coin_pickup_1 by thienbao2109 (4612374807). Set maximum volume to 0.14, fixed playback speed to 0.92, high EQ to -12 dB, and mid EQ to -2 dB. A 25 ms attack softens the initial transient, and a 180 ms release avoids an abrupt cutoff within the 500 ms playback window. Keep one voice, duplicate suppression, and the shared Sound toggle. Paper Skies retains its existing mix.
+
+Fresh Studio Play verification: the replacement source loaded at 0.702 seconds with playback speed 0.92 and pickup-only EQ at -12 dB high / -2 dB mid. Three unique synthetic pickup notifications plus a duplicate produced exactly three starts on one Sound instance; peak volume was 0.14 and playback stopped after the envelope. Sound OFF suppressed the next pickup and muted music; Sound ON restored the continuing music. Temporary listeners were disconnected. Synthetic IDs awarded no server gold. Subjective listening approval, actual flown collection, and published audio permissions remain manual checks.
+
+**Interview lesson:** Technical playback correctness does not establish a suitable sound style. Treat listening feedback as an art-direction iteration, select a different source when attenuation alone is insufficient, and preserve duplicate and mute behavior while tuning. This is a design refinement, not a newly discovered software defect. The coin replacement and rear-field turtle move remain uncommitted for user testing.

@@ -28,11 +28,15 @@ Config.RingValue = 10
 Config.DistanceGoldStuds = 200
 Config.CollectionRadius = 12
 Config.RingMargin = 3.6
-Config.CollectSoundId = "rbxassetid://111940732857414"
-Config.CollectSoundVolume = 0.2
-Config.CollectSoundHighGain = -8
+-- Quiet coin pickup with a softened attack and release, separate from the music mix.
+Config.CollectSoundId = "rbxassetid://4612374807"
+Config.CollectSoundVolume = 0.14
+Config.CollectSoundHighGain = -12
 Config.CollectSoundMidGain = -2
-Config.CollectSoundDuration = 0.45
+Config.CollectSoundDuration = 0.5
+Config.CollectSoundAttack = 0.025
+Config.CollectSoundRelease = 0.18
+Config.CollectSoundPlaybackSpeed = 0.92
 -- Original Paper Skies loop, uploaded by the project owner from assets/audio/PaperSkies.wav.
 -- Empty disables music without requesting a placeholder or inaccessible asset.
 Config.MusicSoundId = "rbxassetid://126932983544303"

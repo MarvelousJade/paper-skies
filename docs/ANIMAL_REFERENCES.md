@@ -27,7 +27,7 @@ All fifteen current encounter instances use the new models. Two extra field enco
 
 ## Placement and gameplay
 
-Thirteen animals retain their locations behind mountains, and two occupy the introductory field. The front encounters are a bear and turtle; the extra meadow candy cat and raccoon were removed to keep the field open. The models use a 0.62 authored scale and retain complete 24-stud belly rings facing sideways.
+Thirteen animals retain their locations behind mountains. The two introductory field encounters are split around launch: a bear in front and a turtle behind, at approximately (-550, 56.5, 1850). The turtle faces toward the starting area; its complete ring remains aligned sideways under its belly. The extra meadow candy cat and raccoon were previously removed to keep the field open. The models use a 0.62 authored scale and retain complete 24-stud belly rings facing sideways.
 
 All fifteen animals now use smooth cylindrical legs, with rounded paws and feet. Gorilla arms use cylinders, rounded shoulder/elbow joints, and cuffs that follow the forearm. Flattened paws, hands, toes, and turtle flippers use sphere meshes scaled to their authored part dimensions. Body layers and faces retain the reference style. Existing footprints and leg placements preserve clearance for the required full rings. All animals remain static exploration landmarks; animation is not implemented.
 
@@ -35,6 +35,6 @@ All fifteen animals now use smooth cylindrical legs, with rounded paws and feet.
 
 Close views were inspected for each of the five new types; the gorilla and mammoth had already been inspected from three-quarter and side views. A floating/occluded fox-eye iteration was corrected with a forward face panel. Raccoon ears were shortened to distinguish them from the fox.
 
-All 5766 geometry/layout assertions passed for the expanded ring layout, including visible ring-rim clearance samples, plane-width belly passages, sideways reward crossings, eight launch directions, and a check that every encounter uses the new roster and model builder.
+All 5770 geometry/layout assertions passed for the expanded ring layout, including visible ring-rim clearance samples, plane-width belly passages, sideways reward crossings, eight launch directions, and a check that every encounter uses the new roster and model builder.
 
 The rebuilt world has 30,494 descendants, including the expanded ring trails. Device performance and live keyboard-flown collection beneath the new roster remain unverified. These models are original adaptations of the reference style, not exact replicas.

@@ -87,9 +87,17 @@ for _,animal in W.Animals do
  local model=workspace.PaperFlightWorld.Rings:FindFirstChild("Ring"..found.id)
  check(#model:GetChildren()==48,"Animal reward displays a complete ring")
 end
-local forward=0;local trails={}
+local forward,rear=0,0;local trails={}
 for _,a in W.Animals do
  if a.forwardMeadow then forward+=1;check(a.position.Z<0 and a.position.Y<110,"Visible wildlife belongs in the forward field") end
+ if a.rearMeadow then
+  rear+=1
+  check(a.species=="Turtle" and a.position.Z>require(package.Config).Launch.Z+1000 and a.position.Y<110,"The turtle belongs in the rear lowland field")
+  for _,offset in {Vector2.new(45,0),Vector2.new(-45,0),Vector2.new(0,55),Vector2.new(0,-55)} do
+   local height,_,mountain=L.height(a.position.X+offset.X,a.position.Z+offset.Y)
+   check(not mountain and math.abs(height-a.position.Y)<2.5,"Rear turtle needs a flat footprint")
+  end
+ end
 end
 for _,r in W.Rings do if r.group:find("Meandering") then trails[r.group]=(trails[r.group] or 0)+1 end end
 local trailCount=0
@@ -97,7 +105,7 @@ for _,count in trails do
  trailCount+=1
  check(count==10,"Each connected sky trail contains ten pickups")
 end
-check(forward==2,"Keep exactly two open-field animals")
+check(forward==1 and rear==1,"Split the two field animals between front and back of launch")
 check(trailCount==31,"Keep twenty-four existing trails plus seven high trails")
 local highCount=0;local highGroups={}
 for _,ring in W.Rings do if ring.highSky then

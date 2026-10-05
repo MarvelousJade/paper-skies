@@ -18,7 +18,7 @@ World.Thermals={
  {center=Vector3.new(-2200,0,1350),radius=280,height=1000,strength=14},
  {center=Vector3.new(-1850,0,-2100),radius=300,height=1200,strength=15},
 }
--- Two visible field encounters; thirteen remain hidden behind mountain silhouettes.
+-- One field encounter ahead and one behind launch; thirteen stay hidden behind mountains.
 -- Seeded rejection sampling keeps every animal off slopes and makes discovery placement reproducible.
 World.Animals={}
 local random=Random.new(261004)
@@ -72,12 +72,18 @@ for attempt=1,60000 do
  end
 end
 assert(#World.Animals==15,"Could not place all wildlife on clear lowland sites")
--- Replace every old model while retaining the validated locations and discovery split.
+-- Relocate only the second field encounter after sampling, preserving every other site.
+-- Default launch faces -Z; +Z places this turtle in the meadow behind the player.
+local rearField=World.Animals[2]
+rearField.position=Vector3.new(-550,Landscape.height(-550,1850),1850)
+rearField.heading=0
+-- Keep the reference roster and derive field markers from the final positions.
 local referenceRoster={"Bear","Turtle","SilverFox","Raccoon","CandyCat","Gorilla","Mammoth",
  "Bear","SilverFox","Turtle","Raccoon","CandyCat","Gorilla","Mammoth","SilverFox"}
 for index,animal in World.Animals do
  animal.species=referenceRoster[index]
- animal.forwardMeadow=animal.behindPeak==nil
+ animal.forwardMeadow=animal.behindPeak==nil and animal.position.Z<launch.Z
+ animal.rearMeadow=animal.behindPeak==nil and animal.position.Z>launch.Z
 end
 World.Rings={}
 local palette={

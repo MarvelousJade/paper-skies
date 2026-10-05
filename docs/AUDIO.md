@@ -2,7 +2,7 @@
 
 ## Ring collection
 
-The ring uses [SONIC RING SFX by PastaReaperYT](https://create.roblox.com/store/asset/111940732857414), a free Creator Store audio asset, ID `111940732857414`. Studio loaded its 0.952-second source. The client plays up to 450 ms and fades the final 60 ms, giving the bright ring attack a short audible tail. Playback speed stays at 1, with volume 0.20 (previously 0.35). A pickup-only EqualizerSoundEffect reduces HighGain to -8 dB and MidGain to -2 dB, with LowGain at 0 dB; wind and music are unaffected by this filter. This replaces the earlier dry UI Tick at the user's request; the pickup sample is a Creator Store asset, not original project music.
+The ring uses [coin_pickup_1 by thienbao2109](https://create.roblox.com/store/asset/4612374807), a free Creator Store audio asset, ID `4612374807`. Its 0.702-second source replaces the Sonic sample for a calmer exploration mix. Playback uses a fixed speed of 0.92 and maximum volume 0.14, with a 25 ms fade-in and 180 ms fade-out over a 500 ms playback window. A pickup-only EqualizerSoundEffect reduces highs by 12 dB and mids by 2 dB, with lows unchanged. The sample is a Creator Store asset; Paper Skies remains the original project music. Listening approval remains with the user.
 
 There is one `RingPickupChime` Sound instance. Rapid pickups restart it instead of stacking voices, and the duplicate-ring guard runs before playback. Sound OFF immediately stops the chime, mutes wind, and mutes music. Sound ON permits new chimes and restores music volume without restarting the song.
 
@@ -46,6 +46,10 @@ The client already creates a local, non-positional loop when a music ID is confi
 The smoke checks injected synthetic client feedback IDs only; they did not award gold or modify server collection state. Full flown collection, subjective sound review, and published-experience permissions remain manual checks.
 
 
-Current chime Play check: asset loaded at 0.952 seconds; one pickup plus its duplicate and two rapid unique pickups produced exactly three sound starts. The tail stopped, Sound OFF suppressed the next pickup, and the toggle was restored to ON. These synthetic feedback IDs did not award server gold. The fresh client also loaded all seventy high-sky rings and 336 total rewards. Subjective listening approval and published audio permissions remain pending.
+Earlier Sonic chime Play check: asset loaded at 0.952 seconds; one pickup plus its duplicate and two rapid unique pickups produced exactly three sound starts. The tail stopped, Sound OFF suppressed the next pickup, and the toggle was restored to ON. These synthetic feedback IDs did not award server gold. The fresh client also loaded all seventy high-sky rings and 336 total rewards. Subjective listening approval and published audio permissions remain pending.
 
-Softer pickup Play check: source loaded; volume 0.20; enabled pickup-only EQ at -8 dB high, -2 dB mid, 0 dB low. One pickup plus duplicate and two rapid pickups yielded three starts, with maximum volume 0.20 and the tail stopped. Music continued playing and neither wind nor music had the pickup EQ. Temporary audio-test connections were disconnected. Listening feedback remains pending.
+Earlier softened Sonic pickup Play check: source loaded; volume 0.20; enabled pickup-only EQ at -8 dB high, -2 dB mid, 0 dB low. One pickup plus duplicate and two rapid pickups yielded three starts, with maximum volume 0.20 and the tail stopped. Music continued playing and neither wind nor music had the pickup EQ. Temporary audio-test connections were disconnected. Listening feedback remains pending.
+
+## Current quiet coin verification
+
+Fresh Studio Play verification: the replacement source loaded at 0.702 seconds with playback speed 0.92 and pickup-only EQ at -12 dB high / -2 dB mid. Three unique synthetic pickup notifications plus a duplicate produced exactly three starts on one Sound instance; peak volume was 0.14 and playback stopped after the envelope. Sound OFF suppressed the next pickup and muted music; Sound ON restored the continuing music. Temporary listeners were disconnected. Synthetic IDs awarded no server gold. Subjective listening approval, actual flown collection, and published audio permissions remain manual checks.

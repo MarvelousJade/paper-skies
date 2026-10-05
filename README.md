@@ -39,7 +39,7 @@ Updraft strength was reduced from a previous mountain-zone maximum of 52 to 18 b
 
 The seven mountains, island lobes, ring trails, and thermals now surround the starting plateau. Tests require at least three mountains on either side of each main axis and no gap greater than 75 degrees between mountain bearings. Outer meadows remain behind the mountains.
 
-The world includes a broad flat launch plateau, varied mountain profiles, a lagoon, coastal water, four low foothill passages, and fifteen stylized animals across seven species. A bear and turtle occupy the open introductory field; thirteen animals sit behind mountain silhouettes. All wildlife uses a 0.62 authored model scale.
+The world includes a broad flat launch plateau, varied mountain profiles, a lagoon, coastal water, four low foothill passages, and fifteen stylized animals across seven species. A bear occupies the forward introductory field and a turtle occupies the field behind launch; thirteen animals sit behind mountain silhouettes. All wildlife uses a 0.62 authored model scale.
 
 There are 336 rewards: 310 rings on thirty-one curved sky routes, four at foothill passages, fifteen rings beneath animals, and seven at mountain summits. No reward is within 1000 horizontal studs of launch. Sky rings are 24 studs across and approximately 24 studs apart within each cluster. All rings now use round, 0.65-stud neon tubing instead of the previous 0.28-stud square segments; collection radii and rewards are unchanged. Summit rings are also 24 studs across; foothill rings are 28. Each sky trail contains ten consecutive rings. Twenty-four low/outer trails are joined by seven mountain-side high trails at roughly 475–1373 studs, near existing rising-air regions; aircraft ceilings and lift strength are unchanged. Earlier field trails still fill spaces between mountain approaches.
 
@@ -95,7 +95,7 @@ A replication focus follows the plane while the avatar stays behind. Flight rend
 
 Published profile writes use UpdateAsync with ownership leases, retries, periodic saves, and departure/shutdown saves. Normalization retains valid plane ownership and selection; old profiles keep gold and existing bonuses. **Studio progress is session-only; published persistence has not been verified end to end.**
 
-Wind asset: 687874741. Pickup audio: [SONIC RING SFX by PastaReaperYT](https://create.roblox.com/store/asset/111940732857414), played as one fixed-pitch voice with a 450 ms limit and a soft tail fade. Pickup volume is 0.20, with high frequencies reduced by 8 dB and mid frequencies by 2 dB to soften its sharp edge. Original chill EDM loop: `assets/audio/PaperSkies.wav`; regeneration and Roblox setup are documented in `docs/AUDIO.md`. Background music uses the uploaded PaperSkies asset `126932983544303` at volume 0.16, with looping and the shared Sound toggle.
+Wind asset: 687874741. Pickup audio: [coin_pickup_1 by thienbao2109](https://create.roblox.com/store/asset/4612374807), one quiet voice at volume 0.14 and fixed playback speed 0.92. A 25 ms attack, 180 ms release, and reduced high frequencies soften its 500 ms playback window. Original chill EDM loop: `assets/audio/PaperSkies.wav`; regeneration and Roblox setup are documented in `docs/AUDIO.md`. Background music uses the uploaded PaperSkies asset `126932983544303` at volume 0.16, with looping and the shared Sound toggle.
 
 ## Validation
 
@@ -119,6 +119,6 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The latest requested checkpoint is **`6a64f7c` — Polish neon aiming and pickups and add high-sky ring trails**. Softer pickup audio and rounded animal limbs remain uncommitted for user testing.
+The latest requested checkpoint is **`ba1ca74` — Soften pickup chime and round wildlife limbs**. Moving the turtle and its belly ring to the rear field and replacing the Sonic sample with a quiet coin pickup remain uncommitted for user testing.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.
