@@ -27,7 +27,13 @@ if vista then
  local prior=early:FindFirstChild("DistantLandscape");if prior then prior:Destroy() end
  vista.ModelStreamingMode=Enum.ModelStreamingMode.Default;vista.Parent=early
 end
-assert(early:FindFirstChild("DistantLandscape"),"Missing early mountain silhouettes")
+-- Ship compact sampled points, not thousands of replicated fallback Parts.
+local priorVista=early:FindFirstChild("DistantLandscape");if priorVista then priorVista:Destroy() end
+local skyline=require(RF.PaperSkyline)
+local data=skyline.bake(require(game.ReplicatedStorage.PaperFlight.Landscape))
+local payload=early:FindFirstChild("SkylineData") or Instance.new("StringValue")
+payload.Name="SkylineData";payload.Value=game.HttpService:JSONEncode(data);payload.Parent=early
+payload:SetAttribute("TileCount",#data)
 local markers=early:FindFirstChild("SummitMarkers") or Instance.new("Folder")
 markers.Name="SummitMarkers";markers.Parent=early;markers:ClearAllChildren()
 for _,ring in world.Rings:GetChildren() do

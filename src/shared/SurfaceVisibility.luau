@@ -11,9 +11,15 @@ function Visibility.new(vista,terrain,world)
  for _,tile in vista:GetChildren() do
   local center=tile:GetAttribute("Center")
   if center then
-   local parts={};local samples={center}
+   local parts={};local samples={}
+   for i=1,9 do local sample=tile:GetAttribute("Sample"..i);if sample then table.insert(samples,sample) end end
+   local bakedCoverage=#samples>0
+   if not bakedCoverage then table.insert(samples,center) end
    for _,p in tile:GetDescendants() do
-    if p:IsA("BasePart") then table.insert(parts,p);table.insert(samples,p.Position) end
+    if p:IsA("BasePart") then
+     table.insert(parts,p)
+     if not bakedCoverage then table.insert(samples,p.Position) end
+    end
    end
    table.insert(tiles,{center=center,parts=parts,samples=samples,fade=-1})
   end

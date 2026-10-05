@@ -5,7 +5,20 @@ local RunService=game:GetService("RunService")
 local Visibility=require(RF:WaitForChild("PaperSurfaceVisibility"))
 local source=RF:WaitForChild("PaperEarlyWorld")
 source.Name="PaperEarlyWorld";source.Parent=workspace
-local controller=Visibility.new(source:WaitForChild("DistantLandscape"),workspace.Terrain,workspace)
+local Skyline=require(RF:WaitForChild("PaperSkyline"))
+local payload=source:WaitForChild("SkylineData")
+local data=game.HttpService:JSONDecode(payload.Value)
+-- Build toward the initial camera first, without waiting for ReplicatedStorage or world scripts.
+local camera=workspace.CurrentCamera
+if camera then table.sort(data,function(a,b)
+ local function score(row)
+  local offset=Vector3.new(unpack(row[5]))-camera.CFrame.Position
+  return offset.Magnitude-(offset.Magnitude>0 and offset.Unit:Dot(camera.CFrame.LookVector) or 0)*10000
+ end
+ return score(a)<score(b)
+end) end
+local vista=Skyline.build(data,source,function() RunService.Heartbeat:Wait() end)
+local controller=Visibility.new(vista,workspace.Terrain,workspace)
 workspace:SetAttribute("PaperSkylineReadySeconds",os.clock()-started)
 local elapsed=0
 local connection=RunService.Heartbeat:Connect(function(dt)

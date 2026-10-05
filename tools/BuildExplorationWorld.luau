@@ -291,24 +291,7 @@ for i,tree in trees:GetChildren() do
   Scenery.stone(stone,rockSpot,V(accentRng:NextNumber(4,8),accentRng:NextNumber(3,6),accentRng:NextNumber(4,7)),a)
  end
 end
--- Persistent coarse silhouettes make the whole archipelago readable beyond streaming range.
--- Detailed terrain occludes these lower surfaces nearby; the client fades close proxy tiles.
-local vista=model("DistantLandscape");vista.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
-for x=-5632,4608-256,256 do for z=-5376,5632-256,256 do
- local centerY,_,isMountain=Landscape.height(x+128,z+128)
- if isMountain and centerY>170 then
-  local tile=model("VistaTile",vista);tile:SetAttribute("Center",V(x+128,centerY,z+128))
-  local function point(px,pz)
-   local h=ground(px,pz)
-   local low=math.min(h,ground(px+48,pz),ground(px-48,pz),ground(px,pz+48),(ground(px,pz-48)))
-   return V(px,math.max(-8,low-28),pz)
-  end
-  local a,b,c,d=point(x,z),point(x+256,z),point(x+256,z+256),point(x,z+256)
-  local _,rock=Landscape.height(x+128,z+128)
-  quad(tile,"DistantSurface",a,b,c,d,rock and Color3.fromRGB(130,134,145) or Color3.fromRGB(125,162,79))
-  for _,p in tile:GetDescendants() do if p:IsA("BasePart") then decor(p);p.CastShadow=false;p.Transparency=0 end end
- end
-end end
+-- Compact complete skyline points are baked by OptimizeWorld after scenery is built.
 local deck=model("LaunchCliff")
 part(deck,"StoneDeck",V(60,8,65),CF(-550,353,555),Color3.fromRGB(132,142,152),Enum.Material.Slate)
 for _,x in {-586,-514} do

@@ -7,10 +7,19 @@ local D=require(game.ServerScriptService.PaperDeferredScenery)
 local Details=require(game.ReplicatedStorage.PaperFlight.MeadowDetails)
 local Scenery=require(game.ReplicatedStorage.PaperFlight.Scenery)
 local early=RF.PaperEarlyWorld
-check(#early.DistantLandscape:GetChildren()==126,"All mountain silhouette tiles are ready in ReplicatedFirst")
+local Skyline=require(RF.PaperSkyline)
+local data=game.HttpService:JSONDecode(early.SkylineData.Value)
+check(#data>500 and #data<1600,"Complete mountain coverage has a bounded tile count")
+check(#early.SkylineData.Value<200000,"Mountain geometry travels as a compact point payload")
+local L=require(game.ReplicatedStorage.PaperFlight.Landscape)
+for _,peak in L.Peaks do
+ local found=false
+ for _,row in data do if math.abs(row[5][1]-peak.x)<=64 and math.abs(row[5][3]-peak.z)<=64 then found=true;break end end
+ check(found,"Every mountain summit has an early surface tile")
+end
 check(#early.SummitMarkers:GetChildren()==9,"All nine summit goals are included in early content")
-check(#early:GetDescendants()<800,"Bound early download size")
-check(not SS.PaperFlightBackups.Archivable,"Development snapshots cannot ship in the release")
+check(#early:GetDescendants()<250,"Do not replicate thousands of visual fallback parts")
+check(not SS:FindFirstChild("PaperFlightBackups") or not SS.PaperFlightBackups.Archivable,"Development snapshots cannot ship in the release")
 check(SS.PaperDeferredWorld.Archivable,"Deferred playable content must be saved")
 local vista=Instance.new("Folder");local tile=Instance.new("Model");tile.Parent=vista
 tile:SetAttribute("Center",Vector3.new(0,100,0))
@@ -29,6 +38,22 @@ check(part.LocalTransparencyModifier==1,"Complete nearby terrain replaces the pr
 present=false;visible:Update(Vector3.new(0,110,0))
 check(part.LocalTransparencyModifier==0,"Terrain eviction restores the fallback")
 visible:Update(Vector3.new(4000,110,0));check(part.LocalTransparencyModifier==0,"Distant skyline remains visible")
+-- A loaded gully below a coarse face must replace that face, not leave a gray patch.
+local gully=Instance.new("Model");gully.Parent=vista;gully:SetAttribute("Center",Vector3.new(0,150,0))
+gully:SetAttribute("Sample1",Vector3.new(0,80,0));gully:SetAttribute("Sample2",Vector3.new(10,75,0))
+local face=Instance.new("Part");face.Position=Vector3.new(10,160,0);face.Parent=gully
+local loaded=true;local incomplete=false
+local gullyWorld={Raycast=function(_,origin)
+ if not loaded or (incomplete and origin.X>0) then return nil end
+ return {Position=Vector3.new(origin.X,85,origin.Z)}
+end}
+local gullyVisibility=V.new(vista,workspace.Terrain,gullyWorld)
+gullyVisibility:Update(Vector3.new(0,150,20))
+check(face.LocalTransparencyModifier==1,"Loaded lower terrain must hide a coarse face bridging its gully")
+incomplete=true;gullyVisibility:Update(Vector3.new(0,150,20))
+check(face.LocalTransparencyModifier==0,"Incomplete gully coverage retains the fallback")
+loaded=false;gullyVisibility:Update(Vector3.new(0,150,20))
+check(face.LocalTransparencyModifier==0,"Evicted gully terrain restores the fallback")
 vista:Destroy()
 local storage=SS.PaperDeferredWorld
 local manager=D.new(world,storage)

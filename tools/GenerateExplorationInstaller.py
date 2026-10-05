@@ -22,6 +22,7 @@ local function write(parent,name,class,source)
 end
 ''']
 for parent,name,cls,path in [
+ ("game.ReplicatedFirst","PaperSkyline","ModuleScript","src/shared/Skyline.luau"),
  ("package","Config","ModuleScript","src/shared/Config.luau"),
  ("package","Flight","ModuleScript","src/shared/Flight.luau"),
  ("package","FlightCamera","ModuleScript","src/shared/FlightCamera.luau"),
