@@ -18,6 +18,9 @@ Config.ThrowStand = Vector3.new(-550, 360, 534)
 Config.MouseSensitivity = 0.0025
 Config.MaxAimYaw = math.pi
 Config.ThrowDelay = 0.4
+-- A fresh hand throw blends into normal climb penalties over its first second.
+Config.ThrowClimbEaseDuration = 1.2
+Config.ThrowClimbInitialScale = 0.1
 Config.AimPitch = math.rad(10)
 Config.AimCurveWidth = 0.9
 Config.AimCurveEnd = Vector3.new(0,-65,-220)
@@ -88,7 +91,7 @@ local Config = require(script.Parent.Config)
 export type Stats = {launchSpeed:number, drag:number, sink:number, turnRate:number,
  climbComfort:number, climbLoss:number, airCeiling:number, boostRecharge:number}
 export type State = {position:Vector3, yaw:number, pitch:number, speed:number, stalled:boolean, bank:number,
- boostRemaining:number?, boosting:boolean?, boostRest:number?, recharging:boolean?}
+ boostRemaining:number?, boosting:boolean?, boostRest:number?, recharging:boolean?, age:number?}
 local Flight = {}
 function Flight.stats(levels: {[string]:number}?,planeId:string?): Stats
  local l=levels or {};local plane=Config.Planes[planeId or "Dart"] or Config.Planes.Dart
@@ -98,15 +101,20 @@ function Flight.stats(levels: {[string]:number}?,planeId:string?): Stats
 end
 function Flight.new(position:Vector3, yaw:number, pitch:number, stats:Stats): State
  return {position=position,yaw=yaw,pitch=pitch,speed=stats.launchSpeed,stalled=false,bank=0,
-  boostRemaining=Config.BoostDuration,boosting=false,boostRest=0,recharging=false}
+  boostRemaining=Config.BoostDuration,boosting=false,boostRest=0,recharging=false,age=0}
 end
 function Flight.step(state:State, steer:Vector2, dt:number, stats:Stats?, updraft:number?, boostHeld:boolean?): State
  local settings=stats or Flight.stats()
  local step=math.max(0,dt)
+ -- Missing age means established flight, so partial/legacy states get no fresh throw bonus.
+ local age=state.age or Config.ThrowClimbEaseDuration
+ local progress=math.clamp((age+step*0.5)/Config.ThrowClimbEaseDuration,0,1)
+ local blend=progress*progress*(3-2*progress)
+ local climbScale=Config.ThrowClimbInitialScale+(1-Config.ThrowClimbInitialScale)*blend
  local speed=state.speed
  local stalled=state.stalled
  -- Pulling up raises the speed needed to retain lift. Recovery has a separate threshold.
- local stallThreshold=Config.StallSpeed+math.max(0,math.sin(state.pitch))*35
+ local stallThreshold=Config.StallSpeed+math.max(0,math.sin(state.pitch))*35*climbScale
  if speed<stallThreshold then stalled=true end
  if stalled and speed>Config.RecoverySpeed and state.pitch<0 then stalled=false end
  local pitch=state.pitch
@@ -123,7 +131,7 @@ function Flight.step(state:State, steer:Vector2, dt:number, stats:Stats?, updraf
  -- These are soft energy costs, not angle/altitude clamps. Better folds tolerate steeper climbs.
  local excessClimb=math.max(0,pitch-settings.climbComfort)/math.rad(30)
  local altitudeLoad=math.clamp((state.position.Y-settings.airCeiling)/Config.AltitudeSoftBand,0,3)
- local climbDrag=settings.climbLoss*excessClimb*excessClimb
+ local climbDrag=settings.climbLoss*excessClimb*excessClimb*climbScale
  local drag=settings.drag*speed*speed + math.abs(steer.X)*1.9 + climbDrag + altitudeLoad*8
  local remaining=math.clamp(state.boostRemaining or 0,0,Config.BoostDuration)
  local used=boostHeld and math.min(step,remaining) or 0
@@ -142,7 +150,7 @@ function Flight.step(state:State, steer:Vector2, dt:number, stats:Stats?, updraf
  local afterUse=math.max(0,remaining-used)
  local fuel=math.min(Config.BoostDuration,afterUse+restored)
  return {position=position,yaw=yaw,pitch=pitch,speed=speed,stalled=stalled,bank=bank,
-  boostRemaining=fuel,boosting=used>0,boostRest=rest,recharging=fuel>afterUse}
+  boostRemaining=fuel,boosting=used>0,boostRest=rest,recharging=fuel>afterUse,age=age+step}
 end
 function Flight.aimInput(state:State, yaw:number, pitch:number): Vector2
  local difference=(yaw-state.yaw+math.pi)%(2*math.pi)-math.pi
@@ -184,6 +192,22 @@ function Camera.step(state:State,dt:number,boosting:boolean): State
  local distance=29+math.max(throwPulse*9,boosting and 5.5 or 0)
  local blend=1-math.exp(-7*math.max(0,dt))
  return {age=age,fov=state.fov+(fov-state.fov)*blend,distance=state.distance+(distance-state.distance)*blend}
+end
+-- Orbit height is independent of a steep upward aim. The old full-direction
+-- offset put the camera below the launch deck at maximum pitch.
+function Camera.frame(position:Vector3,direction:Vector3,distance:number,params:RaycastParams,side:number?): CFrame
+ local horizontal=Vector3.new(direction.X,0,direction.Z)
+ horizontal=horizontal.Magnitude>0.001 and horizontal.Unit or Vector3.new(0,0,-1)
+ local right=horizontal:Cross(Vector3.yAxis)
+ local height=math.clamp(7-direction.Y*distance*0.35,5,18)
+ local desired=position-horizontal*distance+Vector3.yAxis*height+right*(side or 0)
+ local origin=position+Vector3.yAxis*2.5
+ local offset=desired-origin
+ -- A volume sweep protects the near plane, not just the camera's center ray.
+ local hit=workspace:Spherecast(origin,2,offset,params)
+ if hit then desired=origin+offset.Unit*math.max(0,hit.Distance-0.5) end
+ -- Look a little ahead while keeping the aircraft visible during steep climbs.
+ return CFrame.lookAt(desired,position+direction*8)
 end
 return Camera
 ]=])
@@ -279,14 +303,22 @@ function Landscape.height(x:number,z:number): (number,boolean,boolean)
    if top>h then h=top;rocky=true;mountain=true end
   end
  end
- -- Broad 520 x 540 summit with angular cliff shoulders. No spherical launch mound.
- local dx=math.abs((x+550)/260);local dz=math.abs((z-534)/270)
- local mesa=math.max(dx,dz)
- if mesa<1.75 then
-  local slope=math.clamp((1.75-mesa)/0.75,0,1)
-  local top=42+307*slope^0.55
-  if mesa>1 then top+=math.noise(x/70,z/85)*13*(1-slope) end
-  if top>h then h=top;mountain=true;rocky=mesa>1.01 end
+ -- Compact 110 x 120 launch summit: steep throws reach open air before descending.
+ local dx=math.abs((x+550)/55);local dz=math.abs((z-534)/60)
+ -- Rounded angular summit; ridged shoulders taper into a broad, irregular foot.
+ -- The convex falloff drops quickly beside launch, leaving steep throws clear air.
+ local mesa=(dx^4+dz^4)^0.25
+ local angle=math.atan2(z-534,x+550)
+ local spread=2.8*(1+0.16*math.sin(angle*5+0.4)+0.06*math.cos(angle*9))
+ local t=math.clamp((mesa-1)/spread,0,1)
+ if t<1 then
+  local slope=1-t
+  local top=42+307*slope^2.6
+  if mesa>1 then top+=math.noise(x/28,z/35)*22*t*(1-t) end
+  if top>h then
+   h=top;mountain=true
+   rocky=mesa>1.02 and (t<0.65 or math.noise(x/43,z/51)<0.1)
+  end
  end
  return h,rocky,mountain
 end
@@ -313,16 +345,18 @@ World.Thermals={
  {center=Vector3.new(-2200,0,1350),radius=280,height=1000,strength=14},
  {center=Vector3.new(-1850,0,-2100),radius=300,height=1200,strength=15},
 }
--- One field encounter ahead and one behind launch; thirteen stay hidden behind mountains.
+-- Keep the two field encounters and exactly one distinct discovery behind each mountain.
 -- Seeded rejection sampling keeps every animal off slopes and makes discovery placement reproducible.
 World.Animals={}
 local random=Random.new(261004)
-local species={"Lion","Elephant","Deer","Fox","Giraffe"}
+-- Assign by mountain, not sampling order, so each destination has a distinct identity.
+local mountainSpecies={"Gorilla","Mammoth","Turtle","SilverFox","Raccoon","Bear","CandyCat"}
+local animalCount=#Landscape.Peaks+2
 local launch=Vector3.new(-550,370,534)
 local rearCounts={}
 local function hiddenBehind(x,z,y)
  for index,peak in Landscape.Peaks do
-  if (rearCounts[index] or 0)>=3 then continue end
+  if rearCounts[index] then continue end
   local toPeak=Vector2.new(peak.x-launch.X,peak.z-launch.Z)
   local toAnimal=Vector2.new(x-launch.X,z-launch.Z)
   local along=toAnimal:Dot(toPeak.Unit)
@@ -342,7 +376,7 @@ local function hiddenBehind(x,z,y)
  return nil
 end
 for attempt=1,60000 do
- if #World.Animals>=15 then break end
+ if #World.Animals>=animalCount then break end
  local x=random:NextNumber(-5000,4100);local z=random:NextNumber(-4650,5000)
  local y,_,mountain=Landscape.height(x,z)
  if y<25 or y>110 or mountain or (Vector2.new(x+550,z-534)).Magnitude<1050 then continue end
@@ -361,20 +395,18 @@ for attempt=1,60000 do
  if not flat then continue end
  for _,other in World.Animals do if (Vector3.new(x,y,z)-other.position).Magnitude<360 then flat=false;break end end
  if flat then
-  table.insert(World.Animals,{id=#World.Animals+1,species=species[#World.Animals%#species+1],
+  table.insert(World.Animals,{id=#World.Animals+1,species=behind and mountainSpecies[behind] or (#World.Animals==0 and "Bear" or "Turtle"),
    position=Vector3.new(x,y,z),heading=random:NextNumber(-math.pi,math.pi),scale=0.62,behindPeak=behind})
-  if behind then rearCounts[behind]=(rearCounts[behind] or 0)+1 end
+  if behind then rearCounts[behind]=true end
  end
 end
-assert(#World.Animals==15,"Could not place all wildlife on clear lowland sites")
--- Relocate only the second field encounter after sampling, preserving every other site.
+assert(#World.Animals==animalCount,"Could not place one wildlife discovery behind every mountain")
+for index in Landscape.Peaks do assert(rearCounts[index],"Missing mountain encounter "..index) end
+-- Keep the established second field encounter behind launch.
 -- Default launch faces -Z; +Z places this turtle in the meadow behind the player.
 local rearField=World.Animals[2]
 rearField.position=Vector3.new(-550,Landscape.height(-550,1850),1850)
 rearField.heading=0
--- Keep the reference roster and derive field markers from the final positions.
-local referenceRoster={"Bear","Turtle","SilverFox","Raccoon","CandyCat","Gorilla","Mammoth",
- "Bear","SilverFox","Turtle","Raccoon","CandyCat","Gorilla","Mammoth","SilverFox"}
 -- Authored body offsets shorten limbs without flattening the head, shell, or torso.
 local lowStance={
  Bear={drop=22,ringY=0,passageY=8},
@@ -383,8 +415,7 @@ local lowStance={
  Turtle={drop=36,ringY=-7,passageY=5.5},
  CandyCat={drop=26,ringY=-1,passageY=8},
 }
-for index,animal in World.Animals do
- animal.species=referenceRoster[index]
+for _,animal in World.Animals do
  local stance=lowStance[animal.species]
  animal.bodyDrop=stance and stance.drop or 0
  animal.bellyRingY=stance and stance.ringY or 18
@@ -1521,6 +1552,9 @@ local Config=require(package.Config)
 local Flight=require(package.Flight)
 local FlightCamera=require(package.FlightCamera)
 local cameraMotion=FlightCamera.new()
+local cameraParams=RaycastParams.new();cameraParams.FilterType=Enum.RaycastFilterType.Include
+cameraParams.FilterDescendantsInstances={workspace.Terrain,workspace:WaitForChild("PaperFlightWorld")}
+cameraParams.IgnoreWater=true
 local World=require(package.WorldData)
 local Economy=require(package.Economy)
 local remote=package:WaitForChild("RaceEvent")
@@ -1926,7 +1960,7 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
    aimAnchors[2].CFrame=frame*CFrame.new(Config.AimCurveEnd)
   end
   local focus=Config.ThrowStand+Vector3.new(0,2,0)
-  camera.CFrame=CFrame.lookAt(focus-direction*17+Vector3.new(-3,4,0),focus+direction*80);camera.FieldOfView=65
+  camera.CFrame=FlightCamera.frame(focus,direction,17,cameraParams,-3);camera.FieldOfView=65
   return
  end
  local folder=workspace:FindFirstChild("ActivePaperPlanes");local plane=folder and folder:FindFirstChild("Plane_"..player.UserId)
@@ -1950,7 +1984,7 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
   local pos=smoothedFrame.Position
   -- Release immediately targets normal framing; the spring-like smoothing prevents a snap.
   cameraMotion=FlightCamera.step(cameraMotion,dt,boostHeld and telemetry.boosting==true)
-  camera.CFrame=CFrame.lookAt(pos-direction*cameraMotion.distance+Vector3.new(0,5,0),pos+direction*70)
+  camera.CFrame=FlightCamera.frame(pos,direction,cameraMotion.distance,cameraParams)
   camera.FieldOfView=cameraMotion.fov
   speed.Text=string.format("%d SPS",telemetry.speed)
   condition.Text=telemetry.stalled and "STALL - LOWER THE NOSE" or telemetry.lift>3 and "RISING AIR" or telemetry.boosting and "BOOSTING" or "GLIDING"
@@ -2585,6 +2619,37 @@ if not terrain:GetAttribute("PaperArchipelagoV5") then
  end
  terrain:SetAttribute("PaperArchipelagoV5",true)
 end
+-- Migrate just the previous launch mountain footprint, including its old high
+-- voxels. Rebuilding scenery alone would leave the original wide mesa collision.
+if not terrain:GetAttribute("PaperLaunchMesaV3") then
+ local boundsMin=Vector3int16.new(-256,-8,0)
+ local boundsMax=Vector3int16.new(0,104,256)
+ local snapshot=terrain:CopyRegion(Region3int16.new(boundsMin,boundsMax))
+ snapshot.Name="BeforeCompactLaunchTerrainV3";snapshot.Parent=backups
+ local cells=32;local ny=112
+ for x0=-1024,-128,128 do for z0=0,896,128 do
+  local materials,occupancy={},{}
+  for ix=1,cells do
+   local x=x0+(ix-0.5)*4;local heights,surfaces={},{}
+   for iz=1,cells do
+    local z=z0+(iz-0.5)*4;local h,rock=Landscape.height(x,z)
+    heights[iz]=h;surfaces[iz]=h<17 and Enum.Material.Sand or (rock or math.noise(x/140,z/160)>0.28) and Enum.Material.Rock or Enum.Material.LeafyGrass
+   end
+   materials[ix]={};occupancy[ix]={}
+   for iy=1,ny do
+    local mats,occ=table.create(cells),table.create(cells);local y=-32+(iy-1)*4
+    for iz=1,cells do
+     local amount=math.clamp((heights[iz]-y)/4,0,1)
+     mats[iz]=amount>0 and surfaces[iz] or Enum.Material.Air;occ[iz]=amount
+    end
+    materials[ix][iy]=mats;occupancy[ix][iy]=occ
+   end
+  end
+  terrain:WriteVoxels(Region3.new(V(x0,-32,z0),V(x0+128,416,z0+128)),4,materials,occupancy)
+  task.wait()
+ end end
+ terrain:SetAttribute("PaperLaunchMesaV3",true)
+end
 -- Flat-color, matte ground shares the low-poly foliage style; keep terrain collision intact.
 local materials=game:GetService("MaterialService")
 local meadow=materials:FindFirstChild("PaperMeadow") or Instance.new("MaterialVariant")
@@ -2738,17 +2803,17 @@ for x=-5632,4608-256,256 do for z=-5376,5632-256,256 do
  end
 end end
 local deck=model("LaunchCliff")
-part(deck,"StoneDeck",V(110,8,125),CF(-550,353,586),Color3.fromRGB(132,142,152),Enum.Material.Slate)
-for _,x in {-606,-494} do
- part(deck,"Rail",V(2,5,85),CF(x,363,590),Color3.fromRGB(92,72,49),Enum.Material.Wood)
- for _,z in {550,590,630} do part(deck,"Post",V(4,11,4),CF(x,360,z),Color3.fromRGB(82,61,42),Enum.Material.Wood) end
+part(deck,"StoneDeck",V(60,8,65),CF(-550,353,555),Color3.fromRGB(132,142,152),Enum.Material.Slate)
+for _,x in {-586,-514} do
+ part(deck,"Rail",V(2,3,36),CF(x,359,561),Color3.fromRGB(92,72,49),Enum.Material.Wood)
+ for _,z in {543,561,579} do part(deck,"Post",V(4,5,4),CF(x,359,z),Color3.fromRGB(82,61,42),Enum.Material.Wood) end
 end
 local pad=part(deck,"ThrowPad",V(14,0.25,14),CF(-550,357.2,534),Color3.fromRGB(105,244,211),Enum.Material.Neon)
-for _,x in {-577,-523} do
- local crate=part(deck,"SupplyCrate",V(11,11,11),CF(x,362.5,612),Color3.fromRGB(111,83,53),Enum.Material.WoodPlanks)
- for _,off in {-4.6,4.6} do part(deck,"CrateBand",V(0.7,11.2,11.2),crate.CFrame*CF(off,0,0),Color3.fromRGB(153,121,76),Enum.Material.Wood) end
+for _,x in {-571,-529} do
+ local crate=part(deck,"SupplyCrate",V(8,8,8),CF(x,361,580),Color3.fromRGB(111,83,53),Enum.Material.WoodPlanks)
+ for _,off in {-3.2,3.2} do part(deck,"CrateBand",V(0.7,8.2,8.2),crate.CFrame*CF(off,0,0),Color3.fromRGB(153,121,76),Enum.Material.Wood) end
 end
-local sign=part(deck,"Instructions",V(35,12,1),CF(-550,363,638),Color3.fromRGB(42,54,61),Enum.Material.Wood)
+local sign=part(deck,"Instructions",V(30,8,1),CF(-550,360,584),Color3.fromRGB(42,54,61),Enum.Material.Wood)
 local surface=Instance.new("SurfaceGui");surface.Face=Enum.NormalId.Front;surface.PixelsPerStud=35;surface.Parent=sign
 local text=Instance.new("TextLabel");text.BackgroundTransparency=1;text.Size=UDim2.fromScale(1,1);text.Font=Enum.Font.GothamBold;text.TextSize=55
 text.Text="PAPER SKIES\nCollect gold. Catch rising air.\nF TO LAUNCH";text.TextColor3=Color3.fromRGB(239,238,219);text.Parent=surface

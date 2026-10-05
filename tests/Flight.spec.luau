@@ -196,4 +196,40 @@ check(math.abs(c30.fov-c120.fov)<0.3 and math.abs(c30.distance-c120.distance)<0.
 local restarted=Camera.new()
 check(restarted.age==0 and restarted.fov==65,"each new throw resets camera effect state")
 
+-- Fresh throws have a brief soft transition; ordinary flight still loses lift.
+local function steepThrow(hz,age)
+ local s=Flight.new(Vector3.new(0,350,0),0,Config.MaxPitch,stats)
+ if age then s.age=age end
+ local firstStall;local maxY=s.position.Y;local early
+ for i=1,2*hz do
+  s=Flight.step(s,Flight.aimInput(s,0,Config.MaxPitch),1/hz,stats)
+  if i==math.floor(hz*0.1) then early=s end
+  if s.stalled then firstStall=firstStall or i/hz end
+  maxY=math.max(maxY,s.position.Y)
+ end
+ return firstStall,maxY-350,early,s
+end
+local freshStall,freshHeight,early,fresh=steepThrow(60)
+local normalStall,normalHeight=steepThrow(60,10)
+check(freshStall>0.4 and freshStall>normalStall+0.3,"steep throw gets time to leave the hand before stalling")
+check(early.speed<stats.launchSpeed and early.speed>90,"throw keeps initial momentum but gravity still spends speed")
+check(freshHeight>normalHeight+15 and freshHeight<60,"throw grace gives a small launch arc, not mountain-scale free height")
+check(freshStall<1.5 and fresh.pitch<0,"continued steep launch eventually stalls and drops its nose")
+check(math.abs(fresh.age-2)<0.0001,"simulation time consumes the throw transition once")
+local t30,h30=steepThrow(30);local t120,h120=steepThrow(120)
+check(math.abs(t30-t120)<0.06 and math.abs(h30-h120)<3,"throw transition remains consistent across tick rates")
+local established=Flight.new(Vector3.new(0,400,0),0,math.rad(24),stats)
+established.age=Config.ThrowClimbEaseDuration
+local longFlight=table.clone(established);longFlight.age=40
+local legacyFlight=table.clone(established);legacyFlight.age=nil
+local normalStep=Flight.step(established,Vector2.zero,1/60,stats)
+local lateStep=Flight.step(longFlight,Vector2.zero,1/60,stats)
+local legacyStep=Flight.step(legacyFlight,Vector2.zero,1/60,stats)
+check(normalStep.speed==lateStep.speed and normalStep.pitch==lateStep.pitch,"ordinary physics fully resumes after the transition")
+check(legacyStep.speed==lateStep.speed and legacyStep.stalled==lateStep.stalled,"states without launch age do not acquire fresh throw assistance")
+local boostedLate=Flight.step(longFlight,Vector2.zero,1/60,stats,0,true)
+check(boostedLate.age>40 and boostedLate.boostRemaining<longFlight.boostRemaining,"boost spends fuel without restarting the throw transition")
+local lowEnergy=Flight.new(Vector3.new(0,400,0),0,Config.MaxPitch,stats);lowEnergy.speed=20
+check(Flight.step(lowEnergy,Vector2.zero,1/60,stats).stalled,"launch assistance cannot keep an already slow plane flying")
+
 return string.format("%d flight, pickup, upgrade, and camera assertions passed",passed)

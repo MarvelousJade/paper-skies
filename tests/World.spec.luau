@@ -19,6 +19,7 @@ for _,r in W.Rings do
  if r.group:find("Meandering") then check(r.radius==12,"Sky rings must be 24 studs across") end
 end
 local species={};local hidden=0;local visible=0
+local mountainEncounters={};local mountainSpecies={}
 local roster={Bear=true,SilverFox=true,Turtle=true,Raccoon=true,CandyCat=true,Gorilla=true,Mammoth=true}
 for _,a in W.Animals do
  local _,_,mountain=L.height(a.position.X,a.position.Z)
@@ -28,6 +29,14 @@ for _,a in W.Animals do
  check(roster[a.species] and model and model:GetAttribute("ReferenceStyle")=="LayeredBlock","Every encounter must use a reference model; no legacy animals")
  check(a.scale==0.62,"Wildlife must use the smaller scale")
  if a.behindPeak then
+  check(L.Peaks[a.behindPeak]~=nil,"Wildlife must reference a real mountain")
+  check(not mountainEncounters[a.behindPeak],"Only one animal may belong behind each mountain")
+  check(not mountainSpecies[a.species],"Each mountain discovery must have a different species")
+  mountainEncounters[a.behindPeak]=a;mountainSpecies[a.species]=true
+  local peak=L.Peaks[a.behindPeak]
+  local axis=Vector2.new(peak.x+550,peak.z-534)
+  local offset=Vector2.new(a.position.X+550,a.position.Z-534)
+  check(offset:Dot(axis.Unit)>axis.Magnitude+math.min(peak.rx,peak.rz)*0.7,"Animal must be beyond its assigned mountain from launch")
   hidden+=1;local occluded=false;local launch=Vector3.new(-550,370,534)
   for step=1,19 do local sight=launch:Lerp(a.position+Vector3.yAxis*35,step/20)
    if L.height(sight.X,sight.Z)>sight.Y+50 then occluded=true;break end
@@ -40,7 +49,8 @@ for _,a in W.Animals do
   check(not workspace:Raycast(center-direction*70+off,direction*140,params),"Belly flight corridor blocked: "..a.species..a.id)
  end
 end
-check(hidden==13 and visible==2,"Only two field animals complement thirteen hidden encounters")
+check(hidden==7 and visible==2,"Seven unique mountain discoveries complement two field animals")
+for index in L.Peaks do check(mountainEncounters[index]~=nil,"Every mountain needs one hidden animal") end
 for _,summit in W.Summits do
  local ring
  for _,r in W.Rings do if r.id==summit.ringId then ring=r;break end end
@@ -52,9 +62,10 @@ for _,summit in W.Summits do
  end
 end
 local kinds=0;for _ in species do kinds+=1 end
-check(kinds==7 and #W.Animals==15,"Seven animal species must be scattered through the lowlands")
-for _,p in {Vector2.new(-700,380),Vector2.new(-400,700),Vector2.new(-550,534)} do
- check(math.abs(L.height(p.X,p.Y)-349)<0.1,"Launch plateau must have a broad flat summit")
+check(kinds==7 and #W.Animals==9,"Seven mountain species plus two established field encounters")
+check(#workspace.PaperFlightWorld.PaperAnimals:GetChildren()==9,"Remove duplicate animal models from the world")
+for _,p in {Vector2.new(-580,500),Vector2.new(-520,570),Vector2.new(-550,534)} do
+ check(math.abs(L.height(p.X,p.Y)-349)<0.1,"Compact launch plateau retains a flat standing area")
 end
 local previous
 for _,r in W.Rings do

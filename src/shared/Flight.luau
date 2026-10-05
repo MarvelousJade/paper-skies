@@ -3,7 +3,7 @@ local Config = require(script.Parent.Config)
 export type Stats = {launchSpeed:number, drag:number, sink:number, turnRate:number,
  climbComfort:number, climbLoss:number, airCeiling:number, boostRecharge:number}
 export type State = {position:Vector3, yaw:number, pitch:number, speed:number, stalled:boolean, bank:number,
- boostRemaining:number?, boosting:boolean?, boostRest:number?, recharging:boolean?}
+ boostRemaining:number?, boosting:boolean?, boostRest:number?, recharging:boolean?, age:number?}
 local Flight = {}
 function Flight.stats(levels: {[string]:number}?,planeId:string?): Stats
  local l=levels or {};local plane=Config.Planes[planeId or "Dart"] or Config.Planes.Dart
@@ -13,15 +13,20 @@ function Flight.stats(levels: {[string]:number}?,planeId:string?): Stats
 end
 function Flight.new(position:Vector3, yaw:number, pitch:number, stats:Stats): State
  return {position=position,yaw=yaw,pitch=pitch,speed=stats.launchSpeed,stalled=false,bank=0,
-  boostRemaining=Config.BoostDuration,boosting=false,boostRest=0,recharging=false}
+  boostRemaining=Config.BoostDuration,boosting=false,boostRest=0,recharging=false,age=0}
 end
 function Flight.step(state:State, steer:Vector2, dt:number, stats:Stats?, updraft:number?, boostHeld:boolean?): State
  local settings=stats or Flight.stats()
  local step=math.max(0,dt)
+ -- Missing age means established flight, so partial/legacy states get no fresh throw bonus.
+ local age=state.age or Config.ThrowClimbEaseDuration
+ local progress=math.clamp((age+step*0.5)/Config.ThrowClimbEaseDuration,0,1)
+ local blend=progress*progress*(3-2*progress)
+ local climbScale=Config.ThrowClimbInitialScale+(1-Config.ThrowClimbInitialScale)*blend
  local speed=state.speed
  local stalled=state.stalled
  -- Pulling up raises the speed needed to retain lift. Recovery has a separate threshold.
- local stallThreshold=Config.StallSpeed+math.max(0,math.sin(state.pitch))*35
+ local stallThreshold=Config.StallSpeed+math.max(0,math.sin(state.pitch))*35*climbScale
  if speed<stallThreshold then stalled=true end
  if stalled and speed>Config.RecoverySpeed and state.pitch<0 then stalled=false end
  local pitch=state.pitch
@@ -38,7 +43,7 @@ function Flight.step(state:State, steer:Vector2, dt:number, stats:Stats?, updraf
  -- These are soft energy costs, not angle/altitude clamps. Better folds tolerate steeper climbs.
  local excessClimb=math.max(0,pitch-settings.climbComfort)/math.rad(30)
  local altitudeLoad=math.clamp((state.position.Y-settings.airCeiling)/Config.AltitudeSoftBand,0,3)
- local climbDrag=settings.climbLoss*excessClimb*excessClimb
+ local climbDrag=settings.climbLoss*excessClimb*excessClimb*climbScale
  local drag=settings.drag*speed*speed + math.abs(steer.X)*1.9 + climbDrag + altitudeLoad*8
  local remaining=math.clamp(state.boostRemaining or 0,0,Config.BoostDuration)
  local used=boostHeld and math.min(step,remaining) or 0
@@ -57,7 +62,7 @@ function Flight.step(state:State, steer:Vector2, dt:number, stats:Stats?, updraf
  local afterUse=math.max(0,remaining-used)
  local fuel=math.min(Config.BoostDuration,afterUse+restored)
  return {position=position,yaw=yaw,pitch=pitch,speed=speed,stalled=stalled,bank=bank,
-  boostRemaining=fuel,boosting=used>0,boostRest=rest,recharging=fuel>afterUse}
+  boostRemaining=fuel,boosting=used>0,boostRest=rest,recharging=fuel>afterUse,age=age+step}
 end
 function Flight.aimInput(state:State, yaw:number, pitch:number): Vector2
  local difference=(yaw-state.yaw+math.pi)%(2*math.pi)-math.pi

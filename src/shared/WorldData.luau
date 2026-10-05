@@ -18,16 +18,18 @@ World.Thermals={
  {center=Vector3.new(-2200,0,1350),radius=280,height=1000,strength=14},
  {center=Vector3.new(-1850,0,-2100),radius=300,height=1200,strength=15},
 }
--- One field encounter ahead and one behind launch; thirteen stay hidden behind mountains.
+-- Keep the two field encounters and exactly one distinct discovery behind each mountain.
 -- Seeded rejection sampling keeps every animal off slopes and makes discovery placement reproducible.
 World.Animals={}
 local random=Random.new(261004)
-local species={"Lion","Elephant","Deer","Fox","Giraffe"}
+-- Assign by mountain, not sampling order, so each destination has a distinct identity.
+local mountainSpecies={"Gorilla","Mammoth","Turtle","SilverFox","Raccoon","Bear","CandyCat"}
+local animalCount=#Landscape.Peaks+2
 local launch=Vector3.new(-550,370,534)
 local rearCounts={}
 local function hiddenBehind(x,z,y)
  for index,peak in Landscape.Peaks do
-  if (rearCounts[index] or 0)>=3 then continue end
+  if rearCounts[index] then continue end
   local toPeak=Vector2.new(peak.x-launch.X,peak.z-launch.Z)
   local toAnimal=Vector2.new(x-launch.X,z-launch.Z)
   local along=toAnimal:Dot(toPeak.Unit)
@@ -47,7 +49,7 @@ local function hiddenBehind(x,z,y)
  return nil
 end
 for attempt=1,60000 do
- if #World.Animals>=15 then break end
+ if #World.Animals>=animalCount then break end
  local x=random:NextNumber(-5000,4100);local z=random:NextNumber(-4650,5000)
  local y,_,mountain=Landscape.height(x,z)
  if y<25 or y>110 or mountain or (Vector2.new(x+550,z-534)).Magnitude<1050 then continue end
@@ -66,20 +68,18 @@ for attempt=1,60000 do
  if not flat then continue end
  for _,other in World.Animals do if (Vector3.new(x,y,z)-other.position).Magnitude<360 then flat=false;break end end
  if flat then
-  table.insert(World.Animals,{id=#World.Animals+1,species=species[#World.Animals%#species+1],
+  table.insert(World.Animals,{id=#World.Animals+1,species=behind and mountainSpecies[behind] or (#World.Animals==0 and "Bear" or "Turtle"),
    position=Vector3.new(x,y,z),heading=random:NextNumber(-math.pi,math.pi),scale=0.62,behindPeak=behind})
-  if behind then rearCounts[behind]=(rearCounts[behind] or 0)+1 end
+  if behind then rearCounts[behind]=true end
  end
 end
-assert(#World.Animals==15,"Could not place all wildlife on clear lowland sites")
--- Relocate only the second field encounter after sampling, preserving every other site.
+assert(#World.Animals==animalCount,"Could not place one wildlife discovery behind every mountain")
+for index in Landscape.Peaks do assert(rearCounts[index],"Missing mountain encounter "..index) end
+-- Keep the established second field encounter behind launch.
 -- Default launch faces -Z; +Z places this turtle in the meadow behind the player.
 local rearField=World.Animals[2]
 rearField.position=Vector3.new(-550,Landscape.height(-550,1850),1850)
 rearField.heading=0
--- Keep the reference roster and derive field markers from the final positions.
-local referenceRoster={"Bear","Turtle","SilverFox","Raccoon","CandyCat","Gorilla","Mammoth",
- "Bear","SilverFox","Turtle","Raccoon","CandyCat","Gorilla","Mammoth","SilverFox"}
 -- Authored body offsets shorten limbs without flattening the head, shell, or torso.
 local lowStance={
  Bear={drop=22,ringY=0,passageY=8},
@@ -88,8 +88,7 @@ local lowStance={
  Turtle={drop=36,ringY=-7,passageY=5.5},
  CandyCat={drop=26,ringY=-1,passageY=8},
 }
-for index,animal in World.Animals do
- animal.species=referenceRoster[index]
+for _,animal in World.Animals do
  local stance=lowStance[animal.species]
  animal.bodyDrop=stance and stance.drop or 0
  animal.bellyRingY=stance and stance.ringY or 18

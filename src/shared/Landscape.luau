@@ -89,14 +89,22 @@ function Landscape.height(x:number,z:number): (number,boolean,boolean)
    if top>h then h=top;rocky=true;mountain=true end
   end
  end
- -- Broad 520 x 540 summit with angular cliff shoulders. No spherical launch mound.
- local dx=math.abs((x+550)/260);local dz=math.abs((z-534)/270)
- local mesa=math.max(dx,dz)
- if mesa<1.75 then
-  local slope=math.clamp((1.75-mesa)/0.75,0,1)
-  local top=42+307*slope^0.55
-  if mesa>1 then top+=math.noise(x/70,z/85)*13*(1-slope) end
-  if top>h then h=top;mountain=true;rocky=mesa>1.01 end
+ -- Compact 110 x 120 launch summit: steep throws reach open air before descending.
+ local dx=math.abs((x+550)/55);local dz=math.abs((z-534)/60)
+ -- Rounded angular summit; ridged shoulders taper into a broad, irregular foot.
+ -- The convex falloff drops quickly beside launch, leaving steep throws clear air.
+ local mesa=(dx^4+dz^4)^0.25
+ local angle=math.atan2(z-534,x+550)
+ local spread=2.8*(1+0.16*math.sin(angle*5+0.4)+0.06*math.cos(angle*9))
+ local t=math.clamp((mesa-1)/spread,0,1)
+ if t<1 then
+  local slope=1-t
+  local top=42+307*slope^2.6
+  if mesa>1 then top+=math.noise(x/28,z/35)*22*t*(1-t) end
+  if top>h then
+   h=top;mountain=true
+   rocky=mesa>1.02 and (t<0.65 or math.noise(x/43,z/51)<0.1)
+  end
  end
  return h,rocky,mountain
 end

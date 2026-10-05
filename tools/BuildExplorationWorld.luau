@@ -113,6 +113,37 @@ if not terrain:GetAttribute("PaperArchipelagoV5") then
  end
  terrain:SetAttribute("PaperArchipelagoV5",true)
 end
+-- Migrate just the previous launch mountain footprint, including its old high
+-- voxels. Rebuilding scenery alone would leave the original wide mesa collision.
+if not terrain:GetAttribute("PaperLaunchMesaV3") then
+ local boundsMin=Vector3int16.new(-256,-8,0)
+ local boundsMax=Vector3int16.new(0,104,256)
+ local snapshot=terrain:CopyRegion(Region3int16.new(boundsMin,boundsMax))
+ snapshot.Name="BeforeCompactLaunchTerrainV3";snapshot.Parent=backups
+ local cells=32;local ny=112
+ for x0=-1024,-128,128 do for z0=0,896,128 do
+  local materials,occupancy={},{}
+  for ix=1,cells do
+   local x=x0+(ix-0.5)*4;local heights,surfaces={},{}
+   for iz=1,cells do
+    local z=z0+(iz-0.5)*4;local h,rock=Landscape.height(x,z)
+    heights[iz]=h;surfaces[iz]=h<17 and Enum.Material.Sand or (rock or math.noise(x/140,z/160)>0.28) and Enum.Material.Rock or Enum.Material.LeafyGrass
+   end
+   materials[ix]={};occupancy[ix]={}
+   for iy=1,ny do
+    local mats,occ=table.create(cells),table.create(cells);local y=-32+(iy-1)*4
+    for iz=1,cells do
+     local amount=math.clamp((heights[iz]-y)/4,0,1)
+     mats[iz]=amount>0 and surfaces[iz] or Enum.Material.Air;occ[iz]=amount
+    end
+    materials[ix][iy]=mats;occupancy[ix][iy]=occ
+   end
+  end
+  terrain:WriteVoxels(Region3.new(V(x0,-32,z0),V(x0+128,416,z0+128)),4,materials,occupancy)
+  task.wait()
+ end end
+ terrain:SetAttribute("PaperLaunchMesaV3",true)
+end
 -- Flat-color, matte ground shares the low-poly foliage style; keep terrain collision intact.
 local materials=game:GetService("MaterialService")
 local meadow=materials:FindFirstChild("PaperMeadow") or Instance.new("MaterialVariant")
@@ -266,17 +297,17 @@ for x=-5632,4608-256,256 do for z=-5376,5632-256,256 do
  end
 end end
 local deck=model("LaunchCliff")
-part(deck,"StoneDeck",V(110,8,125),CF(-550,353,586),Color3.fromRGB(132,142,152),Enum.Material.Slate)
-for _,x in {-606,-494} do
- part(deck,"Rail",V(2,5,85),CF(x,363,590),Color3.fromRGB(92,72,49),Enum.Material.Wood)
- for _,z in {550,590,630} do part(deck,"Post",V(4,11,4),CF(x,360,z),Color3.fromRGB(82,61,42),Enum.Material.Wood) end
+part(deck,"StoneDeck",V(60,8,65),CF(-550,353,555),Color3.fromRGB(132,142,152),Enum.Material.Slate)
+for _,x in {-586,-514} do
+ part(deck,"Rail",V(2,3,36),CF(x,359,561),Color3.fromRGB(92,72,49),Enum.Material.Wood)
+ for _,z in {543,561,579} do part(deck,"Post",V(4,5,4),CF(x,359,z),Color3.fromRGB(82,61,42),Enum.Material.Wood) end
 end
 local pad=part(deck,"ThrowPad",V(14,0.25,14),CF(-550,357.2,534),Color3.fromRGB(105,244,211),Enum.Material.Neon)
-for _,x in {-577,-523} do
- local crate=part(deck,"SupplyCrate",V(11,11,11),CF(x,362.5,612),Color3.fromRGB(111,83,53),Enum.Material.WoodPlanks)
- for _,off in {-4.6,4.6} do part(deck,"CrateBand",V(0.7,11.2,11.2),crate.CFrame*CF(off,0,0),Color3.fromRGB(153,121,76),Enum.Material.Wood) end
+for _,x in {-571,-529} do
+ local crate=part(deck,"SupplyCrate",V(8,8,8),CF(x,361,580),Color3.fromRGB(111,83,53),Enum.Material.WoodPlanks)
+ for _,off in {-3.2,3.2} do part(deck,"CrateBand",V(0.7,8.2,8.2),crate.CFrame*CF(off,0,0),Color3.fromRGB(153,121,76),Enum.Material.Wood) end
 end
-local sign=part(deck,"Instructions",V(35,12,1),CF(-550,363,638),Color3.fromRGB(42,54,61),Enum.Material.Wood)
+local sign=part(deck,"Instructions",V(30,8,1),CF(-550,360,584),Color3.fromRGB(42,54,61),Enum.Material.Wood)
 local surface=Instance.new("SurfaceGui");surface.Face=Enum.NormalId.Front;surface.PixelsPerStud=35;surface.Parent=sign
 local text=Instance.new("TextLabel");text.BackgroundTransparency=1;text.Size=UDim2.fromScale(1,1);text.Font=Enum.Font.GothamBold;text.TextSize=55
 text.Text="PAPER SKIES\nCollect gold. Catch rising air.\nF TO LAUNCH";text.TextColor3=Color3.fromRGB(239,238,219);text.Parent=surface

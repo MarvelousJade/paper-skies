@@ -11,6 +11,9 @@ local Config=require(package.Config)
 local Flight=require(package.Flight)
 local FlightCamera=require(package.FlightCamera)
 local cameraMotion=FlightCamera.new()
+local cameraParams=RaycastParams.new();cameraParams.FilterType=Enum.RaycastFilterType.Include
+cameraParams.FilterDescendantsInstances={workspace.Terrain,workspace:WaitForChild("PaperFlightWorld")}
+cameraParams.IgnoreWater=true
 local World=require(package.WorldData)
 local Economy=require(package.Economy)
 local remote=package:WaitForChild("RaceEvent")
@@ -416,7 +419,7 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
    aimAnchors[2].CFrame=frame*CFrame.new(Config.AimCurveEnd)
   end
   local focus=Config.ThrowStand+Vector3.new(0,2,0)
-  camera.CFrame=CFrame.lookAt(focus-direction*17+Vector3.new(-3,4,0),focus+direction*80);camera.FieldOfView=65
+  camera.CFrame=FlightCamera.frame(focus,direction,17,cameraParams,-3);camera.FieldOfView=65
   return
  end
  local folder=workspace:FindFirstChild("ActivePaperPlanes");local plane=folder and folder:FindFirstChild("Plane_"..player.UserId)
@@ -440,7 +443,7 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
   local pos=smoothedFrame.Position
   -- Release immediately targets normal framing; the spring-like smoothing prevents a snap.
   cameraMotion=FlightCamera.step(cameraMotion,dt,boostHeld and telemetry.boosting==true)
-  camera.CFrame=CFrame.lookAt(pos-direction*cameraMotion.distance+Vector3.new(0,5,0),pos+direction*70)
+  camera.CFrame=FlightCamera.frame(pos,direction,cameraMotion.distance,cameraParams)
   camera.FieldOfView=cameraMotion.fov
   speed.Text=string.format("%d SPS",telemetry.speed)
   condition.Text=telemetry.stalled and "STALL - LOWER THE NOSE" or telemetry.lift>3 and "RISING AIR" or telemetry.boosting and "BOOSTING" or "GLIDING"

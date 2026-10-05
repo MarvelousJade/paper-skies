@@ -5,6 +5,9 @@ Config.ThrowStand = Vector3.new(-550, 360, 534)
 Config.MouseSensitivity = 0.0025
 Config.MaxAimYaw = math.pi
 Config.ThrowDelay = 0.4
+-- A fresh hand throw blends into normal climb penalties over its first second.
+Config.ThrowClimbEaseDuration = 1.2
+Config.ThrowClimbInitialScale = 0.1
 Config.AimPitch = math.rad(10)
 Config.AimCurveWidth = 0.9
 Config.AimCurveEnd = Vector3.new(0,-65,-220)
