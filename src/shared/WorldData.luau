@@ -121,6 +121,14 @@ for _,route in {
  {center=Vector3.new(-1050,210,4400),radius=250,start=-0.4,count=10},
  {center=Vector3.new(-4250,230,-450),radius=260,start=0.8,count=10},
 } do table.insert(routes,route) end
+-- High trails sit along the near-side mountain updrafts. Higher peaks offer
+-- higher rewards to explore without changing aircraft ceilings or lift strength.
+for _,peak in Landscape.Peaks do
+ local towardLaunch=Vector3.new(launch.X-peak.x,0,launch.Z-peak.z).Unit
+ local width=math.max(peak.rx,peak.rz)
+ local center=Vector3.new(peak.x,math.clamp(peak.h*0.72,480,1450),peak.z)+towardLaunch*width*0.55
+ table.insert(routes,{center=center,radius=170,start=math.atan2(towardLaunch.Z,towardLaunch.X)-0.6,count=10,highSky=true})
+end
 for group,route in routes do
  local points={};local raise=0
  for i=1,route.count do
@@ -131,6 +139,7 @@ for group,route in routes do
  for i,p in points do
   local a=route.start+(i-1)*24/route.radius
   add(p+Vector3.yAxis*raise,Vector3.new(-math.sin(a),0,math.cos(a)),12,palette[(i+group-2)%#palette+1],10,"Meandering route "..group)
+  World.Rings[#World.Rings].highSky=route.highSky==true
  end
 end
 for i,tunnel in Landscape.Tunnels do

@@ -569,3 +569,38 @@ The scenery rebuild reused existing terrain and regenerated trees against the ne
 **Verification:** All 87 flight/economy/camera assertions passed, including zero distance, the 200-stud boundary, integer rounding, and preservation of collected ring gold. A fresh Studio run traveled 495.84 studs without rings: the HUD displayed 2 gold, Ended awarded 2, and the wallet increased by 2. Another reset did not pay again. The old formula would have awarded 12 for that distance. The live check used normal launch/reset requests and Studio-only progress; no persistent balances were edited. `git diff --check` passed.
 
 **Interview lesson:** Balance passive income against traversal speed and upgrade prices. Keep display and settlement on one server-owned reward rule, and verify both the visible reward and actual wallet change. This is a tuning correction; long-session progression still needs player feedback. The balance adjustment remains uncommitted for testing.
+
+
+## October 5 consistent aim arc and thicker neon rings
+
+### D22 Keep aiming curvature stable while improving visual weight
+
+**Request:** Commit first, make the aiming line consistently curved, rounder and thicker, and make sky rings look more like neon tubing. The distance-gold change was committed as `a414140` before this work.
+
+**Cause of the old changing curve:** The preview ran the flight simulation for 144 steps at 30 Hz. Its sampled path responded to aircraft stats, aim pitch, and rising air. Twenty-four narrow one-segment Beams connected those samples. That behavior made sense as a prediction, but conflicted with the requested stable visual guide.
+
+**Change:** Use one fixed cubic curve with 64 rendered segments, a 0.9-stud core (previously 0.3), a soft outer glow, and rounded endpoints. Two attachments and two beams replace the sampled chain. Only the curve’s rigid frame follows the held plane and aim; its control points never change with aircraft stats or thermals. This is deliberately a direction guide rather than an exact prediction. Flight physics itself is unchanged. Handle orientation follows the [Roblox Beam API](https://create.roblox.com/docs/reference/engine/classes/Beam).
+
+Rings retain their locations, colors, 48 segments, and collection radii. The visual segments are now overlapping round cylinders with 0.65-stud diameter instead of 0.28-stud square bars. They remain non-colliding and non-queryable. Studio geometry was updated in place to avoid another terrain/scenery backup; the world builder and generated installer reproduce the same tubing.
+
+**Verification:** All 4481 world geometry/layout checks passed after expanding the rim-clearance sample to account for the wider tubing. Screenshots checked a ten-ring chain and the aiming preview in Play. The live preview contains six descendants, has the expected endpoint and tangents, and uses the configured width. A temporary clone retained identical local control points across twelve pitch/yaw orientations and was then destroyed. Launching removed the curve and held-plane preview correctly. Automated mouse movement did not produce a locked-cursor delta during the tooling check, so hands-on mouse feel remains for user review; the unchanged input path still supplies the aim frame.
+
+**Interview lesson:** Decide whether a visual is a physical prediction or an aiming cue, then keep its behavior consistent with that purpose. Share ring dimensions between rendering and clearance checks when thickening geometry. The new visual changes remain uncommitted.
+
+
+## October 5 arcade pickup chime and high-sky routes
+
+### D23 Bright ring feedback and elevated exploration trails
+
+The user requested pickup feedback closer to the Sonic ring sound and connected rings higher in the sky. The selected free Creator Store asset is SONIC RING SFX by PastaReaperYT (`111940732857414`), successfully loaded in Studio at 0.952 seconds. The single-voice player now allows 450 ms with a 60 ms fade, at volume 0.35 and fixed pitch. This replaces the earlier UI Tick; duplicate suppression and immediate mute remain in place.
+
+Seven additional ten-ring curves follow the near-side updraft regions of the seven mountains. Their measured elevations range from 475.11 to 1372.99 studs. The existing twenty-four trails remain, for 310 sky rings and 336 total rewards. The high trails are intended to give stronger planes more exploration choices; aircraft ceilings, lift strength, reward values, and the reduced distance-income rate are unchanged.
+
+Only ring models were rebuilt in Studio, using the ring section of the saved world builder. Terrain, trees, animals, and the thick round tubing remain intact. All 5766 geometry/layout assertions passed, including terrain/opening/rim clearance, exactly ten pickups per trail, seven elevated trails, and the existing wildlife placement rules. An elevated camera view checked the mountain-side ring chain. Flying every high trail end to end and subjective sound review remain pending.
+
+### B12 Trail-count regression check lagged behind the authored layout
+
+While updating the high-sky tests, inspection found that an older assertion still accepted eighteen trails even though the preceding map already contained twenty-four. An earlier text replacement had not matched that specific assertion. The layout itself had the correct count, but the check could miss a later regression. The test now requires thirty-one trails, checks ten rings in each, and separately verifies seventy high rings across seven groups. Lesson: inspect edited assertions rather than assuming a text replacement succeeded. All current assertions pass. This task remains uncommitted.
+
+
+Current chime Play check: asset loaded at 0.952 seconds; one pickup plus its duplicate and two rapid unique pickups produced exactly three sound starts. The tail stopped, Sound OFF suppressed the next pickup, and the toggle was restored to ON. These synthetic feedback IDs did not award server gold. The fresh client also loaded all seventy high-sky rings and 336 total rewards. Subjective listening approval and published audio permissions remain pending.

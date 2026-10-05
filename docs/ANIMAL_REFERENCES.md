@@ -35,6 +35,6 @@ The body and leg proportions provide clearance for the required full rings. All 
 
 Close views were inspected for each of the five new types; the gorilla and mammoth had already been inspected from three-quarter and side views. A floating/occluded fox-eye iteration was corrected with a forward face panel. Raccoon ears were shortened to distinguish them from the fox.
 
-All 4481 geometry/layout assertions passed for the expanded ring layout, including visible ring-rim clearance samples, plane-width belly passages, sideways reward crossings, eight launch directions, and a check that every encounter uses the new roster and model builder.
+All 5766 geometry/layout assertions passed for the expanded ring layout, including visible ring-rim clearance samples, plane-width belly passages, sideways reward crossings, eight launch directions, and a check that every encounter uses the new roster and model builder.
 
-The rebuilt world has 26,936 descendants, including the expanded ring trails. Device performance and live keyboard-flown collection beneath the new roster remain unverified. These models are original adaptations of the reference style, not exact replicas.
+The rebuilt world has 30,366 descendants, including the expanded ring trails. Device performance and live keyboard-flown collection beneath the new roster remain unverified. These models are original adaptations of the reference style, not exact replicas.

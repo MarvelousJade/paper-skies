@@ -239,12 +239,14 @@ for _,ring in World.Rings do
    stroke.Transparency=layer[2];stroke.Parent=circle
   end
  end
- -- Thin, open neon hoops: the middle contains no physical or invisible collision part.
+ -- Round neon tubing, with overlapping ends so the thicker hoop stays continuous.
  for j=1,48 do
   local a=(j-1)/48*math.pi*2;local b=j/48*math.pi*2
   local pa=cf:PointToWorldSpace(V(math.cos(a)*ring.radius,math.sin(a)*ring.radius,0))
   local pb=cf:PointToWorldSpace(V(math.cos(b)*ring.radius,math.sin(b)*ring.radius,0))
-  local segment=decor(beam(m,"NeonArc",pa,pb,0.28,ring.color));segment.Material=Enum.Material.Neon
+  local tubeFrame=CFrame.lookAt((pa+pb)/2,pb)*CFrame.Angles(0,math.pi/2,0)
+  local segment=decor(part(m,"NeonArc",V((pb-pa).Magnitude+0.06,Config.RingTubeThickness,Config.RingTubeThickness),tubeFrame,ring.color,Enum.Material.Neon))
+  segment.Shape=Enum.PartType.Cylinder;segment.CastShadow=false
  end
 end
 local currents=model("ThermalMarkers")

@@ -6,6 +6,11 @@ Config.MouseSensitivity = 0.0025
 Config.MaxAimYaw = math.pi
 Config.ThrowDelay = 0.4
 Config.AimPitch = math.rad(10)
+Config.AimCurveWidth = 0.9
+Config.AimCurveEnd = Vector3.new(0,-65,-220)
+Config.AimCurveStartHandle = 70
+Config.AimCurveEndTangent = Vector3.new(0,-50,-70)
+Config.RingTubeThickness = 0.65
 Config.ThermalFadeHeight = 220
 Config.MaxPitch = math.rad(48)
 Config.MinPitch = math.rad(-65)
@@ -23,9 +28,9 @@ Config.RingValue = 10
 Config.DistanceGoldStuds = 200
 Config.CollectionRadius = 12
 Config.RingMargin = 3.6
-Config.CollectSoundId = "rbxassetid://99102731755541"
-Config.CollectSoundVolume = 0.4
-Config.CollectSoundDuration = 0.14
+Config.CollectSoundId = "rbxassetid://111940732857414"
+Config.CollectSoundVolume = 0.35
+Config.CollectSoundDuration = 0.45
 -- Original Paper Skies loop, uploaded by the project owner from assets/audio/PaperSkies.wav.
 -- Empty disables music without requesting a placeholder or inaccessible asset.
 Config.MusicSoundId = "rbxassetid://126932983544303"

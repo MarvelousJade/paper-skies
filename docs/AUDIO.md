@@ -2,9 +2,9 @@
 
 ## Ring collection
 
-The ring uses [UI Tick by OrcaCreations](https://create.roblox.com/store/asset/99102731755541), a free Creator Store audio asset, ID `99102731755541`. Studio successfully loaded its 0.340-second source. The client plays only the first 140 ms, fading the final 35 ms. Playback speed is always 1. There is one Sound instance; rapid pickups restart it instead of stacking voices. The duplicate-ring guard still runs before audio playback.
+The ring uses [SONIC RING SFX by PastaReaperYT](https://create.roblox.com/store/asset/111940732857414), a free Creator Store audio asset, ID `111940732857414`. Studio loaded its 0.952-second source. The client plays up to 450 ms and fades the final 60 ms, giving the bright ring attack a short audible tail. Playback speed stays at 1, with volume 0.35. This replaces the earlier dry UI Tick at the user's request; the pickup sample is a Creator Store asset, not original project music.
 
-Sound OFF immediately stops the click, mutes the wind, and mutes configured music. Sound ON allows new clicks and restores music volume without restarting the song. Existing collected rings do not replay when unmuting.
+There is one `RingPickupChime` Sound instance. Rapid pickups restart it instead of stacking voices, and the duplicate-ring guard runs before playback. Sound OFF immediately stops the chime, mutes wind, and mutes music. Sound ON permits new chimes and restores music volume without restarting the song.
 
 ## Paper Skies — original chill electronic loop
 
@@ -32,9 +32,9 @@ For future replacement tracks:
 
 The client already creates a local, non-positional loop when a music ID is configured. It starts once per client session, rather than restarting on every throw. Music is configured to play continuously at volume 0.16, including between throws.
 
-## Verified in Studio
+## Earlier Studio checks
 
-- Exactly one ring voice, fixed pitch, asset loaded successfully.
+- Previous UI Tick revision: one ring voice, fixed pitch, and successful asset load.
 - Two notifications with the same ring ID produced one click.
 - Two different IDs 70 ms apart each triggered the single voice; the tail stopped.
 - Sound OFF suppressed the next pickup and muted wind; Sound ON restored pickup playback.
@@ -44,3 +44,6 @@ The client already creates a local, non-positional loop when a music ID is confi
 - The actual Sound button muted music to zero while its position kept advancing; toggling ON restored volume 0.16 without restarting.
 
 The smoke checks injected synthetic client feedback IDs only; they did not award gold or modify server collection state. Full flown collection, subjective sound review, and published-experience permissions remain manual checks.
+
+
+Current chime Play check: asset loaded at 0.952 seconds; one pickup plus its duplicate and two rapid unique pickups produced exactly three sound starts. The tail stopped, Sound OFF suppressed the next pickup, and the toggle was restored to ON. These synthetic feedback IDs did not award server gold. The fresh client also loaded all seventy high-sky rings and 336 total rewards. Subjective listening approval and published audio permissions remain pending.

@@ -19,6 +19,11 @@ Config.MouseSensitivity = 0.0025
 Config.MaxAimYaw = math.pi
 Config.ThrowDelay = 0.4
 Config.AimPitch = math.rad(10)
+Config.AimCurveWidth = 0.9
+Config.AimCurveEnd = Vector3.new(0,-65,-220)
+Config.AimCurveStartHandle = 70
+Config.AimCurveEndTangent = Vector3.new(0,-50,-70)
+Config.RingTubeThickness = 0.65
 Config.ThermalFadeHeight = 220
 Config.MaxPitch = math.rad(48)
 Config.MinPitch = math.rad(-65)
@@ -36,9 +41,9 @@ Config.RingValue = 10
 Config.DistanceGoldStuds = 200
 Config.CollectionRadius = 12
 Config.RingMargin = 3.6
-Config.CollectSoundId = "rbxassetid://99102731755541"
-Config.CollectSoundVolume = 0.4
-Config.CollectSoundDuration = 0.14
+Config.CollectSoundId = "rbxassetid://111940732857414"
+Config.CollectSoundVolume = 0.35
+Config.CollectSoundDuration = 0.45
 -- Original Paper Skies loop, uploaded by the project owner from assets/audio/PaperSkies.wav.
 -- Empty disables music without requesting a placeholder or inaccessible asset.
 Config.MusicSoundId = "rbxassetid://126932983544303"
@@ -404,6 +409,14 @@ for _,route in {
  {center=Vector3.new(-1050,210,4400),radius=250,start=-0.4,count=10},
  {center=Vector3.new(-4250,230,-450),radius=260,start=0.8,count=10},
 } do table.insert(routes,route) end
+-- High trails sit along the near-side mountain updrafts. Higher peaks offer
+-- higher rewards to explore without changing aircraft ceilings or lift strength.
+for _,peak in Landscape.Peaks do
+ local towardLaunch=Vector3.new(launch.X-peak.x,0,launch.Z-peak.z).Unit
+ local width=math.max(peak.rx,peak.rz)
+ local center=Vector3.new(peak.x,math.clamp(peak.h*0.72,480,1450),peak.z)+towardLaunch*width*0.55
+ table.insert(routes,{center=center,radius=170,start=math.atan2(towardLaunch.Z,towardLaunch.X)-0.6,count=10,highSky=true})
+end
 for group,route in routes do
  local points={};local raise=0
  for i=1,route.count do
@@ -414,6 +427,7 @@ for group,route in routes do
  for i,p in points do
   local a=route.start+(i-1)*24/route.radius
   add(p+Vector3.yAxis*raise,Vector3.new(-math.sin(a),0,math.cos(a)),12,palette[(i+group-2)%#palette+1],10,"Meandering route "..group)
+  World.Rings[#World.Rings].highSky=route.highSky==true
  end
 end
 for i,tunnel in Landscape.Tunnels do
@@ -1147,10 +1161,9 @@ local profile=Economy.new();local saveMode="Loading progress";local soundEnabled
 local telemetry={speed=165,boostRemaining=Config.BoostDuration,boosting=false,stalled=false,lift=0,distance=0,gold=0,rings=0,region="Coastal Cliffs",altitude=362}
 local originalFov=camera.FieldOfView
 local visualPlane,heldPlane,trajectory,smoothedFrame=nil,nil,nil,nil
-local dots,hiddenRings,lines={},{},{}
+local aimAnchors,hiddenRings,lines={},{},{}
 local collectedIds={}
 local stick=Vector2.zero;local inputClock=0
-local previewClock=0
 local function round(object,radius)
  local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,radius or 7);c.Parent=object
 end
@@ -1213,11 +1226,11 @@ local contents=Instance.new("Frame");contents.BackgroundTransparency=1;contents.
 local modalMode="Upgrades"
 local palette={Color3.fromRGB(255,249,228),Color3.fromRGB(125,212,255),Color3.fromRGB(255,183,153),Color3.fromRGB(189,229,160)}
 local wind=Instance.new("Sound");wind.Name="PaperFlightWind";wind.SoundId=Config.WindSoundId;wind.Looped=true;wind.Volume=0;wind.Parent=SoundService
--- One dry click: fixed pitch, no overlapping voices, and a short faded tail.
-local coinClick=Instance.new("Sound");coinClick.Name="RingCoinClick"
-coinClick.SoundId=Config.CollectSoundId;coinClick.Volume=Config.CollectSoundVolume
-coinClick.Parent=SoundService
-local coinStarted=nil
+-- One bright arcade ring chime: fixed pitch, no overlapping voices, short faded tail.
+local ringChime=Instance.new("Sound");ringChime.Name="RingPickupChime"
+ringChime.SoundId=Config.CollectSoundId;ringChime.Volume=Config.CollectSoundVolume
+ringChime.Parent=SoundService
+local chimeStarted=nil
 local music=nil
 if Config.MusicSoundId~="" then
  music=Instance.new("Sound");music.Name="PaperSkiesMusic";music.SoundId=Config.MusicSoundId
@@ -1275,14 +1288,14 @@ customize.Activated:Connect(function() openModal("Colors") end);maps.Activated:C
 close.Activated:Connect(function() modal.Visible=false;if mode~="Ready" then cursor(false) end end)
 audioToggle.Activated:Connect(function()
  soundEnabled=not soundEnabled;audioToggle.Text=soundEnabled and "Sound ON" or "Sound OFF"
- if not soundEnabled then coinClick:Stop();coinStarted=nil;wind.Volume=0 end
+ if not soundEnabled then ringChime:Stop();chimeStarted=nil;wind.Volume=0 end
  -- Keep the loop's musical position when muting instead of restarting the song.
  if music then music.Volume=soundEnabled and Config.MusicVolume or 0 end
 end)
 local function cleanPreview()
  if heldPlane then heldPlane:Destroy();heldPlane=nil end
  if trajectory then trajectory:Destroy();trajectory=nil end
- table.clear(dots)
+ table.clear(aimAnchors)
 end
 local function colorPlane(model)
  for _,p in model:GetDescendants() do if p:IsA("BasePart") then p.Color=palette[profile.color]:Lerp(Color3.fromRGB(105,128,145),p:GetAttribute("FoldShade") or 0) end end
@@ -1292,18 +1305,28 @@ local function preview()
  heldPlane=package.PlaneModels[profile.planeId]:Clone();heldPlane.Name="HeldPaperPlane";heldPlane:ScaleTo(0.2);heldPlane.Parent=camera;colorPlane(heldPlane)
  for _,v in heldPlane:GetDescendants() do if v:IsA("Trail") then v.Enabled=false end end
  trajectory=Instance.new("Folder");trajectory.Name="ThrowTrajectory";trajectory.Parent=camera
- local previous
- for i=1,25 do
-  local p=Instance.new("Part");p.Name="AimAnchor";p.Size=Vector3.one*0.1
-  p.Transparency=1;p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.Parent=trajectory;dots[i]=p
-  local anchor=Instance.new("Attachment");anchor.Parent=p
-  if previous then
-   local beam=Instance.new("Beam");beam.Name="ContinuousAimCurve"
-   beam.Attachment0=previous;beam.Attachment1=anchor;beam.Width0=0.3;beam.Width1=0.3
-   beam.FaceCamera=true;beam.Color=ColorSequence.new(Color3.fromRGB(83,255,144))
-   beam.Transparency=NumberSequence.new(0.08);beam.LightEmission=1;beam.Segments=1;beam.Parent=trajectory
-  end
-  previous=anchor
+ -- A fixed cubic arc is an aim guide, not a physics prediction. Its shape is
+ -- identical for every pitch/plane; only the rigid frame follows the player's aim.
+ local attachments={}
+ for i=1,2 do
+  local p=Instance.new("Part");p.Name="AimAnchor"..i;p.Shape=Enum.PartType.Ball
+  p.Size=Vector3.one*Config.AimCurveWidth;p.Material=Enum.Material.Neon
+  p.Color=Color3.fromRGB(83,255,144);p.CastShadow=false;p.Anchored=true
+  p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.Parent=trajectory;aimAnchors[i]=p
+  local anchor=Instance.new("Attachment");anchor.Name="CurveTangent"
+  local tangent=i==1 and Vector3.new(0,0,-1) or Config.AimCurveEndTangent
+  -- A Beam's control handles follow the attachment's positive X axis.
+  anchor.CFrame=CFrame.lookAt(Vector3.zero,tangent)*CFrame.Angles(0,math.pi/2,0)
+  anchor.Parent=p;attachments[i]=anchor
+ end
+ for _,layer in {{"ContinuousAimCurve",1,0.02},{"AimCurveGlow",2,0.8}} do
+  local beam=Instance.new("Beam");beam.Name=layer[1]
+  beam.Attachment0=attachments[1];beam.Attachment1=attachments[2]
+  beam.CurveSize0=Config.AimCurveStartHandle;beam.CurveSize1=Config.AimCurveEndTangent.Magnitude
+  beam.Width0=Config.AimCurveWidth*layer[2];beam.Width1=beam.Width0
+  beam.FaceCamera=true;beam.Color=ColorSequence.new(Color3.fromRGB(83,255,144))
+  beam.Transparency=NumberSequence.new(layer[3]);beam.LightEmission=1;beam.LightInfluence=0
+  beam.Segments=64;beam.Parent=trajectory
  end
 end
 local function restoreRings()
@@ -1427,8 +1450,8 @@ remote.OnClientEvent:Connect(function(kind,data)
   if collectedIds[data.id] then return end
   collectedIds[data.id]=true
   if soundEnabled then
-   coinClick:Stop();coinClick.TimePosition=0;coinClick.Volume=Config.CollectSoundVolume
-   coinClick:Play();coinStarted=os.clock()
+   ringChime:Stop();ringChime.TimePosition=0;ringChime.Volume=Config.CollectSoundVolume
+   ringChime:Play();chimeStarted=os.clock()
   end
   local folder=workspace:FindFirstChild("PaperFlightWorld")
   local rings=folder and folder:FindFirstChild("Rings")
@@ -1477,10 +1500,10 @@ local function resize()
 end
 resize();camera:GetPropertyChangedSignal("ViewportSize"):Connect(resize)
 RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value+1,function(dt)
- if coinStarted then
-  local remaining=Config.CollectSoundDuration-(os.clock()-coinStarted)
-  if remaining<=0 then coinClick:Stop();coinStarted=nil
-  else coinClick.Volume=Config.CollectSoundVolume*math.clamp(remaining/0.035,0,1) end
+ if chimeStarted then
+  local remaining=Config.CollectSoundDuration-(os.clock()-chimeStarted)
+  if remaining<=0 then ringChime:Stop();chimeStarted=nil
+  else ringChime.Volume=Config.CollectSoundVolume*math.clamp(remaining/0.06,0,1) end
  end
  local flying=mode=="Flying"
  local intensity=flying and math.clamp((telemetry.speed-80)/170,0,1) or 0
@@ -1502,13 +1525,11 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
  if mode=="Aiming" then
   local c=player.Character;local hand=c and (c:FindFirstChild("RightHand") or c:FindFirstChild("Right Arm"))
   if heldPlane then heldPlane:PivotTo(CFrame.new((hand and hand.Position or Config.Launch)+direction*0.8)*aimFrame) end
-  previewClock+=dt
-  if previewClock>1/30 then
-   previewClock=0;local stats=Flight.stats(profile.levels,profile.planeId);local state=Flight.new(Config.Launch,yaw,pitch,stats)
-   for i=1,#dots do
-    if i>1 then for _=1,6 do state=Flight.step(state,Flight.aimInput(state,yaw,pitch),1/60,stats,World.lift(state.position,profile.planeId)) end end
-    dots[i].Position=(i==1 and heldPlane) and heldPlane:GetPivot().Position or state.position
-   end
+  if heldPlane and aimAnchors[1] then
+   local origin=heldPlane:GetPivot().Position
+   local frame=CFrame.new(origin)*aimFrame
+   aimAnchors[1].CFrame=frame
+   aimAnchors[2].CFrame=frame*CFrame.new(Config.AimCurveEnd)
   end
   local focus=Config.ThrowStand+Vector3.new(0,2,0)
   camera.CFrame=CFrame.lookAt(focus-direction*17+Vector3.new(-3,4,0),focus+direction*80);camera.FieldOfView=65
@@ -2280,12 +2301,14 @@ for _,ring in World.Rings do
    stroke.Transparency=layer[2];stroke.Parent=circle
   end
  end
- -- Thin, open neon hoops: the middle contains no physical or invisible collision part.
+ -- Round neon tubing, with overlapping ends so the thicker hoop stays continuous.
  for j=1,48 do
   local a=(j-1)/48*math.pi*2;local b=j/48*math.pi*2
   local pa=cf:PointToWorldSpace(V(math.cos(a)*ring.radius,math.sin(a)*ring.radius,0))
   local pb=cf:PointToWorldSpace(V(math.cos(b)*ring.radius,math.sin(b)*ring.radius,0))
-  local segment=decor(beam(m,"NeonArc",pa,pb,0.28,ring.color));segment.Material=Enum.Material.Neon
+  local tubeFrame=CFrame.lookAt((pa+pb)/2,pb)*CFrame.Angles(0,math.pi/2,0)
+  local segment=decor(part(m,"NeonArc",V((pb-pa).Magnitude+0.06,Config.RingTubeThickness,Config.RingTubeThickness),tubeFrame,ring.color,Enum.Material.Neon))
+  segment.Shape=Enum.PartType.Cylinder;segment.CastShadow=false
  end
 end
 local currents=model("ThermalMarkers")

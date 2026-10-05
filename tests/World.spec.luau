@@ -67,9 +67,10 @@ end
 -- Sample the full ring rim and a plane-width passage, not just the center.
 for _,ring in W.Rings do
  local frame=CFrame.lookAt(ring.position,ring.position+ring.normal)
+ local rimRadius=ring.radius+require(package.Config).RingTubeThickness/2+0.1
  for i=0,11 do
   local angle=i*math.pi/6
-  local offset=frame.RightVector*math.cos(angle)*(ring.radius+0.3)+Vector3.yAxis*math.sin(angle)*(ring.radius+0.3)
+  local offset=frame.RightVector*math.cos(angle)*rimRadius+Vector3.yAxis*math.sin(angle)*rimRadius
   check(not workspace:Raycast(ring.position+offset-ring.normal,ring.normal*2,params),"Doubled ring rim intersects scenery: "..ring.id)
  end
 end
@@ -91,9 +92,21 @@ for _,a in W.Animals do
  if a.forwardMeadow then forward+=1;check(a.position.Z<0 and a.position.Y<110,"Visible wildlife belongs in the forward field") end
 end
 for _,r in W.Rings do if r.group:find("Meandering") then trails[r.group]=(trails[r.group] or 0)+1 end end
-local trailCount=0;for _ in trails do trailCount+=1 end
+local trailCount=0
+for _,count in trails do
+ trailCount+=1
+ check(count==10,"Each connected sky trail contains ten pickups")
+end
 check(forward==2,"Keep exactly two open-field animals")
-check(trailCount>=18,"Reward trails must also fill gaps between landmarks")
+check(trailCount==31,"Keep twenty-four existing trails plus seven high trails")
+local highCount=0;local highGroups={}
+for _,ring in W.Rings do if ring.highSky then
+ highCount+=1;highGroups[ring.group]=true
+ check(ring.position.Y>=470 and ring.position.Y<2100,"High sky trails must be elevated but below the top plane's ceiling")
+ check(ring.position.Y-L.height(ring.position.X,ring.position.Z)>=59,"High sky rings need clear air above the slope")
+end end
+local highTrailCount=0;for _ in highGroups do highTrailCount+=1 end
+check(highCount==70 and highTrailCount==7,"Every mountain gets a ten-ring high trail")
 local bearings={};local front,back,left,right=0,0,0,0
 for _,peak in L.Peaks do
  local dx,dz=peak.x+550,peak.z-534
