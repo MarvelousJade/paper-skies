@@ -28,10 +28,13 @@ for parent,name,cls,path in [
  ("package","Landscape","ModuleScript","src/shared/Landscape.luau"),
  ("package","WorldData","ModuleScript","src/shared/WorldData.luau"),
  ("package","ReferenceAnimals","ModuleScript","src/shared/ReferenceAnimals.luau"),
+ ("package","Scenery","ModuleScript","src/shared/Scenery.luau"),
+ ("package","MeadowGrass","ModuleScript","src/shared/MeadowGrass.luau"),
  ("package","Economy","ModuleScript","src/shared/Economy.luau"),
  ('game.ServerScriptService',"PaperFlightProfiles","ModuleScript","src/server/ProfileStore.luau"),
  ('game.ServerScriptService',"PaperFlightServer","Script","src/server/RaceServer.server.luau"),
  ('game.StarterPlayer.StarterPlayerScripts',"PaperFlightClient","LocalScript","src/client/FlightClient.client.luau"),
+ ('game.StarterPlayer.StarterPlayerScripts',"PaperMeadowGrass","LocalScript","src/client/MeadowGrass.client.luau"),
 ]:
     output.append(f'write({parent},"{name}","{cls}",{literal(read(path))})\n')
 output.append("if not package:FindFirstChild('Plane') then\nlocal function originalArt()\n"+read("tools/BuildDreamWorld.luau")+"\nend\noriginalArt()\nend\n")

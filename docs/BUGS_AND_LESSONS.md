@@ -684,3 +684,61 @@ Committed the slower flight and lower wildlife first as `d875275`. The seven sum
 Adding lights and particles required extending collection cleanup. Hiding a Part alone does not disable its light or emitter. The client tracks effect-enabled states, clears existing particles on collection, and restores effects when the run resets. Newly streamed nested effects find their owning ring through ancestors so they cannot reappear after that ring was collected. This prevents a foreseeable leftover-glow defect rather than documenting a defect observed by the user.
 
 Verification: 6204 geometry/layout assertions passed for the special effects, and a close summit screenshot was inspected. A fresh Play synthetic summit notification plus duplicate hid 97 parts and disabled ten effects, with one pickup sound. A late-added nested light was also suppressed. Reset restored the nine light/emitter effects and visible parts; music continued. No server gold was awarded by these cosmetic notifications. The server collection code uses the shared ring value and its once-per-run guard. Full flown summit collection, visual preference, and device performance remain manual checks. This revision remains uncommitted.
+
+## October 5 coordinated low-poly scenery
+
+### D31 Bright trees, blossom groves, and sparse meadow accents
+
+Committed the summit glow first as `b927ae3`. The three supplied images guide shape and color rather than exact asset replication; retained copies are references/Scenery_BrightTrees.png, Scenery_BlossomShape.png, and Scenery_StonesAndMeadow.png. All new geometry is procedural and original in Scenery.luau: faceted green broadleaf crowns, pale birches, layered teal pines, pink/coral blossom canopies, brighter palms, irregular cool-gray stones, simple cream/lavender flowers, and small grass tufts. No individual leaf meshes or dense grass carpet were added.
+
+The original tree placement sampler and random height consumption are preserved. Final roster: 452 trees (120 broadleaf, 30 birch, 211 pine, 78 blossom, 13 palms). Forty-two selected grove sites receive a small non-colliding flower/grass patch and nearby stone. Accent sites reject water, steep or rocky ground, launch space, animal approaches, and ring flight corridors. Only Woodlands and MeadowAccents were rebuilt; terrain and gameplay landmarks remain in place.
+
+Geometry/layout validation passed 8707 assertions, covering existing ring and animal approaches, eight launch directions, sparse accent counts, primitive budgets, non-colliding small plants, and actual flower grounding. Close screenshots checked green crowns, blossom silhouettes, stones, flowers, and grass. Current world descendants: 64,216; maximum tree primitives: 124. The richer crowns increase instance count from the preceding 30,970-descendant world. Atomic tree/patch models keep streaming units bounded, but device performance has not been benchmarked; this count is not proof of a frame-rate target. The revision remains uncommitted for user review.
+
+### B14 Small flowers were buried beneath voxel terrain
+
+**Observed:** The first close meadow screenshot showed the rock, but most flowers and grass were missing. Raycasts showed flower centers around 1.55 studs below the actual terrain surface.
+
+**Cause:** Placement used Landscape.height, the analytical field that authored the terrain. Roblox's voxel surface interpolation rendered approximately two studs above that field at the sampled site. This offset was tolerable for large tree trunks but swallowed small ground details.
+
+**Fix:** Use terrain-only downward raycasts around the analytical height to get the visible surface for each small plant. Apply the same surface placement to stone bases. Retain the analytical fallback when no terrain hit exists. Do not raise every object by an arbitrary global offset.
+
+**Verification:** The revised close screenshot shows cream/lavender flowers and short grass beside the faceted stone. Every flower center is checked to be 0.2–0.8 studs above the terrain ray hit; all checks pass. The small plants are non-colliding and non-queryable so decoration cannot block flight.
+
+**Interview lesson:** Procedural source data and rendered collision surfaces can differ. Validate placement against the actual surface at the scale of the asset, and use close visual review to catch problems that broad route checks miss.
+
+### D32 Match the meadow to the brighter scenery
+
+The user found the first ground-cover pass too sparse and wanted the meadow color to fit the trees and stones. Shifted LeafyGrass from blue-green (73,143,105) to warm green (135,173,85), coordinated terrain rock to (139,141,153), and matched the distant terrain proxies to the new palette. Terrain geometry and tree placements stay intact. Ground cover now occupies 95 patches instead of 42, with nine flowers and nine simple tufts in each broader patch. Stone placement remains limited to 46 accents.
+
+The revised close valley screenshot shows the warmer green base continuous across the ground and slopes, with visible flower/grass clusters. All 15661 geometry/layout assertions passed, including plant grounding, non-collision, ring corridors, and launch clearance. Current world descendants: 70,742. These are counts and geometric checks, not a device-performance benchmark. This is an art-direction refinement; no new defect was encountered. The scenery changes remain uncommitted.
+
+### D33 Ground-level grass needs continuous local coverage
+
+The user still found bare ground when approaching ordinary meadow areas. The earlier 95 decorative patches only covered selected grove sites; increasing those patches and changing terrain color did not provide the expected close-up detail across the landscape.
+
+Added a separate client-only grass layer that follows the camera during walking and low flight. MeadowGrass samples the actual terrain surface, accepting only Grass/LeafyGrass and gentle slopes. Deterministically jittered clumps contain three angular blades in the meadow palette. Their 55-stud neighborhood fades from 36 studs outward, with smooth introduction and a hard cap of 420 pooled clumps / 2,520 non-colliding, non-queryable, shadowless blade Parts per client. Updates occur at approximately 0.12-second intervals with at most 64 new terrain samples per update. Missed terrain samples retry to handle streaming. Returning to old ground reuses hidden parts; grass is not replicated from the server.
+
+An Edit preview showed blades distributed across the close meadow rather than one decorative patch. A dedicated terrain-backed check passed with 403 clumps and 1,650 visible blade parts, verified disappearance in high flight and open water, reappearance on descent without extra allocation, collision/query/shadow flags, and full destruction of temporary test objects. The existing authored world is unchanged. Device frame-rate and long-session playtests remain pending; the pool cap is a resource bound, not a performance benchmark.
+
+**Interview lesson:** Distinguish decorative placements from continuous proximity detail. The user's complaint described missing coverage, not another palette adjustment. Match the implementation to where players expect to see the detail, and bound local rendering work rather than adding millions of permanent objects. This revision remains uncommitted.
+
+Fresh Play check: the automatic controller populated 406 local clumps, and the gameplay screenshot showed close grass around the launch plateau. The server had no CloseMeadowGrass folder, confirming client-only creation. A separate forced high-camera check was inconclusive because the camera returned to Custom and the launch position during the check; its assertion failed, and the temporary camera state was explicitly restored. High-altitude release was verified by the deterministic module check above, not by that interrupted camera test. This did not reveal a grass lifecycle defect.
+
+### D34 Extend grass visibility and match the ground's surface style
+
+The user identified both short grass visibility and a mismatch between noisy terrain texture and flat faceted foliage. Grass spacing changes from 4.8 to 4.2 studs. Alternating grid cells form a dense inner layer reaching 58 studs and a sparse outer layer reaching 80 (previously all stopped at 55), with fade starts at 40/52. The pool is bounded at 950 clumps / 5700 Parts, with 80 new raycasts at most per update. This raises the detail budget; target-device performance still needs measurement.
+
+PaperMeadow is a MaterialVariant override for LeafyGrass, preserving the terrain's material identity, shape, and collision. Its neutral color map removes the default noisy surface pattern. Explicit white roughness and black metalness maps, applied to all three terrain faces, produce the matte ground shown in the close screenshot. The maps use bundled Roblox white/black resources that loaded successfully; no uploaded texture is required. API references: [material overrides](https://create.roblox.com/docs/parts/materials) and [terrain face details](https://create.roblox.com/docs/reference/engine/classes/TerrainDetail).
+
+Material preview hurdle: the initial untextured variant produced a glossy surface. Setting a roughness map alone did not visually settle the result; explicit neutral maps and per-face overrides produced the intended matte appearance. The initial material change also temporarily invalidated visible terrain rendering; later screenshots after the renderer updated showed the terrain intact. No terrain voxel edits were made.
+
+Validation: the grass lifecycle check passed with 858 clumps / 3570 visible blade parts, including visible coverage beyond the old range, pool bounds, altitude/water exclusion, reuse, and cleanup. A close composite screenshot checked the smoother ground against the denser grass. Appearance is still subject to user review. This revision remains uncommitted.
+
+### D35 Double grass range and fill out the scenery
+
+At the user's request, the outer grass layer now reaches 160 studs instead of 80, fading from 105 studs. A sparse one-in-nine grid extends beyond the existing 58/80-stud layers, keeping near density while avoiding four times the dense geometry. The local pool cap rises to 1400 clumps / 8400 blade Parts. Terrain ray depth also increases so sloped ground remains eligible across the longer visibility range.
+
+An additive deterministic tree pass keeps the original grove locations, rejects close overlaps for new trees, and increases the total from 452 to 743. Final roster: 245 broadleaf, 70 birch, 293 pine, 112 blossom, 23 palms. Ground accents increase from 46 to 128 stones and 95 to 261 flower patches. Stones now use smaller authored dimensions (4–8 wide, 3–6 tall, 4–7 deep). Existing slope, animal, ring, and launch exclusion rules apply to the additions.
+
+Validation: 31184 geometry/layout assertions passed, including ring and animal passage clearance, launch directions, grounding, and bounded scenery counts. Grass checks passed with 1252 pooled clumps / 5256 visible blade parts, verified visible coverage beyond 120 studs, altitude/water exclusion, reuse, and cleanup. The close meadow preview was inspected. The authored world has 112,449 descendants before client grass; performance on target devices remains unmeasured. No new defect was encountered. These changes remain uncommitted.

@@ -170,4 +170,32 @@ for i=0,7 do
  end
  check(clear,"default throw must clear plateau in all directions")
 end
+-- Scenery must keep a bounded instance count and small accents on rendered terrain.
+local woodland=workspace.PaperFlightWorld.Woodlands
+local treeKinds={};local trees=woodland:GetChildren()
+check(#trees>550 and #trees<900,"Add substantially more trees while bounding authored scenery")
+for _,tree in trees do
+ local kind=tree:GetAttribute("SceneryKind");treeKinds[kind]=(treeKinds[kind] or 0)+1
+ check(tree:GetAttribute("ArtStyle")=="BrightFaceted","Every tree uses the coherent faceted style")
+ check(#tree:GetChildren()<=130,"Tree detail stays within its primitive budget")
+end
+check(treeKinds.CherryBlossom>0 and treeKinds.CherryBlossom<#trees/4,"Blossoms remain accents among green trees")
+check(treeKinds.Broadleaf and treeKinds.Birch and treeKinds.Pine and treeKinds.Palm,"Keep varied tree silhouettes")
+local terrainOnly=RaycastParams.new();terrainOnly.FilterType=Enum.RaycastFilterType.Include
+terrainOnly.FilterDescendantsInstances={workspace.Terrain}
+local patches,stones=0,0
+for _,accent in workspace.PaperFlightWorld.MeadowAccents:GetChildren() do
+ if accent:GetAttribute("SceneryKind")=="Stone" then stones+=1
+ else
+  patches+=1
+  for _,v in accent:GetChildren() do
+   check(not v.CanCollide and not v.CanQuery,"Tiny flowers and grass must not obstruct flight")
+   if v.Name=="FlowerCenter" then
+    local hit=workspace:Raycast(v.Position+Vector3.yAxis*12,-Vector3.yAxis*24,terrainOnly)
+    check(hit and v.Position.Y-hit.Position.Y>0.2 and v.Position.Y-hit.Position.Y<0.8,"Flowers follow visible terrain rather than the buried height field")
+   end
+  end
+ end
+end
+check(patches>150 and patches<=360 and stones>70 and stones<=200,"Bound meadow coverage and keep stones sparse")
 return string.format("%d geometry and discovery-layout checks passed",passed)

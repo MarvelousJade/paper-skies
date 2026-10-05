@@ -49,7 +49,7 @@ Bears, foxes, raccoons, turtles, and candy cats now have shorter legs and lowere
 
 The seven summit rewards use warm golden neon cores, a soft outer glow, local light, sparse rim sparkles, and larger distant halos. Rewards stay at 10 gold for regular sky rings, 25 for foothill passages, 35 for animal belly rings, and 60 for summit rings. Summit effects hide locally on collection and return for the next run, including nested effects that arrive after collection. The seven summit models remain replicated at distance; their halos hide near the actual opening.
 
-Meadows now use LeafyGrass terrain material. An earlier attempt to set the non-scriptable Decoration property had silently failed; the material change was visually verified to remove the dense blades. The rebuilt scene has 30,494 descendants. Expanded trails also influence tree placement so flight corridors remain clear.
+Meadows use a smooth matte PaperMeadow override on LeafyGrass terrain plus a client-only layer of angular grass blades that becomes visible near the ground. An earlier attempt to set the non-scriptable Decoration property had silently failed; the material change was visually verified to remove the dense blades. The authored scene has 112,449 descendants after the scenery update. Close grass adds at most 8,400 non-colliding blade Parts locally per client, recycled around the camera rather than stored across the whole map. Expanded trails also influence tree placement so flight corridors remain clear. The 743 trees use bright faceted crowns: 245 broadleaf, 70 birch, 293 pine, 112 cherry blossom, and 23 palms. A warm green meadow palette now matches the foliage, with cooler gray stone colors. Meadow accents add 128 small angular stones and 261 fuller patches of cream/lavender flowers and simple grass, each with nine flowers and nine low-poly tufts. An additive pass preserves the original grove sites while placing more trees around the wider meadows; new accents avoid animal and ring approaches. This uses more primitives than the previous simple crowns; target-device performance has not been benchmarked.
 
 **Open visual issue:** Far mountain terrain and its coarse proxies were absent in the Studio Play rear-view check, although the summit halos remained visible. The same rear mountains render correctly in Edit mode, and server terrain raycasts find them. Extra streaming focus made the rear terrain queryable on the client without resolving that screenshot. The exact rendering cause remains unconfirmed. This issue is tracked in the bug log; full distant-scene visibility is not claimed as verified.
 
@@ -73,6 +73,8 @@ The installer builds the five aircraft and world from source. Terrain uses the `
 - `src/shared/Config.luau`: aircraft catalog, prices, flight bounds, audio, tuning.
 - `src/shared/Flight.luau`: gliding, aircraft climb/altitude response, server-owned boost stamina, steering, swept ring crossing.
 - `src/shared/FlightCamera.luau`: deterministic throw and boost camera easing.
+- `src/shared/Scenery.luau`: original faceted trees, blossom crowns, stones, flowers, and sparse grass.
+- `src/shared/MeadowGrass.luau` and `src/client/MeadowGrass.client.luau`: pooled close-range grass, following the viewer over meadow terrain.
 - `src/shared/Landscape.luau`: islands, mountains, plateau, foothill passages.
 - `src/shared/WorldData.luau`: wildlife placement, reward routes, summit data, aircraft-specific thermals.
 - `src/shared/Economy.luau`: ownership, purchases, selection, legacy upgrade helpers.
@@ -119,6 +121,10 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The latest requested checkpoint is **`d875275` — Lower wildlife stances and tune exploration flight to 100 SPS**. Special summit-ring glow remains uncommitted for user testing; summit rewards remain 60 gold.
+The latest requested checkpoint is **`b927ae3` — Add distinctive golden glow to summit rings**. Bright faceted trees, blossoms, stones, flowers, and sparse grass remain uncommitted for user testing.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.
+
+Scenery verification: 31184 geometry/layout assertions passed after rebuilding only Woodlands and MeadowAccents. Green/blossom trees and grounded meadow details were visually inspected. Tree models are limited to 130 primitives (current maximum 124); flower/grass accents do not collide with planes.
+
+Close grass: three triangular blades per clump, 4.2-stud spacing with jitter, 1.6–3.1 studs tall. Interleaved detail layers reach 58, 80, and 160 studs, fading from 40, 52, and 105 studs respectively. The sparse outer layer doubles the prior range while retaining dense near coverage. Water, rock, steep surfaces, and high flight are excluded. Checks verified 1252 pooled clumps and 5256 visible blade parts in the test meadow, visible grass beyond 120 studs, release at altitude/water, reuse on return, and cleanup. The per-client cap is 1400 clumps / 8400 blade Parts. Device frame-rate testing remains pending.

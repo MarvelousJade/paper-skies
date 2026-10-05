@@ -844,6 +844,234 @@ function Wildlife.build(animal,parent,ground)
 end
 return Wildlife
 ]=])
+write(package,"Scenery","ModuleScript",[=[
+-- Original low-poly scenery. Broad colored facets replace individual leaves and petals.
+local Scenery={}
+local V,CF=Vector3.new,CFrame.new
+local function part(parent,name,size,frame,color)
+ local p=Instance.new("Part");p.Name=name;p.Size=size;p.CFrame=frame;p.Color=color
+ p.Material=Enum.Material.SmoothPlastic;p.Anchored=true;p.CanTouch=false
+ p.TopSurface=Enum.SurfaceType.Smooth;p.BottomSurface=Enum.SurfaceType.Smooth;p.Parent=parent
+ return p
+end
+local function triangle(parent,name,a,b,c,color)
+ local ab,ac,bc=b-a,c-a,c-b
+ if ab:Dot(ab)>ac:Dot(ac) and ab:Dot(ab)>bc:Dot(bc) then c,a=a,c
+ elseif ac:Dot(ac)>bc:Dot(bc) then a,b=b,a end
+ ab,ac,bc=b-a,c-a,c-b
+ if ac:Cross(ab).Magnitude<0.001 then return end
+ local right=ac:Cross(ab).Unit;local back=bc.Unit;local up=back:Cross(right).Unit
+ for _,s in {{(a+b)/2,right,back,math.abs(ab:Dot(back))},{(a+c)/2,-right,-back,math.abs(ac:Dot(back))}} do
+  if s[4]>0.001 then
+   local p=Instance.new("WedgePart");p.Name=name;p.Size=V(0.035,math.abs(ab:Dot(up)),s[4])
+   p.CFrame=CFrame.fromMatrix(s[1],s[2],up,s[3]);p.Color=color;p.Material=Enum.Material.SmoothPlastic
+   p.Anchored=true;p.CanTouch=false;p.TopSurface=Enum.SurfaceType.Smooth;p.BottomSurface=Enum.SurfaceType.Smooth;p.Parent=parent
+  end
+ end
+end
+local phi=(1+math.sqrt(5))/2
+local vertices={V(-1,phi,0),V(1,phi,0),V(-1,-phi,0),V(1,-phi,0),V(0,-1,phi),V(0,1,phi),V(0,-1,-phi),V(0,1,-phi),V(phi,0,-1),V(phi,0,1),V(-phi,0,-1),V(-phi,0,1)}
+local faces={{1,12,6},{1,6,2},{1,2,8},{1,8,11},{1,11,12},{2,6,10},{6,12,5},{12,11,3},{11,8,7},{8,2,9},{4,10,5},{4,5,3},{4,3,7},{4,7,9},{4,9,10},{5,10,6},{3,5,12},{7,3,11},{9,7,8},{10,9,2}}
+local function facets(parent,name,frame,size,color,irregular)
+ local points={}
+ for i,v in vertices do
+  local n=v.Unit;local wobble=irregular and (0.88+(i*7%9)*0.025) or 1
+  points[i]=frame:PointToWorldSpace(n*size*0.5*wobble)
+ end
+ for i,f in faces do
+  local a,b,c=points[f[1]],points[f[2]],points[f[3]]
+  local normal=(b-a):Cross(c-a).Unit
+  local amount=math.clamp(normal:Dot(V(-0.4,0.85,-0.3).Unit)*0.15,-0.15,0.15)
+  local shade=amount>=0 and color:Lerp(Color3.fromRGB(255,251,206),amount) or color:Lerp(Color3.fromRGB(43,61,62),-amount)
+  triangle(parent,name,a,b,c,shade)
+ end
+end
+local function beam(parent,name,a,b,width,color)
+ return part(parent,name,V(width,width,(b-a).Magnitude+0.25),CFrame.lookAt((a+b)/2,b),color)
+end
+function Scenery.tree(model,origin,h,kind,heading)
+ model:SetAttribute("SceneryKind",kind);model:SetAttribute("BasePosition",origin);model:SetAttribute("ArtStyle","BrightFaceted")
+ local frame=CF(origin)*CFrame.Angles(0,heading,0)
+ local function point(x,y,z) return frame:PointToWorldSpace(V(x,y,z)*h) end
+ local bark=kind=="CherryBlossom" and Color3.fromRGB(103,65,69) or Color3.fromRGB(110,91,67)
+ local function branch(a,b,width) return beam(model,"Branch",point(a.X,a.Y,a.Z),point(b.X,b.Y,b.Z),width*h,bark) end
+ local function crown(x,y,z,size,color,turn)
+  facets(model,"CanopyFacet",CF(point(x,y,z))*CFrame.Angles(0,heading+(turn or 0),0),size*h,color,false)
+ end
+ if kind=="Palm" then
+  branch(V(0,-0.03,0),V(0.06,0.55,0),0.075);branch(V(0.06,0.55,0),V(0.14,0.97,0.02),0.055)
+  local tip=point(0.14,0.97,0.02)
+  for i=1,7 do
+   local a=i*math.pi*2/7;local radial=V(math.cos(a),0,math.sin(a));local side=V(-radial.Z,0,radial.X)*h*0.09
+   local mid=tip+radial*h*0.28+V(0,h*0.06,0);local finish=tip+radial*h*0.58-V(0,h*0.15,0)
+   triangle(model,"PalmFrond",tip,mid+side,finish,Color3.fromRGB(128,184,72))
+   triangle(model,"PalmFrond",tip,finish,mid-side,Color3.fromRGB(157,202,81))
+  end
+ elseif kind=="Pine" then
+  branch(V(0,-0.03,0),V(0,0.92,0),0.07)
+  for layer=0,2 do
+   local y=0.29+layer*0.22;local radius=(0.31-layer*0.065)*h
+   local center=point(0,y,0);local tip=point(0,y+0.49,0)
+   local color=Color3.fromRGB(73+layer*11,145+layer*10,118+layer*5)
+   for i=0,5 do
+    local a=heading+i*math.pi/3;local b=a+math.pi/3
+    local p=center+V(math.cos(a)*radius,0,math.sin(a)*radius);local q=center+V(math.cos(b)*radius,0,math.sin(b)*radius)
+    triangle(model,"PineFacet",tip,p,q,color:Lerp(Color3.fromRGB(170,205,128),i%3*0.075))
+    triangle(model,"PineUnderside",center,q,p,color:Lerp(Color3.fromRGB(48,90,79),0.13))
+   end
+  end
+ elseif kind=="Birch" then
+  bark=Color3.fromRGB(224,219,180)
+  branch(V(0,-0.03,0),V(0.03,0.95,0),0.055)
+  branch(V(0.02,0.43,0),V(-0.2,0.77,0.04),0.035)
+  for i=1,4 do part(model,"BarkMark",V(h*0.057,h*0.025,h*0.057),CF(point(0.03*i/4,i*0.13,0)),Color3.fromRGB(88,97,82)) end
+  crown(0.04,0.92,0,V(0.53,0.8,0.49),Color3.fromRGB(172,206,74),0.25)
+  crown(-0.21,0.78,0.05,V(0.42,0.6,0.42),Color3.fromRGB(195,216,99),0.8)
+ else
+  local cherry=kind=="CherryBlossom"
+  branch(V(0,-0.04,0),V(-0.08,0.32,0),0.13)
+  branch(V(-0.08,0.32,0),V(0.06,0.64,0.01),0.095)
+  branch(V(-0.06,0.38,0),V(-0.31,0.72,0.04),0.06)
+  branch(V(0.01,0.54,0),V(0.33,0.79,-0.04),0.05)
+  local main=cherry and Color3.fromRGB(243,136,158) or Color3.fromRGB(144,188,65)
+  local side=cherry and Color3.fromRGB(227,111,141) or Color3.fromRGB(116,166,62)
+  crown(-0.27,0.81,0.04,V(0.81,0.48,0.72),side,0.3)
+  crown(0.28,0.9,-0.02,V(0.87,0.55,0.77),main,1.1)
+  if cherry then crown(0.01,1.1,0.03,V(0.7,0.46,0.64),Color3.fromRGB(255,164,175),0.65) end
+ end
+end
+function Scenery.stone(model,origin,size,heading)
+ model:SetAttribute("SceneryKind","Stone");model:SetAttribute("BasePosition",origin)
+ facets(model,"StoneFacet",CF(origin+V(0,size.Y*0.25,0))*CFrame.Angles(0,heading,0.08),size,Color3.fromRGB(149,150,163),true)
+end
+function Scenery.patch(model,origin,ground,seed)
+ local rng=Random.new(seed);model:SetAttribute("SceneryKind","MeadowPatch")
+ model:SetAttribute("BasePosition",origin)
+ for i=1,9 do
+  local x,z=origin.X+rng:NextNumber(-9,9),origin.Z+rng:NextNumber(-9,9)
+  local y=ground(x,z)+0.45;local frame=CF(x,y,z)*CFrame.Angles(0,i*1.3,0)
+  local col=i%3==0 and Color3.fromRGB(199,162,232) or Color3.fromRGB(255,246,219)
+  part(model,"Petal",V(1.5,0.13,0.48),frame,col)
+  part(model,"Petal",V(0.48,0.14,1.5),frame,col)
+  part(model,"FlowerCenter",V(0.37,0.19,0.37),frame,Color3.fromRGB(246,207,79))
+ end
+ for i=1,9 do
+  local x,z=origin.X+rng:NextNumber(-10,10),origin.Z+rng:NextNumber(-10,10)
+  local base=V(x,ground(x,z)-0.1,z)
+  for j=1,3 do
+   local a=j*math.pi*2/3+i;local d=V(math.cos(a),0,math.sin(a));local across=V(-d.Z,0,d.X)*0.45
+   triangle(model,"GrassBlade",base-across,base+across,base+d*1.2+V(0,1.7+j*0.3,0),Color3.fromRGB(125+j*7,165+j*6,72+j*3))
+  end
+ end
+ for _,p in model:GetChildren() do if p:IsA("BasePart") then p.CanCollide=false;p.CanQuery=false;p.CastShadow=false end end
+end
+return Scenery
+]=])
+write(package,"MeadowGrass","ModuleScript",[=[
+-- Client-only close-range grass. A bounded pool follows the camera; no server collision.
+local MeadowGrass={}
+local V=Vector3.new
+local SPACING,RADIUS,FADE_START,MAX_CLUMPS=4.2,160,105,1400
+local MID_RADIUS=80
+local NEAR_RADIUS=58 -- Interleave a denser inner layer with a sparse longer-range layer.
+local function wedge(parent)
+ local p=Instance.new("WedgePart");p.Name="GrassBlade"
+ p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.CastShadow=false
+ p.Material=Enum.Material.SmoothPlastic;p.TopSurface=Enum.SurfaceType.Smooth;p.BottomSurface=Enum.SurfaceType.Smooth
+ p.Transparency=1;p.Parent=parent;return p
+end
+local function triangle(parts,index,a,b,c,color)
+ local ab,ac,bc=b-a,c-a,c-b
+ if ab:Dot(ab)>ac:Dot(ac) and ab:Dot(ab)>bc:Dot(bc) then c,a=a,c
+ elseif ac:Dot(ac)>bc:Dot(bc) then a,b=b,a end
+ ab,ac,bc=b-a,c-a,c-b
+ local right=ac:Cross(ab).Unit;local back=bc.Unit;local up=back:Cross(right).Unit
+ local height=math.abs(ab:Dot(up))
+ local first,second=parts[index],parts[index+1]
+ first.Size=V(0.035,height,math.max(0.01,math.abs(ab:Dot(back))))
+ second.Size=V(0.035,height,math.max(0.01,math.abs(ac:Dot(back))))
+ first.CFrame=CFrame.fromMatrix((a+b)/2,right,up,back)
+ second.CFrame=CFrame.fromMatrix((a+c)/2,-right,up,-back)
+ first.Color=color;second.Color=color
+end
+function MeadowGrass.new(parent)
+ local folder=Instance.new("Folder");folder.Name="CloseMeadowGrass";folder.Parent=parent
+ local active,pool,misses={},{},{}
+ local allocated,clock=0,0
+ local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Include
+ params.FilterDescendantsInstances={workspace.Terrain};params.IgnoreWater=false
+ local api={Folder=folder}
+ local function release(key,clump)
+  for _,p in clump.parts do p.Transparency=1 end
+  active[key]=nil;table.insert(pool,clump)
+ end
+ function api:Update(eye,dt)
+  clock+=dt
+  local count=0
+  for key,clump in active do
+   local distance=(clump.position-eye).Magnitude
+   if distance>clump.radius then release(key,clump)
+   else
+    count+=1
+    local fadeStart=clump.radius==NEAR_RADIUS and 40 or clump.radius==MID_RADIUS and 52 or FADE_START
+    local target=math.clamp((distance-fadeStart)/(clump.radius-fadeStart),0,1)
+    clump.transparency+=(target-clump.transparency)*(1-math.exp(-12*dt))
+    for _,p in clump.parts do p.Transparency=clump.transparency end
+   end
+  end
+  local cx,cz=math.floor(eye.X/SPACING),math.floor(eye.Z/SPACING)
+  local candidates={};local cells=math.ceil(RADIUS/SPACING)
+  for x=cx-cells,cx+cells do for z=cz-cells,cz+cells do
+   local dx,dz=x*SPACING-eye.X,z*SPACING-eye.Z
+   local d=dx*dx+dz*dz
+   -- Sparse far cells double visibility without quadrupling dense geometry.
+   local radius=(x%3==0 and z%3==0) and RADIUS or (x+z)%2==0 and MID_RADIUS or NEAR_RADIUS
+   if d<radius*radius then
+    local key=x..":"..z
+    if not active[key] and (not misses[key] or misses[key]<clock) then
+     table.insert(candidates,{x=x,z=z,key=key,distance=d,radius=radius})
+    end
+   end
+  end end
+  table.sort(candidates,function(a,b) return a.distance<b.distance end)
+  local checked=0
+  for _,cell in candidates do
+   if checked>=80 or count>=MAX_CLUMPS then break end
+   checked+=1
+   local rng=Random.new((cell.x*73856093+cell.z*19349663)%2147483647)
+   local x,z=cell.x*SPACING+rng:NextNumber(-1.2,1.2),cell.z*SPACING+rng:NextNumber(-1.2,1.2)
+   local hit=workspace:Raycast(V(x,eye.Y+35,z),V(0,-225,0),params)
+   if not hit or (hit.Material~=Enum.Material.LeafyGrass and hit.Material~=Enum.Material.Grass)
+    or hit.Normal.Y<0.72 or (hit.Position-eye).Magnitude>cell.radius then
+    misses[cell.key]=clock+1.5;continue
+   end
+   local clump=table.remove(pool)
+   if not clump then
+    if allocated>=MAX_CLUMPS then break end
+    clump={parts={}};for i=1,6 do clump.parts[i]=wedge(folder) end
+    allocated+=1
+   end
+   clump.position=hit.Position;clump.transparency=1;clump.radius=cell.radius
+   local base=hit.Position-V(0,0.12,0)
+   local rotation=rng:NextNumber(0,math.pi*2)
+   for blade=1,3 do
+    local a=rotation+blade*math.pi*2/3
+    local along=V(math.cos(a),0,math.sin(a));local side=V(-along.Z,0,along.X)
+    local width=rng:NextNumber(0.65,1.05);local height=rng:NextNumber(1.6,3.1)
+    local col=Color3.fromRGB(124+blade*9,167+blade*7,68+blade*5)
+    triangle(clump.parts,blade*2-1,base-side*width,base+side*width,base+V(0,height,0)+along*rng:NextNumber(0.5,1.2),col)
+   end
+   active[cell.key]=clump;count+=1
+  end
+  -- Failed terrain queries retry after streaming, and expire rather than growing forever.
+  for key,untilTime in misses do if untilTime<clock-2 then misses[key]=nil end end
+  folder:SetAttribute("ActiveClumps",count);folder:SetAttribute("AllocatedClumps",allocated)
+ end
+ function api:Destroy() folder:Destroy();table.clear(active);table.clear(pool);table.clear(misses) end
+ return api
+end
+return MeadowGrass
+]=])
 write(package,"Economy","ModuleScript",[=[
 --!strict
 local Config=require(script.Parent.Config)
@@ -1686,6 +1914,22 @@ end)
 updateHud();remote:FireServer("Sync")
 print("Exploration HUD and wind presentation ready.")
 ]=])
+write(game.StarterPlayer.StarterPlayerScripts,"PaperMeadowGrass","LocalScript",[=[
+-- Show individual grass blades only near the viewer, including low flight and walking.
+local RS=game:GetService("ReplicatedStorage")
+local RunService=game:GetService("RunService")
+local MeadowGrass=require(RS:WaitForChild("PaperFlight"):WaitForChild("MeadowGrass"))
+local grass=MeadowGrass.new(workspace)
+local elapsed=0
+local connection=RunService.Heartbeat:Connect(function(dt)
+ elapsed+=dt
+ if elapsed<0.12 then return end
+ local camera=workspace.CurrentCamera
+ if camera then grass:Update(camera.CFrame.Position,elapsed) end
+ elapsed=0
+end)
+script.Destroying:Connect(function() connection:Disconnect();grass:Destroy() end)
+]=])
 if not package:FindFirstChild('Plane') then
 local function originalArt()
 -- Run in Studio's EDIT mode after installing src/shared/Config.luau.
@@ -2146,6 +2390,7 @@ local Config=require(RS.PaperFlight.Config)
 local World=require(RS.PaperFlight.WorldData)
 local Landscape=require(RS.PaperFlight.Landscape)
 local ReferenceAnimals=require(RS.PaperFlight.ReferenceAnimals)
+local Scenery=require(RS.PaperFlight.Scenery)
 local V,CF=Vector3.new,CFrame.new
 local rng=Random.new(70421)
 local folder=Instance.new("Folder");folder.Name="PaperFlightWorld"
@@ -2251,8 +2496,24 @@ if not terrain:GetAttribute("PaperArchipelagoV5") then
  end
  terrain:SetAttribute("PaperArchipelagoV5",true)
 end
-terrain:SetMaterialColor(Enum.Material.LeafyGrass,Color3.fromRGB(73,143,105))
-terrain:SetMaterialColor(Enum.Material.Rock,Color3.fromRGB(112,116,125))
+-- Flat-color, matte ground shares the low-poly foliage style; keep terrain collision intact.
+local materials=game:GetService("MaterialService")
+local meadow=materials:FindFirstChild("PaperMeadow") or Instance.new("MaterialVariant")
+meadow.Name="PaperMeadow";meadow.BaseMaterial=Enum.Material.LeafyGrass
+meadow.ColorMap="rbxasset://textures/sky/white.png";meadow.NormalMap=""
+meadow.MetalnessMap="rbxasset://textures/blackBkg_square.png"
+-- Roblox's bundled solid-white texture gives full roughness without another uploaded asset.
+meadow.RoughnessMap="rbxasset://textures/sky/white.png";meadow.StudsPerTile=32;meadow.Parent=materials
+for _,face in Enum.TerrainFace:GetEnumItems() do
+ local name="Matte"..face.Name
+ local detail=meadow:FindFirstChild(name) or Instance.new("TerrainDetail")
+ detail.Name=name;detail.Face=face;detail.ColorMap=meadow.ColorMap;detail.NormalMap=""
+ detail.RoughnessMap=meadow.RoughnessMap;detail.MetalnessMap=meadow.MetalnessMap
+ detail.StudsPerTile=32;detail.Parent=meadow
+end
+materials:SetBaseMaterialOverride(Enum.Material.LeafyGrass,meadow.Name)
+terrain:SetMaterialColor(Enum.Material.LeafyGrass,Color3.fromRGB(135,173,85))
+terrain:SetMaterialColor(Enum.Material.Rock,Color3.fromRGB(139,141,153))
 terrain:SetMaterialColor(Enum.Material.Sand,Color3.fromRGB(214,197,160))
 -- Flat water and smooth grass match the reference's broad, readable surfaces.
 -- LeafyGrass keeps a meadow surface without the animated Grass blades.
@@ -2266,15 +2527,13 @@ end end
 local terrainParams=RaycastParams.new();terrainParams.FilterType=Enum.RaycastFilterType.Include;terrainParams.FilterDescendantsInstances={terrain}
 local function ground(x,z) return Landscape.height(x,z) end
 local trees=model("Woodlands")
-local function crown(parent,center,size,color)
- local top=center+V(0,size.Y/2,0);local bottom=center-V(0,size.Y/2,0)
- local points={center+V(-size.X/2,0,-size.Z/2),center+V(size.X/2,0,-size.Z/2),center+V(size.X/2,0,size.Z/2),center+V(-size.X/2,0,size.Z/2)}
- for i=1,4 do local n=i%4+1
-  triangle(parent,"CanopyFold",top,points[i],points[n],color)
-  triangle(parent,"CanopyFold",bottom,points[n],points[i],color:Lerp(Color3.fromRGB(37,75,60),0.15))
+local function treeAt(x,z,index,extra)
+ if extra then
+  for _,existing in trees:GetChildren() do
+   local base=existing:GetAttribute("BasePosition")
+   if Vector2.new(x-base.X,z-base.Z).Magnitude<26 then return end
+  end
  end
-end
-local function treeAt(x,z,index)
  local y,rock=ground(x,z)
  -- Keep smaller wildlife and reward approaches clear of randomly placed trees.
  for _,animal in World.Animals do
@@ -2290,27 +2549,11 @@ local function treeAt(x,z,index)
  if slope>1.1 then return end
  local tree=model("Tree",trees);tree:SetAttribute("Elevation",y);tree.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
  local h=rng:NextNumber(28,49)
- local brown=Color3.fromRGB(99,78,63)
- if y<22 then
-  -- Slender palms on sand; folded fronds have a clear silhouette from above.
-  local base=V(x,y,z);local bend=V(x+4,y+h*0.55,z+2);local tip=V(x+8,y+h,z+1)
-  beam(tree,"Trunk",base,bend,2.8,brown);beam(tree,"Trunk",bend,tip,2.1,brown)
-  for j=1,7 do
-   local a=j*math.pi*2/7
-   local radial=V(math.cos(a),0,math.sin(a));local side=V(-radial.Z,0,radial.X)*4
-   local mid=tip+radial*11+V(0,3,0);local finish=tip+radial*24-V(0,6,0)
-   triangle(tree,"PalmFrond",tip,mid+side,finish,Color3.fromRGB(53,126,79))
-   triangle(tree,"PalmFrond",tip,finish,mid-side,Color3.fromRGB(68,151,88))
-  end
- elseif index%3==0 then
-  part(tree,"Trunk",V(3,h*0.65,3),CF(x,y+h*0.325,z),brown,Enum.Material.Wood)
-  crown(tree,V(x,y+h*0.59,z),V(h*0.44,h*1.04,h*0.44),Color3.fromRGB(36,87,68))
- else
-  local tip=V(x+3,y+h*0.72,z)
-  beam(tree,"Trunk",V(x,y,z),tip,3.2,brown)
-  beam(tree,"Branch",V(x+1,y+h*0.4,z),tip+V(-8,-2,3),1.7,brown)
-  crown(tree,tip,V(h*0.92,h*0.43,h*0.73),Color3.fromRGB(42+index%4*5,117+index%3*7,79))
- end
+ -- Style selection consumes no randomness, preserving the existing grove locations.
+ local blossom=y<400 and (math.noise(x/550,z/550,4)>0.3 or index%17==0)
+ local kind=y<22 and "Palm" or blossom and "CherryBlossom" or index%3==0 and "Pine" or index%5==0 and "Birch" or "Broadleaf"
+ Scenery.tree(tree,V(x,y,z),h,kind,index*2.4)
+
 end
 for i=1,420 do
  treeAt(rng:NextNumber(-5300,4250),rng:NextNumber(-5100,5300),i)
@@ -2321,6 +2564,48 @@ for _,peak in Landscape.Peaks do
  for i=1,90 do
   local a=rng:NextNumber(0,math.pi*2);local r=rng:NextNumber(0.45,0.98)
   treeAt(peak.x+math.cos(a)*peak.rx*r,peak.z+math.sin(a)*peak.rz*r,i*3)
+ end
+end
+-- Additive pass preserves the original groves and fills more of the wider meadows.
+rng=Random.new(90817)
+for i=1,360 do treeAt(rng:NextNumber(-5300,4250),rng:NextNumber(-5100,5300),2000+i,true) end
+for i=1,160 do treeAt(rng:NextNumber(-1900,1300),rng:NextNumber(-1800,2400),3000+i,true) end
+-- Fuller meadow patches share the warm foliage palette while keeping flight lanes open.
+local accents=model("MeadowAccents")
+local accentRng=Random.new(81312)
+-- Voxel terrain renders above the analytical height field; sample its real surface
+-- for small flowers/grass rather than burying them inside that interpolation band.
+local function surfaceGround(x,z)
+ local y=ground(x,z)
+ local hit=workspace:Raycast(V(x,y+16,z),V(0,-32,0),terrainParams)
+ return hit and hit.Position.Y or y
+end
+local function accentSite(x,z)
+ local y,rock=ground(x,z)
+ if y<24 or y>600 or rock then return end
+ if Vector2.new(x+550,z-534).Magnitude<220 then return end
+ if math.abs(ground(x+7,z)-ground(x-7,z))>5 or math.abs(ground(x,z+7)-ground(x,z-7))>5 then return end
+ for _,animal in World.Animals do
+  if Vector2.new(x-animal.position.X,z-animal.position.Z).Magnitude<105 then return end
+ end
+ for _,ring in World.Rings do
+  local offset=V(x,y,z)-ring.position;local along=offset:Dot(ring.normal)
+  if math.abs(along)<110 and (offset-ring.normal*along).Magnitude<70 then return end
+ end
+ return V(x,surfaceGround(x,z),z)
+end
+for i,tree in trees:GetChildren() do
+ if i%2~=0 then continue end
+ local base=tree:GetAttribute("BasePosition")
+ local a=accentRng:NextNumber(0,math.pi*2)
+ local spot=accentSite(base.X+math.cos(a)*25,base.Z+math.sin(a)*25)
+ if not spot then continue end
+ local patch=model("FlowerPatch",accents);patch.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
+ Scenery.patch(patch,spot,surfaceGround,i*113)
+ local rockSpot=accentSite(spot.X+10,spot.Z+8)
+ if rockSpot and i%4==0 then
+  local stone=model("FacetedStone",accents);stone.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
+  Scenery.stone(stone,rockSpot,V(accentRng:NextNumber(4,8),accentRng:NextNumber(3,6),accentRng:NextNumber(4,7)),a)
  end
 end
 -- Persistent coarse silhouettes make the whole archipelago readable beyond streaming range.
@@ -2337,7 +2622,7 @@ for x=-5632,4608-256,256 do for z=-5376,5632-256,256 do
   end
   local a,b,c,d=point(x,z),point(x+256,z),point(x+256,z+256),point(x,z+256)
   local _,rock=Landscape.height(x+128,z+128)
-  quad(tile,"DistantSurface",a,b,c,d,rock and Color3.fromRGB(105,113,123) or Color3.fromRGB(73,137,101))
+  quad(tile,"DistantSurface",a,b,c,d,rock and Color3.fromRGB(130,134,145) or Color3.fromRGB(125,162,79))
   for _,p in tile:GetDescendants() do if p:IsA("BasePart") then decor(p);p.CastShadow=false;p.Transparency=0 end end
  end
 end end
