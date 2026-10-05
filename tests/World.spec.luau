@@ -149,6 +149,15 @@ for _,r in W.Rings do
   local model=workspace.PaperFlightWorld.Rings:FindFirstChild("Ring"..r.id)
   check(model.ModelStreamingMode==Enum.ModelStreamingMode.Persistent,"summit rewards must remain loaded at distance")
   check(model:FindFirstChild("SummitBeacon")~=nil,"summit reward needs a distant halo")
+  check(r.value==60,"Summit discoveries award 60 gold")
+  local light=model.SummitBeaconAnchor:FindFirstChild("SummitLight")
+  check(light and light.Enabled and light.Brightness==2,"Summit reward casts a warm local glow")
+  local glows,motes=0,0
+  for _,v in model:GetDescendants() do
+   if v.Name=="SummitGlow" then glows+=1;check(not v.CanCollide and not v.CanQuery,"Summit glow cannot obstruct collection") end
+   if v:IsA("ParticleEmitter") then motes+=1 end
+  end
+  check(glows==48 and motes==8,"Summit rewards need continuous glow and sparse rim sparkles")
  end
 end
 local F=require(package.Flight);local C=require(package.Config)

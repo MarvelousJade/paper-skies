@@ -47,7 +47,7 @@ All fifteen encounters use the reference-inspired roster: two bears, three silve
 
 Bears, foxes, raccoons, turtles, and candy cats now have shorter legs and lowered bodies, retaining their original head and torso proportions. Their sideways belly rewards are 36-stud circles centered at or below ground, exposing a half-circle or smaller upper arc. Fly through the visible opening between the front and rear legs. The four gorilla/mammoth encounters keep their taller stance and complete 24-stud rings. The authored model scale remains 0.62.
 
-The seven summit rewards remain replicated and have small screen-sized halos for visibility at distance. Halos hide near the physical ring and on collection. Both visual segments and the halo are hidden in the collection event handler.
+The seven summit rewards use warm golden neon cores, a soft outer glow, local light, sparse rim sparkles, and larger distant halos. Rewards stay at 10 gold for regular sky rings, 25 for foothill passages, 35 for animal belly rings, and 60 for summit rings. Summit effects hide locally on collection and return for the next run, including nested effects that arrive after collection. The seven summit models remain replicated at distance; their halos hide near the actual opening.
 
 Meadows now use LeafyGrass terrain material. An earlier attempt to set the non-scriptable Decoration property had silently failed; the material change was visually verified to remove the dense blades. The rebuilt scene has 30,494 descendants. Expanded trails also influence tree placement so flight corridors remain clear.
 
@@ -119,6 +119,6 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The latest requested checkpoint is **`dd549a9` — Reduce boost camera movement and raise coin pickup volume**. Shorter wildlife, wider ground arcs, and 100 SPS starter tuning remain uncommitted for user testing.
+The latest requested checkpoint is **`d875275` — Lower wildlife stances and tune exploration flight to 100 SPS**. Special summit-ring glow remains uncommitted for user testing; summit rewards remain 60 gold.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.

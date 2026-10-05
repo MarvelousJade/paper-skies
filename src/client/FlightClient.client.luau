@@ -25,6 +25,7 @@ local originalFov=camera.FieldOfView
 local visualPlane,heldPlane,trajectory,smoothedFrame=nil,nil,nil,nil
 local aimAnchors,hiddenRings,lines={},{},{}
 local collectedIds={}
+local hiddenEffects={}
 local stick=Vector2.zero;local inputClock=0
 local function round(object,radius)
  local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,radius or 7);c.Parent=object
@@ -196,16 +197,28 @@ local function preview()
   beam.Segments=64;beam.Parent=trajectory
  end
 end
+local function hideRingObject(object)
+ if object:IsA("BasePart") then
+  object.LocalTransparencyModifier=1;table.insert(hiddenRings,object)
+ elseif object:IsA("BillboardGui") or object:IsA("Light") or object:IsA("ParticleEmitter") then
+  if hiddenEffects[object]==nil then hiddenEffects[object]=object.Enabled end
+  object.Enabled=false
+  if object:IsA("ParticleEmitter") then object:Clear() end
+ end
+end
 local function restoreRings()
  for _,p in hiddenRings do if p.Parent then p.LocalTransparencyModifier=0 end end
- table.clear(hiddenRings);table.clear(collectedIds)
+ for effect,enabled in hiddenEffects do if effect.Parent then effect.Enabled=enabled end end
+ table.clear(hiddenRings);table.clear(hiddenEffects);table.clear(collectedIds)
 end
-workspace.DescendantAdded:Connect(function(part)
- if not part:IsA("BasePart") and not part:IsA("BillboardGui") then return end
- local ring=part.Parent
- if ring and collectedIds[ring:GetAttribute("RingId")] then
-  if part:IsA("BasePart") then part.LocalTransparencyModifier=1;table.insert(hiddenRings,part)
-  else part.Enabled=false end
+workspace.DescendantAdded:Connect(function(object)
+ if not object:IsA("BasePart") and not object:IsA("BillboardGui") and not object:IsA("Light") and not object:IsA("ParticleEmitter") then return end
+ -- Lights and particles are nested under anchors; find their owning ring too.
+ local ring=object.Parent
+ while ring and ring~=workspace do
+  local id=ring:GetAttribute("RingId")
+  if id then if collectedIds[id] then hideRingObject(object) end;break end
+  ring=ring.Parent
  end
 end)
 local function requestAction()
@@ -325,8 +338,7 @@ remote.OnClientEvent:Connect(function(kind,data)
   local ring=rings and rings:FindFirstChild("Ring"..data.id)
   if ring then
    for _,p in ring:GetDescendants() do
-    if p:IsA("BasePart") then p.LocalTransparencyModifier=1;table.insert(hiddenRings,p)
-    elseif p:IsA("BillboardGui") then p.Enabled=false end
+    hideRingObject(p)
    end
   end
  elseif kind=="Ended" then

@@ -222,15 +222,32 @@ for _,ring in World.Rings do
  local m=model("Ring"..ring.id,rings);m:SetAttribute("RingId",ring.id);m:SetAttribute("Trail",ring.group)
  m.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
  local cf=CFrame.lookAt(ring.position,ring.position+ring.normal)
- if ring.group:find("^Summit ") then
+ local summit=ring.group:find("^Summit ")~=nil
+ if summit then
   -- Only seven summit rewards stay loaded; the halo reveals their small openings at a distance.
   m.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
   local anchor=decor(part(m,"SummitBeaconAnchor",V(0.1,0.1,0.1),CF(ring.position),ring.color))
   anchor.Transparency=1
+  local light=Instance.new("PointLight");light.Name="SummitLight"
+  light.Color=ring.color;light.Brightness=2;light.Range=48;light.Shadows=false;light.Parent=anchor
+  -- Sparse rim sparkles frame the opening without filling the flight path.
+  for i=0,7 do
+   local a=i*math.pi/4
+   local attachment=Instance.new("Attachment");attachment.Name="SummitMotes"
+   attachment.Position=cf:VectorToWorldSpace(V(math.cos(a)*ring.radius,math.sin(a)*ring.radius,0));attachment.Parent=anchor
+   local motes=Instance.new("ParticleEmitter");motes.Name="SummitSparkles"
+   motes.Texture="rbxasset://textures/particles/sparkles_main.dds"
+   motes.Color=ColorSequence.new(ring.color,Color3.fromRGB(255,247,210))
+   motes.Size=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(0.25,0.7),NumberSequenceKeypoint.new(1,0)})
+   motes.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(0.2,0.15),NumberSequenceKeypoint.new(1,1)})
+   motes.Lifetime=NumberRange.new(1,1.8);motes.Rate=0.8;motes.Speed=NumberRange.new(0.4,1.2)
+   motes.SpreadAngle=Vector2.new(40,40);motes.Acceleration=V(0,0.8,0)
+   motes.LightEmission=1;motes.LightInfluence=0;motes.Parent=attachment
+  end
   local beacon=Instance.new("BillboardGui");beacon.Name="SummitBeacon";beacon.Adornee=anchor
-  beacon.Size=UDim2.fromOffset(28,28);beacon.AlwaysOnTop=false;beacon.LightInfluence=0
+  beacon.Size=UDim2.fromOffset(38,38);beacon.AlwaysOnTop=false;beacon.LightInfluence=0
   beacon.MaxDistance=12000;beacon.Enabled=false;beacon.Parent=m
-  for _,layer in {{1,0.7,5},{0.75,0,2.5}} do
+  for _,layer in {{1,0.8,9},{0.85,0.5,5},{0.72,0,2.5}} do
    local circle=Instance.new("Frame");circle.AnchorPoint=Vector2.new(0.5,0.5)
    circle.Position=UDim2.fromScale(0.5,0.5);circle.Size=UDim2.fromScale(layer[1],layer[1])
    circle.BackgroundTransparency=1;circle.Parent=beacon
@@ -247,6 +264,11 @@ for _,ring in World.Rings do
   local tubeFrame=CFrame.lookAt((pa+pb)/2,pb)*CFrame.Angles(0,math.pi/2,0)
   local segment=decor(part(m,"NeonArc",V((pb-pa).Magnitude+0.06,Config.RingTubeThickness,Config.RingTubeThickness),tubeFrame,ring.color,Enum.Material.Neon))
   segment.Shape=Enum.PartType.Cylinder;segment.CastShadow=false
+  if summit then
+   segment.Color=Color3.fromRGB(255,242,193)
+   local glow=segment:Clone();glow.Name="SummitGlow";glow.Color=ring.color
+   glow.Size=V(segment.Size.X,2.1,2.1);glow.Transparency=0.82;glow.Parent=m
+  end
  end
 end
 local currents=model("ThermalMarkers")

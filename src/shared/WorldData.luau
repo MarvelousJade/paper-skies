@@ -198,7 +198,8 @@ for index,peak in Landscape.Peaks do
  table.insert(World.Thermals,{center=Vector3.new(peak.x,0,peak.z)+towardLaunch*width*0.55,
   radius=width*0.85,height=center.Y+260,strength=18})
  table.insert(World.Summits,{position=top,ringPosition=center,peak=index})
- add(center,normal,12,palette[(index+2)%#palette+1],60,"Summit "..index)
+ -- Summit discoveries pay six ordinary sky rings and share a special gold signature.
+ add(center,normal,12,Color3.fromRGB(255,214,105),60,"Summit "..index)
 end
 function World.lift(position:Vector3,planeId:string?): number
  -- Aircraft attributes change usable rising air; there is no hard positional ceiling.
