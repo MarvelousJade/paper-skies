@@ -144,11 +144,11 @@ end end
 local terrainParams=RaycastParams.new();terrainParams.FilterType=Enum.RaycastFilterType.Include;terrainParams.FilterDescendantsInstances={terrain}
 local function ground(x,z) return Landscape.height(x,z) end
 local trees=model("Woodlands")
-local function treeAt(x,z,index,extra)
+local function treeAt(x,z,index,extra,forestId)
  if extra then
   for _,existing in trees:GetChildren() do
    local base=existing:GetAttribute("BasePosition")
-   if Vector2.new(x-base.X,z-base.Z).Magnitude<26 then return end
+   if Vector2.new(x-base.X,z-base.Z).Magnitude<(forestId and 12 or 26) then return end
   end
  end
  local y,rock=ground(x,z)
@@ -170,6 +170,8 @@ local function treeAt(x,z,index,extra)
  local blossom=y<400 and (math.noise(x/550,z/550,4)>0.3 or index%17==0)
  local kind=y<22 and "Palm" or blossom and "CherryBlossom" or index%3==0 and "Pine" or index%5==0 and "Birch" or "Broadleaf"
  Scenery.tree(tree,V(x,y,z),h,kind,index*2.4)
+ if forestId then tree:SetAttribute("ForestCluster",forestId) end
+ return tree
 
 end
 for i=1,420 do
@@ -187,6 +189,26 @@ end
 rng=Random.new(90817)
 for i=1,360 do treeAt(rng:NextNumber(-5300,4250),rng:NextNumber(-5100,5300),2000+i,true) end
 for i=1,160 do treeAt(rng:NextNumber(-1900,1300),rng:NextNumber(-1800,2400),3000+i,true) end
+-- Six compact forests have overlapping crowns and 12-stud trunk spacing.
+-- Use accepted lowland tree sites; all normal wildlife/route exclusions still apply.
+local forestCenters={}
+local candidates=trees:GetChildren()
+for _,tree in candidates do
+ if #forestCenters>=6 then break end
+ local base=tree:GetAttribute("BasePosition")
+ if base.Y<28 or base.Y>180 or Vector2.new(base.X+550,base.Z-534).Magnitude<700 then continue end
+ local separated=true
+ for _,center in forestCenters do if (base-center).Magnitude<650 then separated=false;break end end
+ if not separated then continue end
+ local cluster=#forestCenters+1;local planted=0
+ for attempt=1,180 do
+  local a=rng:NextNumber(0,math.pi*2);local r=math.sqrt(rng:NextNumber())*48
+  local added=treeAt(base.X+math.cos(a)*r,base.Z+math.sin(a)*r,4000+attempt,true,cluster)
+  if added then planted+=1 end
+  if planted>=20 then break end
+ end
+ if planted>0 then table.insert(forestCenters,base) end
+end
 -- Fuller meadow patches share the warm foliage palette while keeping flight lanes open.
 local accents=model("MeadowAccents")
 local accentRng=Random.new(81312)
@@ -265,7 +287,7 @@ for _,ring in World.Rings do
  local cf=CFrame.lookAt(ring.position,ring.position+ring.normal)
  local summit=ring.group:find("^Summit ")~=nil
  if summit then
-  -- Only seven summit rewards stay loaded; the halo reveals their small openings at a distance.
+  -- Only summit rewards stay loaded; the halo reveals their small openings at a distance.
   m.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
   local anchor=decor(part(m,"SummitBeaconAnchor",V(0.1,0.1,0.1),CF(ring.position),ring.color))
   anchor.Transparency=1

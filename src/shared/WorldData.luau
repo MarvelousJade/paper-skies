@@ -198,9 +198,98 @@ for index,peak in Landscape.Peaks do
  table.insert(World.Thermals,{center=Vector3.new(peak.x,0,peak.z)+towardLaunch*width*0.55,
   radius=width*0.85,height=center.Y+260,strength=18})
  table.insert(World.Summits,{position=top,ringPosition=center,peak=index})
- -- Summit discoveries pay six ordinary sky rings and share a special gold signature.
- add(center,normal,12,Color3.fromRGB(255,214,105),60,"Summit "..index)
+ -- Higher discoveries pay more, while low summits keep the existing 60 gold.
+ local value=top.Y>=1600 and 120 or top.Y>=1100 and 100 or top.Y>=750 and 80 or 60
+ add(center,normal,12,Color3.fromRGB(255,214,105),value,"Summit "..index)
+ World.Summits[#World.Summits].ringId=#World.Rings
 end
+-- Both lobes of each double summit deserve a discovery. Search the opposite
+-- local lobe instead of guessing its height or placing a reward inside the rock.
+for index,peak in Landscape.Peaks do
+ if peak.style~="massif" then continue end
+ local primary=World.Summits[index].position
+ local function localU(p)
+  return (p.X-peak.x)/peak.rx*math.cos(peak.angle)-(p.Z-peak.z)/peak.rz*math.sin(peak.angle)
+ end
+ local sign=localU(primary)>0 and -1 or 1
+ local top=Vector3.new(peak.x,-math.huge,peak.z)
+ for dx=-peak.rx*0.6,peak.rx*0.6,8 do for dz=-peak.rz*0.6,peak.rz*0.6,8 do
+  local p=Vector3.new(peak.x+dx,Landscape.height(peak.x+dx,peak.z+dz),peak.z+dz)
+  if localU(p)*sign>0.1 and p.Y>top.Y then top=p end
+ end end
+ local normal=Vector3.new(math.cos(peak.angle),0,math.sin(peak.angle))
+ local center=top+Vector3.yAxis*19
+ for step=-90,90,6 do for side=-4,4,4 do
+  local p=top+normal*step+Vector3.new(-normal.Z,0,normal.X)*side
+  center=Vector3.new(center.X,math.max(center.Y,Landscape.height(p.X,p.Z)+17),center.Z)
+ end end
+ local value=top.Y>=750 and 80 or 60
+ add(center,normal,12,Color3.fromRGB(255,214,105),value,"Summit "..index.." second tip")
+ table.insert(World.Summits,{position=top,ringPosition=center,peak=index,ringId=#World.Rings,secondary=true})
+end
+-- Follow the mountain surface, then resample by distance so climbs keep evenly
+-- spaced pickups. A footprint envelope leaves room for the entire tilted hoop.
+World.MountainRoutes={}
+local function mountainRoute(name,peakIndex,path,closed)
+ local dense={};local cumulative={0};local total=0
+ for i=0,800 do
+  local p=path(i/800);local y=Landscape.height(p.X,p.Z)
+  for dx=-20,20,10 do for dz=-20,20,10 do
+   local height=Landscape.height(p.X+dx,p.Z+dz);y=math.max(y,height)
+  end end
+  dense[i+1]=Vector3.new(p.X,y+28,p.Z)
+ end
+ -- A climbing route must not dive into each gully and immediately turn uphill.
+ if not closed then
+  for i=2,#dense do
+   dense[i]=Vector3.new(dense[i].X,math.max(dense[i].Y,dense[i-1].Y),dense[i].Z)
+  end
+ end
+ -- Smooth terrain ripples without dipping below the clearance envelope.
+ for pass=1,3 do
+  local smooth=table.clone(dense)
+  for i=2,#dense-1 do
+   local y=(dense[i-1].Y+dense[i].Y*2+dense[i+1].Y)/4
+   smooth[i]=Vector3.new(dense[i].X,math.max(dense[i].Y,y),dense[i].Z)
+  end
+  dense=smooth
+ end
+ for i=2,#dense do total+=(dense[i]-dense[i-1]).Magnitude;cumulative[i]=total end
+ local count=math.max(2,math.floor(total/26));local spacing=total/count
+ local points={};local segment=2
+ for i=0,(closed and count-1 or count) do
+  local target=i*spacing
+  while segment<#dense and cumulative[segment]<target do segment+=1 end
+  local span=cumulative[segment]-cumulative[segment-1]
+  points[#points+1]=dense[segment-1]:Lerp(dense[segment],math.clamp((target-cumulative[segment-1])/span,0,1))
+ end
+ local ids={}
+ for i,p in points do
+  local before=points[i-1] or (closed and points[#points] or p)
+  local after=points[i+1] or (closed and points[1] or p)
+  add(p,after-before,12,palette[(i-1)%#palette+1],10,name)
+  local ring=World.Rings[#World.Rings];ring.mountainRoute=true;ring.peak=peakIndex
+  ids[i]=ring.id
+ end
+ table.insert(World.MountainRoutes,{name=name,peak=peakIndex,closed=closed==true,ids=ids})
+end
+local ridge=Landscape.Peaks[1]
+local near=math.atan2(launch.Z-ridge.z,launch.X-ridge.x)
+mountainRoute("Ridge face ascent",1,function(t)
+ local a=near+0.1*math.sin(t*math.pi);local r=0.82-0.72*t
+ return Vector3.new(ridge.x+math.cos(a)*ridge.rx*r,0,ridge.z+math.sin(a)*ridge.rz*r)
+end,false)
+local spire=Landscape.Peaks[4]
+local start=math.atan2(launch.Z-spire.z,launch.X-spire.x)
+mountainRoute("Cloudspire spiral",4,function(t)
+ local a=start+t*math.pi*3;local r=0.8-0.71*t
+ return Vector3.new(spire.x+math.cos(a)*spire.rx*r,0,spire.z+math.sin(a)*spire.rz*r)
+end,false)
+local mesa=Landscape.Peaks[3]
+mountainRoute("Plateau crown loop",3,function(t)
+ local a=t*math.pi*2
+ return Vector3.new(mesa.x+math.cos(a)*mesa.rx*0.32,0,mesa.z+math.sin(a)*mesa.rz*0.32)
+end,true)
 function World.lift(position:Vector3,planeId:string?): number
  -- Aircraft attributes change usable rising air; there is no hard positional ceiling.
  local plane=Config.Planes[planeId or "Dart"] or Config.Planes.Dart

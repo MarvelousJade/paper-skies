@@ -43,7 +43,7 @@ end
 check(hidden==13 and visible==2,"Only two field animals complement thirteen hidden encounters")
 for _,summit in W.Summits do
  local ring
- for _,r in W.Rings do if r.group=="Summit "..summit.peak then ring=r;break end end
+ for _,r in W.Rings do if r.id==summit.ringId then ring=r;break end end
  check(ring~=nil,"Every mountain needs a summit reward")
  check(ring.position.Y-summit.position.Y>=17 and ring.position.Y-summit.position.Y<32,"Summit ring must sit close to the tip")
  local cf=CFrame.lookAt(ring.position,ring.position+ring.normal)
@@ -73,7 +73,7 @@ for _,ring in W.Rings do
  local rimRadius=ring.radius+require(package.Config).RingTubeThickness/2+0.1
  for i=0,11 do
   local angle=i*math.pi/6
-  local offset=frame.RightVector*math.cos(angle)*rimRadius+Vector3.yAxis*math.sin(angle)*rimRadius
+  local offset=frame.RightVector*math.cos(angle)*rimRadius+frame.UpVector*math.sin(angle)*rimRadius
   local point=ring.position+offset
   local filter=ring.groundArc and point.Y<L.height(point.X,point.Z)+2 and animalParams or params
   check(not workspace:Raycast(point-ring.normal,ring.normal*2,filter),"Ring rim intersects scenery: "..ring.id)
@@ -149,7 +149,7 @@ for _,r in W.Rings do
   local model=workspace.PaperFlightWorld.Rings:FindFirstChild("Ring"..r.id)
   check(model.ModelStreamingMode==Enum.ModelStreamingMode.Persistent,"summit rewards must remain loaded at distance")
   check(model:FindFirstChild("SummitBeacon")~=nil,"summit reward needs a distant halo")
-  check(r.value==60,"Summit discoveries award 60 gold")
+  check(r.value>=60 and r.value<=120,"Summit discoveries award 60-120 gold by altitude")
   local light=model.SummitBeaconAnchor:FindFirstChild("SummitLight")
   check(light and light.Enabled and light.Brightness==2,"Summit reward casts a warm local glow")
   local glows,motes=0,0
@@ -173,7 +173,7 @@ end
 -- Scenery must keep a bounded instance count and small accents on rendered terrain.
 local woodland=workspace.PaperFlightWorld.Woodlands
 local treeKinds={};local trees=woodland:GetChildren()
-check(#trees>550 and #trees<900,"Add substantially more trees while bounding authored scenery")
+check(#trees>550 and #trees<1000,"Add substantially more trees while bounding authored scenery")
 for _,tree in trees do
  local kind=tree:GetAttribute("SceneryKind");treeKinds[kind]=(treeKinds[kind] or 0)+1
  check(tree:GetAttribute("ArtStyle")=="BrightFaceted","Every tree uses the coherent faceted style")
@@ -198,4 +198,46 @@ for _,accent in workspace.PaperFlightWorld.MeadowAccents:GetChildren() do
  end
 end
 check(patches>150 and patches<=360 and stones>70 and stones<=200,"Bound meadow coverage and keep stones sparse")
+local secondary=0;local maxReward=0
+for _,s in W.Summits do
+ if s.secondary then secondary+=1 end
+ maxReward=math.max(maxReward,W.Rings[s.ringId].value)
+end
+check(secondary==2 and maxReward==120,"Both double peaks gain a second tip; highest summit pays 120")
+check(#W.MountainRoutes==3,"Ridge ascent, spiral climb and plateau loop are present")
+for _,route in W.MountainRoutes do
+ check(#route.ids>=25,"Mountain routes need consecutive pickups")
+ for i,id in route.ids do
+  local ring=W.Rings[id]
+  check(ring.value==10 and ring.radius==12,"Mountain route pickups keep ordinary gold and size")
+  check(F.crossedRing(ring.position-ring.normal*30,ring.position+ring.normal*30,ring.position,ring.normal,ring.radius-C.RingMargin),"Tilted mountain ring remains collectible")
+  local nextId=route.ids[i+1] or (route.closed and route.ids[1])
+  if nextId then
+   local nextRing=W.Rings[nextId];local delta=nextRing.position-ring.position
+   if not route.closed then check(delta.Y>=-0.01,"Climbing routes must not reverse downhill into gullies") end
+   check(delta.Magnitude>20 and delta.Magnitude<29,"Mountain pickups stay evenly spaced")
+   check(ring.normal:Dot(delta.Unit)>0.75,"Ring opening follows the route tangent")
+   for step=0,4 do
+    local point=ring.position:Lerp(nextRing.position,step/4)
+    check(not workspace:Raycast(point-Vector3.yAxis*3,Vector3.yAxis*6,params),"Flight segment stays above terrain")
+   end
+  end
+ end
+end
+local clusters={}
+for _,tree in trees do
+ local cluster=tree:GetAttribute("ForestCluster")
+ if cluster then clusters[cluster]=clusters[cluster] or {};table.insert(clusters[cluster],tree:GetAttribute("BasePosition")) end
+end
+local clusterCount=0
+for _,positions in clusters do
+ clusterCount+=1
+ check(#positions>=12,"Each small forest needs a dense group of trees")
+ for _,position in positions do
+  local neighbor=math.huge
+  for _,other in positions do if other~=position then neighbor=math.min(neighbor,(position-other).Magnitude) end end
+  check(neighbor<35,"Forest crowns should have close neighbors")
+ end
+end
+check(clusterCount==6,"Six compact forests complement scattered trees")
 return string.format("%d geometry and discovery-layout checks passed",passed)
