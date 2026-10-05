@@ -44,6 +44,7 @@ for parent,name,cls,path in [
  ('game.StarterPlayer.StarterPlayerScripts',"PaperMeadowDetails","LocalScript","src/client/MeadowDetails.client.luau"),
 ]:
     output.append(f'write({parent},"{name}","{cls}",{literal(read(path))})\n')
+output.append("local function sceneryMeshes()\n"+read("tools/BuildSceneryMeshes.luau")+"\nend\nprint(sceneryMeshes())\n")
 output.append("if not package:FindFirstChild('Plane') then\nlocal function originalArt()\n"+read("tools/BuildDreamWorld.luau")+"\nend\noriginalArt()\nend\n")
 output.append("local function planeModels()\n"+read("tools/BuildPlaneModels.luau")+"\nend\nprint(planeModels())\n")
 output.append("local function exploration()\n"+read("tools/BuildExplorationWorld.luau")+"\nend\nprint(exploration())\n")

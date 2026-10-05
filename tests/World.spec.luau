@@ -193,7 +193,7 @@ check(#trees>550 and #trees<1000,"Add substantially more trees while bounding au
 for _,tree in trees do
  local kind=tree:GetAttribute("SceneryKind");treeKinds[kind]=(treeKinds[kind] or 0)+1
  check(tree:GetAttribute("ArtStyle")=="BrightFaceted","Every tree uses the coherent faceted style")
- check(#tree:GetChildren()<=130,"Tree detail stays within its primitive budget")
+ check(tree:GetAttribute("MeshOptimized") and #tree:GetChildren()<=30,"Trees use compact solid crowns, not wedge shells")
 end
 check(treeKinds.CherryBlossom>0 and treeKinds.CherryBlossom<#trees/4,"Blossoms remain accents among green trees")
 check(treeKinds.Broadleaf and treeKinds.Birch and treeKinds.Pine and treeKinds.Palm,"Keep varied tree silhouettes")

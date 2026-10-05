@@ -22,28 +22,23 @@ local function triangle(parent,name,a,b,c,color)
   end
  end
 end
-local phi=(1+math.sqrt(5))/2
-local vertices={V(-1,phi,0),V(1,phi,0),V(-1,-phi,0),V(1,-phi,0),V(0,-1,phi),V(0,1,phi),V(0,-1,-phi),V(0,1,-phi),V(phi,0,-1),V(phi,0,1),V(-phi,0,-1),V(-phi,0,1)}
-local faces={{1,12,6},{1,6,2},{1,2,8},{1,8,11},{1,11,12},{2,6,10},{6,12,5},{12,11,3},{11,8,7},{8,2,9},{4,10,5},{4,5,3},{4,3,7},{4,7,9},{4,9,10},{5,10,6},{3,5,12},{7,3,11},{9,7,8},{10,9,2}}
+local function solid(parent,name,kind,frame,scale,color)
+ local template=assert(script.Parent.SceneryMeshes:FindFirstChild(kind),"Build scenery mesh templates first")
+ local p=template:Clone();p.Name=name
+ p.Size=template:GetAttribute("CanonicalSize")*scale
+ p.CFrame=frame*CFrame.new(template:GetAttribute("CanonicalCenter")*scale)
+ p.Color=color;p.UsePartColor=true;p.Parent=parent
+ return p
+end
 local function facets(parent,name,frame,size,color,irregular)
- local points={}
- for i,v in vertices do
-  local n=v.Unit;local wobble=irregular and (0.88+(i*7%9)*0.025) or 1
-  points[i]=frame:PointToWorldSpace(n*size*0.5*wobble)
- end
- for i,f in faces do
-  local a,b,c=points[f[1]],points[f[2]],points[f[3]]
-  local normal=(b-a):Cross(c-a).Unit
-  local amount=math.clamp(normal:Dot(V(-0.4,0.85,-0.3).Unit)*0.15,-0.15,0.15)
-  local shade=amount>=0 and color:Lerp(Color3.fromRGB(255,251,206),amount) or color:Lerp(Color3.fromRGB(43,61,62),-amount)
-  triangle(parent,name,a,b,c,shade)
- end
+ return solid(parent,name,irregular and "Stone" or "Canopy",frame,size/100,color)
 end
 local function beam(parent,name,a,b,width,color)
  return part(parent,name,V(width,width,(b-a).Magnitude+0.25),CFrame.lookAt((a+b)/2,b),color)
 end
 function Scenery.tree(model,origin,h,kind,heading)
  model:SetAttribute("SceneryKind",kind);model:SetAttribute("BasePosition",origin);model:SetAttribute("ArtStyle","BrightFaceted")
+ model:SetAttribute("TreeHeight",h);model:SetAttribute("TreeHeading",heading);model:SetAttribute("MeshOptimized",true)
  local frame=CF(origin)*CFrame.Angles(0,heading,0)
  local function point(x,y,z) return frame:PointToWorldSpace(V(x,y,z)*h) end
  local bark=kind=="CherryBlossom" and Color3.fromRGB(103,65,69) or Color3.fromRGB(110,91,67)
@@ -66,12 +61,7 @@ function Scenery.tree(model,origin,h,kind,heading)
    local y=0.29+layer*0.22;local radius=(0.31-layer*0.065)*h
    local center=point(0,y,0);local tip=point(0,y+0.49,0)
    local color=Color3.fromRGB(73+layer*11,145+layer*10,118+layer*5)
-   for i=0,5 do
-    local a=heading+i*math.pi/3;local b=a+math.pi/3
-    local p=center+V(math.cos(a)*radius,0,math.sin(a)*radius);local q=center+V(math.cos(b)*radius,0,math.sin(b)*radius)
-    triangle(model,"PineFacet",tip,p,q,color:Lerp(Color3.fromRGB(170,205,128),i%3*0.075))
-    triangle(model,"PineUnderside",center,q,p,color:Lerp(Color3.fromRGB(48,90,79),0.13))
-   end
+   solid(model,"PineCrown","Pine",CF(center)*CFrame.Angles(0,-heading,0),V(radius/50,h*.49/100,radius/50),color)
   end
  elseif kind=="Birch" then
   bark=Color3.fromRGB(224,219,180)
@@ -94,7 +84,7 @@ function Scenery.tree(model,origin,h,kind,heading)
  end
 end
 function Scenery.stone(model,origin,size,heading)
- model:SetAttribute("SceneryKind","Stone");model:SetAttribute("BasePosition",origin)
+ model:SetAttribute("SceneryKind","Stone");model:SetAttribute("BasePosition",origin);model:SetAttribute("MeshOptimized",true)
  facets(model,"StoneFacet",CF(origin+V(0,size.Y*0.25,0))*CFrame.Angles(0,heading,0.08),size,Color3.fromRGB(149,150,163),true)
 end
 function Scenery.patch(model,origin,ground,seed)
