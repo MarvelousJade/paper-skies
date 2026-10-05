@@ -39,7 +39,9 @@ for _,entry in manager.Entries do
  if entry.object:GetAttribute("TargetGroup")=="PaperAnimals" then animalCount+=1 end
  check(entry.object:GetAttribute("TargetGroup")~="Rings" or not entry.object:FindFirstChild("SummitBeacon"),"Summit goals must never be deferred")
 end
-check(animalCount==7,"One rear animal per mountain waits for approach")
+check(animalCount==0,"Wildlife landmarks must not disappear into server-only staging")
+check(#world.PaperAnimals:GetChildren()==9,"All nine animals remain available for discovery")
+for _,animal in world.PaperAnimals:GetChildren() do check(animal.ModelStreamingMode==Enum.ModelStreamingMode.Persistent,"Small landmark roster stays visible") end
 local active=manager:Update({},0.1);check(active==0,"No observers means no initial rear scenery")
 local positions={}
 for _,entry in manager.Entries do table.insert(positions,entry.position) end

@@ -33,6 +33,14 @@ for _,a in W.Animals do
  local model=workspace.PaperFlightWorld.PaperAnimals:FindFirstChild(a.species..a.id)
  check(roster[a.species] and model and model:GetAttribute("ReferenceStyle")=="LayeredBlock","Every encounter must use a reference model; no legacy animals")
  check(a.scale==0.62,"Wildlife must use the smaller scale")
+ check((model:GetPivot().Position-a.position).Magnitude<.05,"Actual wildlife geometry must match its authored encounter and streaming position")
+ local groundParams=RaycastParams.new();groundParams.FilterType=Enum.RaycastFilterType.Include;groundParams.FilterDescendantsInstances={workspace.Terrain}
+ for _,foot in model:GetChildren() do
+  if foot.Name=="RoundedPaw" or foot.Name=="RearFoot" or foot.Name=="MammothFoot" then
+   local hit=workspace:Raycast(foot.Position+Vector3.yAxis*30,-Vector3.yAxis*60,groundParams)
+   check(hit and math.abs(foot.Position.Y-foot.Size.Y/2-hit.Position.Y)<1.2,"Animal paws must meet the rendered terrain")
+  end
+ end
  if a.behindPeak then
   check(L.Peaks[a.behindPeak]~=nil,"Wildlife must reference a real mountain")
   check(not mountainEncounters[a.behindPeak],"Only one animal may belong behind each mountain")

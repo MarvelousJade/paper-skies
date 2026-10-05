@@ -69,11 +69,11 @@ for _,groupName in {"Woodlands","MeadowAccents","PaperAnimals","Rings"} do
   local position=object:GetAttribute("BasePosition");local peak
   if groupName=="PaperAnimals" then
    local animal=World.Animals[object:GetAttribute("AnimalId")]
-   position=animal.position;peak=animal.behindPeak
+   position=animal.position;object.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
   elseif groupName=="Rings" then
    local ring=World.Rings[object:GetAttribute("RingId")]
    local animal=ring and ring.animalId and World.Animals[ring.animalId]
-   if animal then position=ring.position;peak=animal.behindPeak end
+   if animal then position=ring.position;object.ModelStreamingMode=Enum.ModelStreamingMode.Persistent end
   elseif position then peak=behindMountain(position) end
   if peak then
    object:SetAttribute("TargetGroup",groupName);object:SetAttribute("StreamingPosition",position)

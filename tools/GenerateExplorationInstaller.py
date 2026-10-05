@@ -51,6 +51,7 @@ output.append("local function exploration()\n"+read("tools/BuildExplorationWorld
 output.append("local function foothills()\n"+read("tools/DressFoothills.luau")+"\nend\nprint(foothills())\n")
 output.append("local function forests()\n"+read("tools/SpaceForestGroves.luau")+"\nend\nprint(forests())\n")
 output.append("local function ponds()\n"+read("tools/DressForestPonds.luau")+"\nend\nprint(ponds())\n")
+output.append("local function repairWildlife()\n"+read("tools/RepairWildlife.luau")+"\nend\nprint(repairWildlife())\n")
 output.append("local function optimize()\n"+read("tools/OptimizeWorld.luau")+"\nend\nprint(optimize())\n")
 (ROOT/"tools/InstallStudio.luau").write_text("".join(output),encoding="utf-8")
 print("Generated exploration tools/InstallStudio.luau")
