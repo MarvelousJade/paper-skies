@@ -15,7 +15,7 @@ Press **F** to aim, move the mouse to rotate the smooth green aiming arc, then c
 - Controller: left stick aims, A activates, B resets, R2 boosts.
 - Touch: drag to aim and hold boost. Device testing is pending.
 
-Climbing spends speed, prolonged climbing causes a stall and nose drop, and diving rebuilds speed. The starter loses energy sharply beyond a 12-degree climb; stronger types tolerate steeper climbs (up to a 28-degree comfort threshold on Kestrel). Above each type's air ceiling, additional drag and sink gradually make further climbing harder. Range comes from energy, drag, sink, and flying technique; there is no per-type distance cutoff. This is a tuned kinematic glider. Collect optional neon rings and distance gold to buy different plane types through **Planes**. Customize changes paper color; Explore lists regions.
+The starter launches and naturally glides at approximately 100 SPS. Diving and boost can still exceed that speed, up to the existing 250 SPS cap. Climbing spends speed, prolonged climbing causes a stall and nose drop, and diving rebuilds speed. The starter loses energy sharply beyond a 12-degree climb; stronger types tolerate steeper climbs (up to a 28-degree comfort threshold on Kestrel). Above each type's air ceiling, additional drag and sink gradually make further climbing harder. Range comes from energy, drag, sink, and flying technique; there is no per-type distance cutoff. This is a tuned kinematic glider. Collect optional neon rings and distance gold to buy different plane types through **Planes**. Customize changes paper color; Explore lists regions.
 
 A throw briefly widens the camera to about 80 degrees and increases follow distance. It settles back to the normal 70-degree view. Active boost smoothly widens to 77 degrees and moves the camera from 29 to 34.5 studs back (half the previous boost effect); releasing boost returns to normal even while speed remains high.
 
@@ -23,11 +23,11 @@ A throw briefly widens the camera to about 80 degrees and increases follow dista
 
 | Type | Gold | Launch speed | Rising air fades out by |
 | --- | ---: | ---: | ---: |
-| Paper Dart | Free | 165 SPS | 650 studs |
-| Lockwing | 180 | 172 SPS | 950 studs |
-| Delta | 550 | 180 SPS | 1300 studs |
-| Sailwing | 1400 | 188 SPS | 1750 studs |
-| Kestrel | 3200 | 198 SPS | 2250 studs |
+| Paper Dart | Free | 100 SPS | 650 studs |
+| Lockwing | 180 | 107 SPS | 950 studs |
+| Delta | 550 | 115 SPS | 1300 studs |
+| Sailwing | 1400 | 123 SPS | 1750 studs |
+| Kestrel | 3200 | 133 SPS | 2250 studs |
 
 The five models have different wing shapes and folds. Higher types reduce drag and sink while improving handling. The hangar has 3D previews, server-validated purchases, permanent ownership within the saved profile, and free switching between owned types. Switching during flight is rejected.
 
@@ -41,11 +41,11 @@ The seven mountains, island lobes, ring trails, and thermals now surround the st
 
 The world includes a broad flat launch plateau, varied mountain profiles, a lagoon, coastal water, four low foothill passages, and fifteen stylized animals across seven species. A bear occupies the forward introductory field and a turtle occupies the field behind launch; thirteen animals sit behind mountain silhouettes. All wildlife uses a 0.62 authored model scale.
 
-There are 336 rewards: 310 rings on thirty-one curved sky routes, four at foothill passages, fifteen rings beneath animals, and seven at mountain summits. No reward is within 1000 horizontal studs of launch. Sky rings are 24 studs across and approximately 24 studs apart within each cluster. All rings now use round, 0.65-stud neon tubing instead of the previous 0.28-stud square segments; collection radii and rewards are unchanged. Summit rings are also 24 studs across; foothill rings are 28. Each sky trail contains ten consecutive rings. Twenty-four low/outer trails are joined by seven mountain-side high trails at roughly 475–1373 studs, near existing rising-air regions; aircraft ceilings and lift strength are unchanged. Earlier field trails still fill spaces between mountain approaches.
+There are 336 rewards: 310 rings on thirty-one curved sky routes, four at foothill passages, fifteen rings beneath animals, and seven at mountain summits. No reward is within 1000 horizontal studs of launch. Sky rings are 24 studs across and approximately 24 studs apart within each cluster. All rings now use round, 0.65-stud neon tubing instead of the previous 0.28-stud square segments; sky-ring collection radii and all rewards are unchanged. Summit rings are also 24 studs across; foothill rings are 28. Each sky trail contains ten consecutive rings. Twenty-four low/outer trails are joined by seven mountain-side high trails at roughly 475–1373 studs, near existing rising-air regions; aircraft ceilings and lift strength are unchanged. Earlier field trails still fill spaces between mountain approaches.
 
 All fifteen encounters use the reference-inspired roster: two bears, three silver foxes, two turtles, two raccoons, two candy cats, two gorillas, and two ice mammoths. The legacy lion/elephant/deer/fox/giraffe builder has been replaced. Layered body silhouettes, stepped shells/ears, coats, and expressive faces follow the supplied screenshots. All fifteen animals now have cylindrical legs and rounded paws; the gorilla also has rounded arms, joints, hands, and cuffs. Reference filenames and modeling decisions are recorded in [Animal references](docs/ANIMAL_REFERENCES.md).
 
-Animal rewards are complete 24-stud circles facing the animal's side. Fly sideways beneath its belly, between the front and rear legs. Ring centers sit 18 studs above the sampled ground. Raised torsos and a longer front-to-rear stance provide clearance while retaining the 0.62 model scale.
+Bears, foxes, raccoons, turtles, and candy cats now have shorter legs and lowered bodies, retaining their original head and torso proportions. Their sideways belly rewards are 36-stud circles centered at or below ground, exposing a half-circle or smaller upper arc. Fly through the visible opening between the front and rear legs. The four gorilla/mammoth encounters keep their taller stance and complete 24-stud rings. The authored model scale remains 0.62.
 
 The seven summit rewards remain replicated and have small screen-sized halos for visibility at distance. Halos hide near the physical ring and on collection. Both visual segments and the halo are hidden in the collection event handler.
 
@@ -119,6 +119,6 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The latest requested checkpoint is **`5363eca` — Move turtle to rear field and soften coin pickup audio**. Half-strength boost camera movement and the slightly louder coin pickup remain uncommitted for user testing.
+The latest requested checkpoint is **`dd549a9` — Reduce boost camera movement and raise coin pickup volume**. Shorter wildlife, wider ground arcs, and 100 SPS starter tuning remain uncommitted for user testing.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.

@@ -16,11 +16,11 @@ The Delta and Kestrel combine general swept-wing and folded-canard ideas into or
 
 | Plane | Gold | Launch speed | Air ceiling | Visible model features |
 | --- | ---: | ---: | ---: | --- |
-| Paper Dart | Free | 165 SPS | 650 studs | Narrow pointed wings and central keel |
-| Lockwing | 180 | 172 SPS | 950 studs | Broad wings, nose lock and raised tips |
-| Delta | 550 | 180 SPS | 1300 studs | Swept triangular wings and folded trailing edges |
-| Sailwing | 1400 | 188 SPS | 1750 studs | Broad wings, winglets and a separate tail |
-| Kestrel | 3200 | 198 SPS | 2250 studs | Forewing folds, swept main wings and split tail folds |
+| Paper Dart | Free | 100 SPS | 650 studs | Narrow pointed wings and central keel |
+| Lockwing | 180 | 107 SPS | 950 studs | Broad wings, nose lock and raised tips |
+| Delta | 550 | 115 SPS | 1300 studs | Swept triangular wings and folded trailing edges |
+| Sailwing | 1400 | 123 SPS | 1750 studs | Broad wings, winglets and a separate tail |
+| Kestrel | 3200 | 133 SPS | 2250 studs | Forewing folds, swept main wings and split tail folds |
 
 Each higher type also has less drag, less sink, and more turning authority. Space boost has a 4.5-second stamina capacity and the shared 250 SPS speed cap. Releasing boost starts recovery after 0.85 seconds of steady flight at 5 degrees upward or lower, at least 76 SPS, and outside a stall. Holding empty boost cannot regenerate it.
 

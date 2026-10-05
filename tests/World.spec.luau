@@ -13,7 +13,7 @@ for _,t in L.Tunnels do
  end
 end
 for _,r in W.Rings do
- local passage=r.position
+ local passage=r.passagePosition or r.position
  check(not workspace:Raycast(passage-r.normal*16,r.normal*32,params),"Ring "..r.id.." opening is blocked")
  check((Vector2.new(r.position.X+550,r.position.Z-534)).Magnitude>1000,"No reward rail close to launch")
  if r.group:find("Meandering") then check(r.radius==12,"Sky rings must be 24 studs across") end
@@ -34,7 +34,7 @@ for _,a in W.Animals do
   end
   check(occluded,"Rear wildlife must be hidden by a mountain from launch")
  else visible+=1 end
- local cf=CFrame.Angles(0,a.heading,0);local center=a.position+Vector3.yAxis*18
+ local cf=CFrame.Angles(0,a.heading,0);local center=a.position+Vector3.yAxis*a.passageY
  local direction=cf.RightVector
  for _,off in {Vector3.zero,cf.LookVector*3.6,-cf.LookVector*3.6,Vector3.yAxis*1.5,-Vector3.yAxis*1.5} do
   check(not workspace:Raycast(center-direction*70+off,direction*140,params),"Belly flight corridor blocked: "..a.species..a.id)
@@ -64,14 +64,19 @@ for _,r in W.Rings do
  end
  previous=r
 end
--- Sample the full ring rim and a plane-width passage, not just the center.
+-- Full circles clear scenery; ground arcs deliberately continue beneath terrain.
+local animalParams=RaycastParams.new();animalParams.FilterType=Enum.RaycastFilterType.Include
+animalParams.FilterDescendantsInstances={workspace.PaperFlightWorld.PaperAnimals}
+-- Check the complete rim against animals, and its exposed section against scenery.
 for _,ring in W.Rings do
  local frame=CFrame.lookAt(ring.position,ring.position+ring.normal)
  local rimRadius=ring.radius+require(package.Config).RingTubeThickness/2+0.1
  for i=0,11 do
   local angle=i*math.pi/6
   local offset=frame.RightVector*math.cos(angle)*rimRadius+Vector3.yAxis*math.sin(angle)*rimRadius
-  check(not workspace:Raycast(ring.position+offset-ring.normal,ring.normal*2,params),"Doubled ring rim intersects scenery: "..ring.id)
+  local point=ring.position+offset
+  local filter=ring.groundArc and point.Y<L.height(point.X,point.Z)+2 and animalParams or params
+  check(not workspace:Raycast(point-ring.normal,ring.normal*2,filter),"Ring rim intersects scenery: "..ring.id)
  end
 end
 for _,animal in W.Animals do
@@ -79,13 +84,24 @@ for _,animal in W.Animals do
  for _,ring in W.Rings do
   if ring.animalId==animal.id then found=ring;break end
  end
- check(found~=nil,"Every animal needs a complete ring reward")
+ check(found~=nil,"Every animal needs a ring reward")
  local side=CFrame.Angles(0,animal.heading,0).RightVector
  check(math.abs(found.normal:Dot(side))>0.999,"Animal rewards must face sideways")
- local crossing=found.position
+ local crossing=found.passagePosition or found.position
  check(require(package.Flight).crossedRing(crossing-side*30,crossing+side*30,found.position,found.normal,found.radius-require(package.Config).RingMargin),"A side-on belly flight must earn the belly reward")
  local model=workspace.PaperFlightWorld.Rings:FindFirstChild("Ring"..found.id)
- check(#model:GetChildren()==48,"Animal reward displays a complete ring")
+ check(#model:GetChildren()==48,"Animal reward keeps continuous round tubing")
+ if animal.bodyDrop>0 then
+  check(found.groundArc and found.radius==18 and found.position.Y<=animal.position.Y,"Short animals use a wide half-circle or smaller ground arc")
+  local shape=workspace.PaperFlightWorld.PaperAnimals:FindFirstChild(animal.species..animal.id)
+  local legs=0
+  for _,part in shape:GetChildren() do if part.Name=="RoundLeg" then
+   legs+=1
+   check(part.Size.X<30,"Short-stanced leg should no longer be a tall pillar")
+  end end
+  check(legs==4,"Lowered quadrupeds retain four rounded legs")
+  check(require(package.Flight).crossedRing(crossing-side*70,crossing+side*70,found.position,found.normal,found.radius-require(package.Config).RingMargin),"Exposed ground arc remains collectible")
+ end
 end
 local forward,rear=0,0;local trails={}
 for _,a in W.Animals do

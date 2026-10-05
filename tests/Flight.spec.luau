@@ -9,16 +9,16 @@ local function check(condition,name) assert(condition,name);passed+=1 end
 local stats=Flight.stats()
 local function simulate(target,seconds,hz,initial)
  local state=initial or Flight.new(Vector3.new(0,400,0),0,Config.TrimPitch,stats)
- local stalled=false
+ local stalled=false;local peakHeight=state.position.Y
  for _=1,seconds*hz do
   state=Flight.step(state,Flight.aimInput(state,0,target),1/hz,stats)
-  stalled=stalled or state.stalled
+  stalled=stalled or state.stalled;peakHeight=math.max(peakHeight,state.position.Y)
  end
- return state,stalled
+ return state,stalled,peakHeight
 end
-local climb=simulate(math.rad(40),2,60)
+local climb,_,climbPeak=simulate(math.rad(40),2,60)
 check(climb.speed<stats.launchSpeed-15,"climbing must spend speed")
-check(climb.position.Y>400,"climb initially gains height")
+check(climbPeak>405,"climb initially gains height before a lower-energy stall")
 local _,stalled=simulate(math.rad(48),8,60)
 check(stalled,"sustained pull-up must stall")
 local recovery=simulate(math.rad(-12),6,60,{position=Vector3.new(0,800,0),yaw=0,pitch=0.2,speed=20,stalled=true,bank=0})
@@ -61,7 +61,7 @@ end
 check(math.abs(used-Config.BoostDuration)<0.03,"boost lasts only its finite duration")
 check(boosted.boostRemaining==0 and not boosted.boosting,"held boost cannot run after fuel is empty")
 local top=Flight.new(Vector3.new(0,1000,0),0,Config.TrimPitch,stats)
-for _=1,180 do top=Flight.step(top,Vector2.zero,1/60,stats,0,true) end
+for _=1,270 do top=Flight.step(top,Vector2.zero,1/60,stats,0,true) end
 check(top.speed==Config.MaxSpeed,"base plane reaches 250 SPS with boost")
 local idle=Flight.step(top,Vector2.zero,0.25,stats,0,false)
 check(idle.boostRemaining==top.boostRemaining,"release delay prevents immediate recharge")
@@ -70,7 +70,7 @@ local f120=Flight.new(Vector3.new(0,1000,0),0,Config.TrimPitch,stats)
 for _=1,90 do f30=Flight.step(f30,Vector2.zero,1/30,stats,0,true) end
 for _=1,360 do f120=Flight.step(f120,Vector2.zero,1/120,stats,0,true) end
 check(math.abs(f30.boostRemaining-f120.boostRemaining)<0.0001,"boost duration is timestep-independent")
-check(glide.speed>140 and glide.speed<170,"ordinary glide remains near 150 SPS")
+check(stats.launchSpeed==100 and glide.speed>95 and glide.speed<105,"starter launch and ordinary glide remain near 100 SPS")
 local hangar=Economy.new()
 check(hangar.planeId=="Dart" and hangar.ownedPlanes.Dart,"new players own and equip the starter")
 check(not Economy.selectPlane(hangar,"Kestrel") and hangar.planeId=="Dart","cannot buy without funds")
@@ -152,9 +152,9 @@ local function climbTrial(id,hz)
 end
 local weak,weakStall,nose=climbTrial("Dart",60)
 local strong,strongStall=climbTrial("Kestrel",60)
-check(weakStall~=nil and strongStall==nil,"starter stalls on a sustained modest climb before the advanced aircraft")
+check(weakStall~=nil and (strongStall==nil or strongStall>weakStall+0.5),"starter stalls on a sustained modest climb before the advanced aircraft")
 check(nose<0,"continued pull-up still produces a nose drop after stall")
-check(strong.speed>weak.speed+30 and strong.position.Y>weak.position.Y,"better aircraft preserve climbing energy and height")
+check(strong.position.Y>weak.position.Y+20,"better aircraft gain more height before their later stall")
 local _,stall30=climbTrial("Dart",30);local _,stall120=climbTrial("Dart",120)
 check(stall30 and stall120 and math.abs(stall30-stall120)<0.1,"stall onset stays close across simulation timesteps")
 local low=Flight.new(Vector3.new(0,400,0),0,0,stats)

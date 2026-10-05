@@ -20,7 +20,7 @@ gui.Parent=player:WaitForChild("PlayerGui")
 local boostHeld=false
 local mode="Ready";local yaw=0;local pitch=Config.AimPitch;local cursorFree=false
 local profile=Economy.new();local saveMode="Loading progress";local soundEnabled=true
-local telemetry={speed=165,boostRemaining=Config.BoostDuration,boosting=false,stalled=false,lift=0,distance=0,gold=0,rings=0,region="Coastal Cliffs",altitude=362}
+local telemetry={speed=Config.Planes.Dart.launchSpeed,boostRemaining=Config.BoostDuration,boosting=false,stalled=false,lift=0,distance=0,gold=0,rings=0,region="Coastal Cliffs",altitude=362}
 local originalFov=camera.FieldOfView
 local visualPlane,heldPlane,trajectory,smoothedFrame=nil,nil,nil,nil
 local aimAnchors,hiddenRings,lines={},{},{}
@@ -57,7 +57,7 @@ earned.TextColor3=Color3.fromRGB(82,229,91);earned.Visible=false
 local distance=label(gui,"RunDistance","",UDim2.fromOffset(540,40),UDim2.new(0.5,-270,0,118),24)
 local region=label(gui,"Region","COASTAL CLIFFS",UDim2.fromOffset(550,28),UDim2.new(0.5,-275,0,22),16)
 region.TextTransparency=0.15
-local speed=label(gui,"Speed","165 SPS",UDim2.fromOffset(280,66),UDim2.new(1,-300,1,-182),52)
+local speed=label(gui,"Speed",string.format("%d SPS",Config.Planes.Dart.launchSpeed),UDim2.fromOffset(280,66),UDim2.new(1,-300,1,-182),52)
 speed.TextXAlignment=Enum.TextXAlignment.Right;speed.Visible=false
 local condition=label(gui,"AirState","GLIDING",UDim2.fromOffset(350,32),UDim2.new(1,-370,1,-112),24)
 condition.TextXAlignment=Enum.TextXAlignment.Right;condition.Visible=false

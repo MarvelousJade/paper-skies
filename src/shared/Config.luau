@@ -51,11 +51,11 @@ Config.WindSoundId = "rbxassetid://687874741"
 -- Costs and performance are game balance values, not claims about real folded designs.
 Config.PlaneOrder={"Dart","Lockwing","Delta","Sailwing","Kestrel"}
 Config.Planes={
- Dart={name="Paper Dart",price=0,launchSpeed=165,drag=0.000165,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,climbComfort=math.rad(12),climbLoss=110,boostRecharge=0.6,rank=1},
- Lockwing={name="Lockwing",price=180,launchSpeed=172,drag=0.00015,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,climbComfort=math.rad(16),climbLoss=95,boostRecharge=0.65,rank=2},
- Delta={name="Delta",price=550,launchSpeed=180,drag=0.000135,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,climbComfort=math.rad(20),climbLoss=80,boostRecharge=0.7,rank=3},
- Sailwing={name="Sailwing",price=1400,launchSpeed=188,drag=0.00012,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,climbComfort=math.rad(24),climbLoss=65,boostRecharge=0.78,rank=4},
- Kestrel={name="Kestrel",price=3200,launchSpeed=198,drag=0.000105,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,climbComfort=math.rad(28),climbLoss=50,boostRecharge=0.85,rank=5},
+ Dart={name="Paper Dart",price=0,launchSpeed=100,drag=0.000376,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,climbComfort=math.rad(12),climbLoss=110,boostRecharge=0.6,rank=1},
+ Lockwing={name="Lockwing",price=180,launchSpeed=107,drag=0.000342,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,climbComfort=math.rad(16),climbLoss=95,boostRecharge=0.65,rank=2},
+ Delta={name="Delta",price=550,launchSpeed=115,drag=0.000308,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,climbComfort=math.rad(20),climbLoss=80,boostRecharge=0.7,rank=3},
+ Sailwing={name="Sailwing",price=1400,launchSpeed=123,drag=0.000274,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,climbComfort=math.rad(24),climbLoss=65,boostRecharge=0.78,rank=4},
+ Kestrel={name="Kestrel",price=3200,launchSpeed=133,drag=0.000239,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,climbComfort=math.rad(28),climbLoss=50,boostRecharge=0.85,rank=5},
 }
 -- Retained for existing profile bonuses; new purchases use named plane types.
 Config.Upgrades = {

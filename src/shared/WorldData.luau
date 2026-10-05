@@ -80,8 +80,21 @@ rearField.heading=0
 -- Keep the reference roster and derive field markers from the final positions.
 local referenceRoster={"Bear","Turtle","SilverFox","Raccoon","CandyCat","Gorilla","Mammoth",
  "Bear","SilverFox","Turtle","Raccoon","CandyCat","Gorilla","Mammoth","SilverFox"}
+-- Authored body offsets shorten limbs without flattening the head, shell, or torso.
+local lowStance={
+ Bear={drop=22,ringY=0,passageY=8},
+ SilverFox={drop=23,ringY=-1,passageY=8},
+ Raccoon={drop=28,ringY=-4,passageY=6.5},
+ Turtle={drop=36,ringY=-7,passageY=5.5},
+ CandyCat={drop=26,ringY=-1,passageY=8},
+}
 for index,animal in World.Animals do
  animal.species=referenceRoster[index]
+ local stance=lowStance[animal.species]
+ animal.bodyDrop=stance and stance.drop or 0
+ animal.bellyRingY=stance and stance.ringY or 18
+ animal.bellyRingRadius=stance and 18 or 12
+ animal.passageY=stance and stance.passageY or 18
  animal.forwardMeadow=animal.behindPeak==nil and animal.position.Z<launch.Z
  animal.rearMeadow=animal.behindPeak==nil and animal.position.Z>launch.Z
 end
@@ -154,7 +167,10 @@ end
 for i,animal in World.Animals do
  -- A complete hoop faces the animal's side, between its front and rear legs.
  local normal=(CFrame.Angles(0,animal.heading,0)).RightVector
- add(animal.position+Vector3.new(0,18,0),normal,12,palette[(i+1)%#palette+1],35,animal.species.." belly")
+ -- A broad circle can sit partly below ground; the visible cap is the flight gate.
+ add(animal.position+Vector3.new(0,animal.bellyRingY,0),normal,animal.bellyRingRadius,palette[(i+1)%#palette+1],35,animal.species.." belly")
+ World.Rings[#World.Rings].groundArc=animal.bodyDrop>0
+ World.Rings[#World.Rings].passagePosition=animal.position+Vector3.yAxis*animal.passageY
  World.Rings[#World.Rings].animalId=animal.id
 end
 -- One reward at each summit. It sits just above the tip, with no hole through the mountain.

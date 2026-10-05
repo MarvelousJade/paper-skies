@@ -658,3 +658,19 @@ Committed the rear-field turtle and calm pickup as `5363eca` before this change.
 Validation: all 87 flight, pickup, upgrade, and camera assertions passed. The fresh client module settled at 77 degrees / 34.5 studs during a simulated two-second boost and returned to 70 degrees / 29 studs on release. This checks the live-loaded module, not a full keyboard-flown camera recording. A cosmetic pickup reached volume 0.18, then stopped; music continued and no server gold was awarded. Listening and hands-on camera comfort remain for user testing. Changes remain uncommitted.
 
 Tooling hurdle: Edit execution was rejected when Studio had returned to Play after a stop request. Checking the actual mode and stopping again allowed installation. During the next startup, the client bridge was temporarily unreachable, so a dependent smoke read had no listener state. After startup completed, the listener was installed and the check repeated with a new synthetic ID, then disconnected. No game-code fix was needed; wait for the target datamodel to be ready and establish test setup successfully before relying on it.
+
+## October 5 lower wildlife and slower exploration
+
+### D28 Fit ground arches to natural animal proportions
+
+Committed the camera/audio checkpoint first as `dd549a9`. Lowered bears, foxes, raccoons, turtles, and candy cats: eleven animals across five species. Authored vertical offsets are respectively 22, 23, 28, 36, and 26 units before the existing 0.62 scale. Moving the torso/face geometry intact preserves their shapes; compensating the sampled foot heights keeps paws planted while shortening the rounded legs. Gorillas and mammoths retain their larger stance.
+
+The eleven lowered encounters use 36-stud circular rings centered 0 to 7 studs below the sampled ground. Only half or less of the circle is exposed. Their sideways collection planes and reward values stay intact; explicit above-ground passage points guide clearance and crossing checks. The logical circle still crosses terrain below ground intentionally. No terrain was removed to create these arches.
+
+Validation: 5847 geometry/layout assertions passed, including all animal flight passages, exposed rim clearance, no rim/animal collisions, shorter limb dimensions, reward crossing through exposed arcs, and all eight default launch directions. Bear and turtle side screenshots were inspected. Rebuilt only the eleven changed animals and rings; the rest of the scene remains in place. Full flown collection and device performance remain manual checks.
+
+### D29 Trial a 100 SPS starter
+
+The user chose 100 after considering 50–80. Starter launch speed drops from 165 to 100. Drag is also retuned so a hands-off trim glide stays near 100 instead of accelerating back toward the old cruising speed. Other tier launches are 107, 115, 123, and 133, preserving the existing speed increments and advantages in drag, sink, handling, and climb comfort. Dives and boost can still reach higher speeds; the cap remains 250. HUD defaults now use the shared starter configuration rather than a hardcoded 165.
+
+The slower starting energy caused two older climb-test assumptions to fail: the starter had already stalled by the two-second final sample, and the advanced plane could also stall within a four-second steep climb. Tests now check peak initial altitude, compare first-stall timing, and require greater climb height for the advanced plane, rather than assuming neither has entered recovery at an arbitrary endpoint. The boost-cap check allows the full fuel window from the lower initial speed. All 87 flight, pickup, upgrade, and camera assertions pass. These changes are tuning iterations, not hidden physics fixes; sustained climb intentionally spends energy. User assessment of pace and lower flight gates remains pending. This revision remains uncommitted.

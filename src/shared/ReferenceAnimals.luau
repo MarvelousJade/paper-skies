@@ -7,7 +7,10 @@ function Wildlife.build(animal,parent,ground)
  model.Name=animal.species..animal.id;model.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
  model:SetAttribute("Species",animal.species);model:SetAttribute("AnimalId",animal.id)
  model:SetAttribute("ReferenceStyle","LayeredBlock")
- local frame=CF(animal.position)*CFrame.Angles(0,animal.heading,0)
+ local baseFrame=CF(animal.position)*CFrame.Angles(0,animal.heading,0)
+ local bodyDrop=animal.bodyDrop or 0
+ local frame=baseFrame*CF(0,-bodyDrop,0)
+ model:SetAttribute("BodyDrop",bodyDrop)
  local function block(name,size,localFrame,color,material)
   local p=Instance.new("Part");p.Name=name;p.Size=size;p.CFrame=frame*localFrame
   p.Color=color;p.Material=material or Enum.Material.SmoothPlastic;p.Anchored=true;p.CanTouch=false
@@ -76,7 +79,8 @@ function Wildlife.build(animal,parent,ground)
  end
  local function footY(x,z)
   local point=frame:PointToWorldSpace(V(x*animal.scale,0,z*animal.scale))
-  return (ground(point.X,point.Z)-animal.position.Y)/animal.scale
+  -- Compensate grounded paws while the torso and leg tops move down.
+  return (ground(point.X,point.Z)-animal.position.Y)/animal.scale+bodyDrop
  end
  local function eye(x,y,z,color)
   local p=block("EyeGlow",V(2.5,3,0.7),CF(x,y,z),color,Enum.Material.Neon)
@@ -309,7 +313,7 @@ function Wildlife.build(animal,parent,ground)
  else
   model:Destroy();return nil
  end
- model.WorldPivot=frame;model:ScaleTo(animal.scale)
+ model.WorldPivot=baseFrame;model:ScaleTo(animal.scale)
  model:SetAttribute("WildlifeScale",animal.scale)
  if animal.behindPeak then model:SetAttribute("BehindPeak",animal.behindPeak) end
  model.Parent=parent

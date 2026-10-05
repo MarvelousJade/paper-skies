@@ -64,11 +64,11 @@ Config.WindSoundId = "rbxassetid://687874741"
 -- Costs and performance are game balance values, not claims about real folded designs.
 Config.PlaneOrder={"Dart","Lockwing","Delta","Sailwing","Kestrel"}
 Config.Planes={
- Dart={name="Paper Dart",price=0,launchSpeed=165,drag=0.000165,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,climbComfort=math.rad(12),climbLoss=110,boostRecharge=0.6,rank=1},
- Lockwing={name="Lockwing",price=180,launchSpeed=172,drag=0.00015,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,climbComfort=math.rad(16),climbLoss=95,boostRecharge=0.65,rank=2},
- Delta={name="Delta",price=550,launchSpeed=180,drag=0.000135,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,climbComfort=math.rad(20),climbLoss=80,boostRecharge=0.7,rank=3},
- Sailwing={name="Sailwing",price=1400,launchSpeed=188,drag=0.00012,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,climbComfort=math.rad(24),climbLoss=65,boostRecharge=0.78,rank=4},
- Kestrel={name="Kestrel",price=3200,launchSpeed=198,drag=0.000105,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,climbComfort=math.rad(28),climbLoss=50,boostRecharge=0.85,rank=5},
+ Dart={name="Paper Dart",price=0,launchSpeed=100,drag=0.000376,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,climbComfort=math.rad(12),climbLoss=110,boostRecharge=0.6,rank=1},
+ Lockwing={name="Lockwing",price=180,launchSpeed=107,drag=0.000342,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,climbComfort=math.rad(16),climbLoss=95,boostRecharge=0.65,rank=2},
+ Delta={name="Delta",price=550,launchSpeed=115,drag=0.000308,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,climbComfort=math.rad(20),climbLoss=80,boostRecharge=0.7,rank=3},
+ Sailwing={name="Sailwing",price=1400,launchSpeed=123,drag=0.000274,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,climbComfort=math.rad(24),climbLoss=65,boostRecharge=0.78,rank=4},
+ Kestrel={name="Kestrel",price=3200,launchSpeed=133,drag=0.000239,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,climbComfort=math.rad(28),climbLoss=50,boostRecharge=0.85,rank=5},
 }
 -- Retained for existing profile bonuses; new purchases use named plane types.
 Config.Upgrades = {
@@ -375,8 +375,21 @@ rearField.heading=0
 -- Keep the reference roster and derive field markers from the final positions.
 local referenceRoster={"Bear","Turtle","SilverFox","Raccoon","CandyCat","Gorilla","Mammoth",
  "Bear","SilverFox","Turtle","Raccoon","CandyCat","Gorilla","Mammoth","SilverFox"}
+-- Authored body offsets shorten limbs without flattening the head, shell, or torso.
+local lowStance={
+ Bear={drop=22,ringY=0,passageY=8},
+ SilverFox={drop=23,ringY=-1,passageY=8},
+ Raccoon={drop=28,ringY=-4,passageY=6.5},
+ Turtle={drop=36,ringY=-7,passageY=5.5},
+ CandyCat={drop=26,ringY=-1,passageY=8},
+}
 for index,animal in World.Animals do
  animal.species=referenceRoster[index]
+ local stance=lowStance[animal.species]
+ animal.bodyDrop=stance and stance.drop or 0
+ animal.bellyRingY=stance and stance.ringY or 18
+ animal.bellyRingRadius=stance and 18 or 12
+ animal.passageY=stance and stance.passageY or 18
  animal.forwardMeadow=animal.behindPeak==nil and animal.position.Z<launch.Z
  animal.rearMeadow=animal.behindPeak==nil and animal.position.Z>launch.Z
 end
@@ -449,7 +462,10 @@ end
 for i,animal in World.Animals do
  -- A complete hoop faces the animal's side, between its front and rear legs.
  local normal=(CFrame.Angles(0,animal.heading,0)).RightVector
- add(animal.position+Vector3.new(0,18,0),normal,12,palette[(i+1)%#palette+1],35,animal.species.." belly")
+ -- A broad circle can sit partly below ground; the visible cap is the flight gate.
+ add(animal.position+Vector3.new(0,animal.bellyRingY,0),normal,animal.bellyRingRadius,palette[(i+1)%#palette+1],35,animal.species.." belly")
+ World.Rings[#World.Rings].groundArc=animal.bodyDrop>0
+ World.Rings[#World.Rings].passagePosition=animal.position+Vector3.yAxis*animal.passageY
  World.Rings[#World.Rings].animalId=animal.id
 end
 -- One reward at each summit. It sits just above the tip, with no hole through the mountain.
@@ -513,7 +529,10 @@ function Wildlife.build(animal,parent,ground)
  model.Name=animal.species..animal.id;model.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
  model:SetAttribute("Species",animal.species);model:SetAttribute("AnimalId",animal.id)
  model:SetAttribute("ReferenceStyle","LayeredBlock")
- local frame=CF(animal.position)*CFrame.Angles(0,animal.heading,0)
+ local baseFrame=CF(animal.position)*CFrame.Angles(0,animal.heading,0)
+ local bodyDrop=animal.bodyDrop or 0
+ local frame=baseFrame*CF(0,-bodyDrop,0)
+ model:SetAttribute("BodyDrop",bodyDrop)
  local function block(name,size,localFrame,color,material)
   local p=Instance.new("Part");p.Name=name;p.Size=size;p.CFrame=frame*localFrame
   p.Color=color;p.Material=material or Enum.Material.SmoothPlastic;p.Anchored=true;p.CanTouch=false
@@ -582,7 +601,8 @@ function Wildlife.build(animal,parent,ground)
  end
  local function footY(x,z)
   local point=frame:PointToWorldSpace(V(x*animal.scale,0,z*animal.scale))
-  return (ground(point.X,point.Z)-animal.position.Y)/animal.scale
+  -- Compensate grounded paws while the torso and leg tops move down.
+  return (ground(point.X,point.Z)-animal.position.Y)/animal.scale+bodyDrop
  end
  local function eye(x,y,z,color)
   local p=block("EyeGlow",V(2.5,3,0.7),CF(x,y,z),color,Enum.Material.Neon)
@@ -815,7 +835,7 @@ function Wildlife.build(animal,parent,ground)
  else
   model:Destroy();return nil
  end
- model.WorldPivot=frame;model:ScaleTo(animal.scale)
+ model.WorldPivot=baseFrame;model:ScaleTo(animal.scale)
  model:SetAttribute("WildlifeScale",animal.scale)
  if animal.behindPeak then model:SetAttribute("BehindPeak",animal.behindPeak) end
  model.Parent=parent
@@ -1192,7 +1212,7 @@ gui.Parent=player:WaitForChild("PlayerGui")
 local boostHeld=false
 local mode="Ready";local yaw=0;local pitch=Config.AimPitch;local cursorFree=false
 local profile=Economy.new();local saveMode="Loading progress";local soundEnabled=true
-local telemetry={speed=165,boostRemaining=Config.BoostDuration,boosting=false,stalled=false,lift=0,distance=0,gold=0,rings=0,region="Coastal Cliffs",altitude=362}
+local telemetry={speed=Config.Planes.Dart.launchSpeed,boostRemaining=Config.BoostDuration,boosting=false,stalled=false,lift=0,distance=0,gold=0,rings=0,region="Coastal Cliffs",altitude=362}
 local originalFov=camera.FieldOfView
 local visualPlane,heldPlane,trajectory,smoothedFrame=nil,nil,nil,nil
 local aimAnchors,hiddenRings,lines={},{},{}
@@ -1229,7 +1249,7 @@ earned.TextColor3=Color3.fromRGB(82,229,91);earned.Visible=false
 local distance=label(gui,"RunDistance","",UDim2.fromOffset(540,40),UDim2.new(0.5,-270,0,118),24)
 local region=label(gui,"Region","COASTAL CLIFFS",UDim2.fromOffset(550,28),UDim2.new(0.5,-275,0,22),16)
 region.TextTransparency=0.15
-local speed=label(gui,"Speed","165 SPS",UDim2.fromOffset(280,66),UDim2.new(1,-300,1,-182),52)
+local speed=label(gui,"Speed",string.format("%d SPS",Config.Planes.Dart.launchSpeed),UDim2.fromOffset(280,66),UDim2.new(1,-300,1,-182),52)
 speed.TextXAlignment=Enum.TextXAlignment.Right;speed.Visible=false
 local condition=label(gui,"AirState","GLIDING",UDim2.fromOffset(350,32),UDim2.new(1,-370,1,-112),24)
 condition.TextXAlignment=Enum.TextXAlignment.Right;condition.Visible=false
