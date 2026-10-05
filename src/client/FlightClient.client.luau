@@ -88,10 +88,14 @@ local contents=Instance.new("Frame");contents.BackgroundTransparency=1;contents.
 local modalMode="Upgrades"
 local palette={Color3.fromRGB(255,249,228),Color3.fromRGB(125,212,255),Color3.fromRGB(255,183,153),Color3.fromRGB(189,229,160)}
 local wind=Instance.new("Sound");wind.Name="PaperFlightWind";wind.SoundId=Config.WindSoundId;wind.Looped=true;wind.Volume=0;wind.Parent=SoundService
--- One bright arcade ring chime: fixed pitch, no overlapping voices, short faded tail.
+-- One softened arcade ring chime: fixed pitch, no overlapping voices, short faded tail.
 local ringChime=Instance.new("Sound");ringChime.Name="RingPickupChime"
 ringChime.SoundId=Config.CollectSoundId;ringChime.Volume=Config.CollectSoundVolume
 ringChime.Parent=SoundService
+-- Tame the sharp click without darkening wind or background music.
+local pickupTone=Instance.new("EqualizerSoundEffect");pickupTone.Name="SoftPickupTone"
+pickupTone.HighGain=Config.CollectSoundHighGain;pickupTone.MidGain=Config.CollectSoundMidGain
+pickupTone.LowGain=0;pickupTone.Parent=ringChime
 local chimeStarted=nil
 local music=nil
 if Config.MusicSoundId~="" then

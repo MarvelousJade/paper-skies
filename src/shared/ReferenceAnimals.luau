@@ -1,5 +1,5 @@
 -- Original procedural wildlife inspired by the user's block-built animal screenshots.
--- Broad beveled volumes and layered plates, with a clear sideways flight passage.
+-- Layered paper bodies with rounded limbs and a clear sideways flight passage.
 local Wildlife={}
 local V,CF=Vector3.new,CFrame.new
 function Wildlife.build(animal,parent,ground)
@@ -83,11 +83,30 @@ function Wildlife.build(animal,parent,ground)
   p.CanCollide=false;p.CanQuery=false
  end
 
+ -- Roblox cylinders run along local X; rotate them onto a leg's vertical axis.
+ -- Smooth ellipsoid paws keep the existing footprint and sampled ground height.
+ local function roundPart(name,size,localFrame,color)
+  local p=block(name,size,localFrame,color,Enum.Material.SmoothPlastic)
+  -- A sphere mesh follows all three dimensions; a Ball Part renders too small
+  -- for flattened paws. Keep the original part bounds for reliable collision.
+  local mesh=Instance.new("SpecialMesh");mesh.MeshType=Enum.MeshType.Sphere;mesh.Parent=p
+  return p
+ end
+ local function roundLeg(name,size,localFrame,color)
+  local p=block(name,V(size.Y,size.X,size.Z),localFrame*CFrame.Angles(0,0,math.pi/2),color,Enum.Material.SmoothPlastic)
+  p.Shape=Enum.PartType.Cylinder
+  return p
+ end
+ local function roundBeam(name,a,b,width,color)
+  local p=block(name,V((b-a).Magnitude+0.15,width,width),CFrame.lookAt((a+b)/2,b)*CFrame.Angles(0,math.pi/2,0),color,Enum.Material.SmoothPlastic)
+  p.Shape=Enum.PartType.Cylinder
+  return p
+ end
  local function fourLegs(x,z,top,width,color,feetColor)
   for _,side in {-1,1} do for _,endSign in {-1,1} do
    local px,pz=side*x,endSign*z;local floor=footY(px,pz)
-   block("BlockLeg",V(width,top-floor,width+3),CF(px,(top+floor)/2,pz),color)
-   block("SteppedFoot",V(width+5,9,width+12),CF(px,floor+4.5,pz-3),feetColor or color)
+   roundLeg("RoundLeg",V(width,top-floor,width+3),CF(px,(top+floor)/2,pz),color)
+   roundPart("RoundedPaw",V(width+5,9,width+12),CF(px,floor+4.5,pz-3),feetColor or color)
   end end
  end
  local function faceEye(x,y,z,size)
@@ -118,7 +137,7 @@ function Wildlife.build(animal,parent,ground)
    block("RoundEarTop",V(12,7,10),CF(side*24,147,-39),brown)
    block("EarInset",V(10,10,2),CF(side*24,139,-46),muzzle)
    faceEye(side*14,119,-65,7)
-   for j=1,3 do block("PawClaw",V(3,3,4),CF(side*22+(j-2)*5,footY(side*22,-36)+5,-52),muzzle) end
+   for j=1,3 do roundPart("PawClaw",V(3,3,4),CF(side*22+(j-2)*5,footY(side*22,-36)+5,-52),muzzle) end
   end
   block("BearMuzzle",V(30,19,16),CF(0,104,-69),muzzle)
   block("BearNose",V(17,8,5),CF(0,110,-79),Color3.fromRGB(39,30,29))
@@ -178,7 +197,7 @@ function Wildlife.build(animal,parent,ground)
   block("HeadTop",V(31,5,29),CF(0,83,-93),green)
   for _,side in {-1,1} do
    faceEye(side*12,72,-111,8)
-   block("FlipperEdge",V(13,8,38),CF(side*52,footY(side*41,-49)+5,-52)*CFrame.Angles(0,side*0.2,0),green)
+   roundPart("FlipperEdge",V(13,8,38),CF(side*52,footY(side*41,-49)+5,-52)*CFrame.Angles(0,side*0.2,0),green)
   end
   block("TurtleSmile",V(19,2,1),CF(0,59,-110.5),dark)
   tube("TurtleTail",{V(0,62,61),V(0,49,79),V(0,43,92)},{8,5,0.1},green)
@@ -214,20 +233,22 @@ function Wildlife.build(animal,parent,ground)
   -- Broad chest plates and high shoulder pads give a recognizable hunched gorilla silhouette.
   for _,side in {-1,1} do
    block("ChestPlate",V(30,27,7),CF(side*16,91,-38)*CFrame.Angles(0,0,side*0.07),edge)
-   block("ShoulderPad",V(31,31,32),CF(side*41,91,-24)*CFrame.Angles(0,0,-side*0.13),edge)
+   roundPart("ShoulderPad",V(31,31,32),CF(side*41,91,-24)*CFrame.Angles(0,0,-side*0.13),edge)
    local armTop=V(side*44,88,-28);local elbow=V(side*49,48,-39);local wrist=V(side*45,14,-51)
-   beam("UpperArm",armTop,elbow,25,dark);beam("Forearm",elbow,wrist,26,edge)
+   roundBeam("UpperArm",armTop,elbow,25,dark);roundBeam("Forearm",elbow,wrist,26,edge)
+   roundPart("ElbowJoint",V(26,26,26),CF(elbow),edge)
    local floor=footY(side*45,-53)
-   block("KnuckleHand",V(28,14,25),CF(side*45,floor+7,-53),dark)
-   for j=1,4 do block("FingerFold",V(5,9,8),CF(side*45+(j-2.5)*5.5,floor+5,-66),edge) end
+   roundPart("KnuckleHand",V(28,14,25),CF(side*45,floor+7,-53),dark)
+   for j=1,4 do roundPart("FingerFold",V(5,9,8),CF(side*45+(j-2.5)*5.5,floor+5,-66),edge) end
    local heelFloor=footY(side*23,39)
-   beam("RearThigh",V(side*22,70,32),V(side*24,32,43),22,dark)
-   block("RearShin",V(19,30-heelFloor,20),CF(side*24,(30+heelFloor)/2,42),edge)
-   block("RearFoot",V(21,9,29),CF(side*24,heelFloor+4.5,37),dark)
-   -- A few plate rows suggest layered hide without a dense stud field.
+   roundBeam("RearThigh",V(side*22,70,32),V(side*24,32,43),22,dark)
+   roundLeg("RearShin",V(19,30-heelFloor,20),CF(side*24,(30+heelFloor)/2,42),edge)
+   roundPart("RearFoot",V(21,9,29),CF(side*24,heelFloor+4.5,37),dark)
+   -- Rounded cuffs follow the forearm so the old flat plates cannot float off its sides.
    for row=1,3 do
-    local y=17+row*8;local t=(y-14)/34
-    block("ArmPlate",V(26,6,3),CF(side*(45+4*t),y,-51+12*t-11.6)*CFrame.Angles(-math.atan(12/34),0,side*0.04),dark)
+    local t=(3+row*8)/34;local center=wrist:Lerp(elbow,t)
+    local axis=(elbow-wrist).Unit
+    roundBeam("ArmCuff",center-axis*3,center+axis*3,27,dark)
    end
   end
   hull("CrestedHead",{{z=-20,y=119,w=16,h=20},{z=-42,y=119,w=20,h=20},{z=-52,y=115,w=15,h=15}},dark)
@@ -248,11 +269,11 @@ function Wildlife.build(animal,parent,ground)
   for _,side in {-1,1} do
    for _,z in {-40,39} do
     local floor=footY(side*26,z)
-    block("MammothLeg",V(22,64-floor,25),CF(side*26,(64+floor)/2,z),blue)
-    block("MammothFoot",V(27,13,30),CF(side*26,floor+6.5,z-2),navy)
-    block("AnklePlate",V(23,13,4),CF(side*26,floor+18,z-15),white)
+    roundLeg("MammothLeg",V(22,64-floor,25),CF(side*26,(64+floor)/2,z),blue)
+    roundPart("MammothFoot",V(27,13,30),CF(side*26,floor+6.5,z-2),navy)
+    roundLeg("AnkleCuff",V(23,13,26),CF(side*26,floor+18,z),white)
     for toe=1,3 do
-     block("IvoryToe",V(5,6,4),CF(side*26+(toe-2)*7,floor+4,z-18),white)
+     roundPart("IvoryToe",V(5,6,4),CF(side*26+(toe-2)*7,floor+4,z-18),white)
     end
    end
    -- Offset rows of white/blue paper armor reproduce the reference's layered coat.

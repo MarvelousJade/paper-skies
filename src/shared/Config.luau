@@ -29,7 +29,9 @@ Config.DistanceGoldStuds = 200
 Config.CollectionRadius = 12
 Config.RingMargin = 3.6
 Config.CollectSoundId = "rbxassetid://111940732857414"
-Config.CollectSoundVolume = 0.35
+Config.CollectSoundVolume = 0.2
+Config.CollectSoundHighGain = -8
+Config.CollectSoundMidGain = -2
 Config.CollectSoundDuration = 0.45
 -- Original Paper Skies loop, uploaded by the project owner from assets/audio/PaperSkies.wav.
 -- Empty disables music without requesting a placeholder or inaccessible asset.

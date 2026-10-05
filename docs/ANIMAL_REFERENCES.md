@@ -20,7 +20,7 @@ The screenshots guide style and silhouette. All in-game geometry comes from the 
 | Turtle | 2 | 75 | Green limbs and head, stepped brown shell, flippers |
 | Raccoon | 2 | 162 | Dark eye mask, compact ears, ringed tail, gray-blue body |
 | CandyCat | 2 | 51 | Orange square head, large eyes, whiskers, cyan body and pink fins |
-| Gorilla | 2 | 264 | Dark hunched torso, shoulder plates, brow, heavy knuckles and silver saddle |
+| Gorilla | 2 | 266 | Dark hunched torso, shoulder plates, brow, heavy knuckles and silver saddle |
 | Mammoth | 2 | 838 | Layered blue/white coat, segmented trunk, curved cyan tusks and ice crest |
 
 All fifteen current encounter instances use the new models. Two extra field encounters were removed in the latest layout pass. The previous shared quadruped builder was removed from the active world builder. Built-in stud surfaces are assigned to suitable broad block faces rather than adding thousands of individual stud Parts.
@@ -29,7 +29,7 @@ All fifteen current encounter instances use the new models. Two extra field enco
 
 Thirteen animals retain their locations behind mountains, and two occupy the introductory field. The front encounters are a bear and turtle; the extra meadow candy cat and raccoon were removed to keep the field open. The models use a 0.62 authored scale and retain complete 24-stud belly rings facing sideways.
 
-The body and leg proportions provide clearance for the required full rings. All animals remain static exploration landmarks; animation is not implemented.
+All fifteen animals now use smooth cylindrical legs, with rounded paws and feet. Gorilla arms use cylinders, rounded shoulder/elbow joints, and cuffs that follow the forearm. Flattened paws, hands, toes, and turtle flippers use sphere meshes scaled to their authored part dimensions. Body layers and faces retain the reference style. Existing footprints and leg placements preserve clearance for the required full rings. All animals remain static exploration landmarks; animation is not implemented.
 
 ## Verification
 
@@ -37,4 +37,4 @@ Close views were inspected for each of the five new types; the gorilla and mammo
 
 All 5766 geometry/layout assertions passed for the expanded ring layout, including visible ring-rim clearance samples, plane-width belly passages, sideways reward crossings, eight launch directions, and a check that every encounter uses the new roster and model builder.
 
-The rebuilt world has 30,366 descendants, including the expanded ring trails. Device performance and live keyboard-flown collection beneath the new roster remain unverified. These models are original adaptations of the reference style, not exact replicas.
+The rebuilt world has 30,494 descendants, including the expanded ring trails. Device performance and live keyboard-flown collection beneath the new roster remain unverified. These models are original adaptations of the reference style, not exact replicas.

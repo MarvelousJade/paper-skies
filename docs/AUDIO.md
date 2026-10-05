@@ -2,7 +2,7 @@
 
 ## Ring collection
 
-The ring uses [SONIC RING SFX by PastaReaperYT](https://create.roblox.com/store/asset/111940732857414), a free Creator Store audio asset, ID `111940732857414`. Studio loaded its 0.952-second source. The client plays up to 450 ms and fades the final 60 ms, giving the bright ring attack a short audible tail. Playback speed stays at 1, with volume 0.35. This replaces the earlier dry UI Tick at the user's request; the pickup sample is a Creator Store asset, not original project music.
+The ring uses [SONIC RING SFX by PastaReaperYT](https://create.roblox.com/store/asset/111940732857414), a free Creator Store audio asset, ID `111940732857414`. Studio loaded its 0.952-second source. The client plays up to 450 ms and fades the final 60 ms, giving the bright ring attack a short audible tail. Playback speed stays at 1, with volume 0.20 (previously 0.35). A pickup-only EqualizerSoundEffect reduces HighGain to -8 dB and MidGain to -2 dB, with LowGain at 0 dB; wind and music are unaffected by this filter. This replaces the earlier dry UI Tick at the user's request; the pickup sample is a Creator Store asset, not original project music.
 
 There is one `RingPickupChime` Sound instance. Rapid pickups restart it instead of stacking voices, and the duplicate-ring guard runs before playback. Sound OFF immediately stops the chime, mutes wind, and mutes music. Sound ON permits new chimes and restores music volume without restarting the song.
 
@@ -47,3 +47,5 @@ The smoke checks injected synthetic client feedback IDs only; they did not award
 
 
 Current chime Play check: asset loaded at 0.952 seconds; one pickup plus its duplicate and two rapid unique pickups produced exactly three sound starts. The tail stopped, Sound OFF suppressed the next pickup, and the toggle was restored to ON. These synthetic feedback IDs did not award server gold. The fresh client also loaded all seventy high-sky rings and 336 total rewards. Subjective listening approval and published audio permissions remain pending.
+
+Softer pickup Play check: source loaded; volume 0.20; enabled pickup-only EQ at -8 dB high, -2 dB mid, 0 dB low. One pickup plus duplicate and two rapid pickups yielded three starts, with maximum volume 0.20 and the tail stopped. Music continued playing and neither wind nor music had the pickup EQ. Temporary audio-test connections were disconnected. Listening feedback remains pending.

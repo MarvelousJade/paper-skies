@@ -43,13 +43,13 @@ The world includes a broad flat launch plateau, varied mountain profiles, a lago
 
 There are 336 rewards: 310 rings on thirty-one curved sky routes, four at foothill passages, fifteen rings beneath animals, and seven at mountain summits. No reward is within 1000 horizontal studs of launch. Sky rings are 24 studs across and approximately 24 studs apart within each cluster. All rings now use round, 0.65-stud neon tubing instead of the previous 0.28-stud square segments; collection radii and rewards are unchanged. Summit rings are also 24 studs across; foothill rings are 28. Each sky trail contains ten consecutive rings. Twenty-four low/outer trails are joined by seven mountain-side high trails at roughly 475–1373 studs, near existing rising-air regions; aircraft ceilings and lift strength are unchanged. Earlier field trails still fill spaces between mountain approaches.
 
-All fifteen encounters use the reference-inspired roster: two bears, three silver foxes, two turtles, two raccoons, two candy cats, two gorillas, and two ice mammoths. The legacy lion/elephant/deer/fox/giraffe builder has been replaced. Distinct block-built silhouettes, stepped shells/ears, layered coats, and expressive faces follow the supplied screenshots. Reference filenames and modeling decisions are recorded in [Animal references](docs/ANIMAL_REFERENCES.md).
+All fifteen encounters use the reference-inspired roster: two bears, three silver foxes, two turtles, two raccoons, two candy cats, two gorillas, and two ice mammoths. The legacy lion/elephant/deer/fox/giraffe builder has been replaced. Layered body silhouettes, stepped shells/ears, coats, and expressive faces follow the supplied screenshots. All fifteen animals now have cylindrical legs and rounded paws; the gorilla also has rounded arms, joints, hands, and cuffs. Reference filenames and modeling decisions are recorded in [Animal references](docs/ANIMAL_REFERENCES.md).
 
 Animal rewards are complete 24-stud circles facing the animal's side. Fly sideways beneath its belly, between the front and rear legs. Ring centers sit 18 studs above the sampled ground. Raised torsos and a longer front-to-rear stance provide clearance while retaining the 0.62 model scale.
 
 The seven summit rewards remain replicated and have small screen-sized halos for visibility at distance. Halos hide near the physical ring and on collection. Both visual segments and the halo are hidden in the collection event handler.
 
-Meadows now use LeafyGrass terrain material. An earlier attempt to set the non-scriptable Decoration property had silently failed; the material change was visually verified to remove the dense blades. The rebuilt scene has 30,366 descendants. Expanded trails also influence tree placement so flight corridors remain clear.
+Meadows now use LeafyGrass terrain material. An earlier attempt to set the non-scriptable Decoration property had silently failed; the material change was visually verified to remove the dense blades. The rebuilt scene has 30,494 descendants. Expanded trails also influence tree placement so flight corridors remain clear.
 
 **Open visual issue:** Far mountain terrain and its coarse proxies were absent in the Studio Play rear-view check, although the summit halos remained visible. The same rear mountains render correctly in Edit mode, and server terrain raycasts find them. Extra streaming focus made the rear terrain queryable on the client without resolving that screenshot. The exact rendering cause remains unconfirmed. This issue is tracked in the bug log; full distant-scene visibility is not claimed as verified.
 
@@ -95,7 +95,7 @@ A replication focus follows the plane while the avatar stays behind. Flight rend
 
 Published profile writes use UpdateAsync with ownership leases, retries, periodic saves, and departure/shutdown saves. Normalization retains valid plane ownership and selection; old profiles keep gold and existing bonuses. **Studio progress is session-only; published persistence has not been verified end to end.**
 
-Wind asset: 687874741. Pickup audio: [SONIC RING SFX by PastaReaperYT](https://create.roblox.com/store/asset/111940732857414), played as one fixed-pitch voice with a 450 ms limit and a soft tail fade. Original chill EDM loop: `assets/audio/PaperSkies.wav`; regeneration and Roblox setup are documented in `docs/AUDIO.md`. Background music uses the uploaded PaperSkies asset `126932983544303` at volume 0.16, with looping and the shared Sound toggle.
+Wind asset: 687874741. Pickup audio: [SONIC RING SFX by PastaReaperYT](https://create.roblox.com/store/asset/111940732857414), played as one fixed-pitch voice with a 450 ms limit and a soft tail fade. Pickup volume is 0.20, with high frequencies reduced by 8 dB and mid frequencies by 2 dB to soften its sharp edge. Original chill EDM loop: `assets/audio/PaperSkies.wav`; regeneration and Roblox setup are documented in `docs/AUDIO.md`. Background music uses the uploaded PaperSkies asset `126932983544303` at volume 0.16, with looping and the shared Sound toggle.
 
 ## Validation
 
@@ -119,6 +119,6 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The latest requested checkpoint is **`a414140` — Reduce passive flight gold and unify reward calculation**. The fixed aiming arc, thicker neon tubing, Sonic-style pickup chime, and higher ring trails remain uncommitted for user testing.
+The latest requested checkpoint is **`6a64f7c` — Polish neon aiming and pickups and add high-sky ring trails**. Softer pickup audio and rounded animal limbs remain uncommitted for user testing.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.

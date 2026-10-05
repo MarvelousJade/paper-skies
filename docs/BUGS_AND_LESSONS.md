@@ -604,3 +604,26 @@ While updating the high-sky tests, inspection found that an older assertion stil
 
 
 Current chime Play check: asset loaded at 0.952 seconds; one pickup plus its duplicate and two rapid unique pickups produced exactly three sound starts. The tail stopped, Sound OFF suppressed the next pickup, and the toggle was restored to ON. These synthetic feedback IDs did not award server gold. The fresh client also loaded all seventy high-sky rings and 336 total rewards. Subjective listening approval and published audio permissions remain pending.
+
+
+## October 5 softer pickups and rounded animal limbs
+
+### D24 Reduce harsh pickup feedback and round the legs
+
+The pickup keeps the selected ring sample and its 450 ms envelope, but volume drops from 0.35 to 0.20. A local EqualizerSoundEffect on RingPickupChime attenuates highs by 8 dB and mids by 2 dB. Only pickup feedback is filtered; the wind and background music retain their own mix. This is subjective sound tuning and remains open to listening feedback.
+
+The shared four-leg builder now uses smooth vertical cylinders and rounded paws for bear, silver fox, raccoon, turtle, and candy cat. Mammoth legs/cuffs and gorilla thighs/shins use the same cylinder approach. Gorilla arms, shoulder/elbow joints, hands, and forearm cuffs were also rounded. The original model scale, positions, colors, layered bodies, and complete belly rings are retained. Only animals were rebuilt in Studio.
+
+### B13 Flattened Ball parts made paws and hands look undersized
+
+**Observed:** The first rounded-leg screenshots showed the bear's feet nearly hidden by its legs and the gorilla's hands as small balls disconnected from the intended forearm silhouette.
+
+**Cause:** A simple Ball Part did not visually fill the intended flattened three-axis paw/hand dimensions, even though the reported Size retained them. Checking Size alone did not catch the visual mismatch.
+
+**Fix:** Use a built-in sphere SpecialMesh on a Part with the authored size for paws, hands, toes, and joints. This preserves the flattened ellipsoid proportions and original collision bounds. Keep cylinders for the long leg/arm sections. Curved arm cuffs replace the old flat plates so their edges do not float away from the rounded forearm.
+
+**Evidence:** Corrected bear and gorilla screenshots show attached rounded feet/hands. All 5766 geometry/layout checks passed after the fix, including every belly corridor. A separate model audit found exactly sixty cylindrical leg sections across fifteen animals and no legacy BlockLeg or SteppedFoot parts. Each gorilla adds two elbow parts (266 parts total); the complete scene has 30,494 descendants, including the small built-in sphere meshes. Full device profiling and hands-on flight through every encounter remain pending.
+
+**Interview lesson:** Reported geometry dimensions and visible shape can differ. Review the rendered silhouette as well as collision clearance, especially when changing primitive types. These changes remain uncommitted.
+
+The final Play audio check verified volume 0.20 and enabled EQ (-8 dB high / -2 dB mid). Three unique synthetic pickup notifications produced three starts, a duplicate was suppressed, and the tail stopped. Wind/music were not filtered; music continued playing. The test listener was removed and no server gold was awarded.
