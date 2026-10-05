@@ -10,6 +10,33 @@ local function write(parent,name,class,source)
  instance=instance or Instance.new(class)
  instance.Name=name;instance.Source=source;instance.Parent=parent
 end
+write(package,"OwnPlaneVisibility","ModuleScript",[=[
+-- Own flight has one local visual. Reapply hiding after late replication or stream-in.
+local Visibility={}
+function Visibility.new(folder,name)
+ local tracked={};local connections={}
+ local function hide(p)
+  if p:IsA("BasePart") then p.LocalTransparencyModifier=1
+  elseif p:IsA("Trail") or p:IsA("ParticleEmitter") or p:IsA("Beam") then p.Enabled=false end
+ end
+ local function remove(model)
+  local connection=tracked[model];if connection then connection:Disconnect();tracked[model]=nil end
+ end
+ local function observe(model)
+  if model.Name~=name or tracked[model] then return end
+  tracked[model]=model.DescendantAdded:Connect(hide)
+  for _,p in model:GetDescendants() do hide(p) end
+ end
+ table.insert(connections,folder.ChildAdded:Connect(observe))
+ table.insert(connections,folder.ChildRemoved:Connect(remove))
+ for _,model in folder:GetChildren() do observe(model) end
+ return {Destroy=function()
+  for _,c in connections do c:Disconnect() end
+  for model in tracked do remove(model) end
+ end}
+end
+return Visibility
+]=])
 write(game.ReplicatedFirst,"PaperSkyline","ModuleScript",[=[
 -- Compact, complete mountain surfaces: serialized points, client-created visual wedges.
 local Skyline={Step=128}
@@ -1846,6 +1873,7 @@ local package=RS:WaitForChild("PaperFlight")
 local Config=require(package.Config)
 local Flight=require(package.Flight)
 local FlightCamera=require(package.FlightCamera)
+local OwnPlaneVisibility=require(package:WaitForChild("OwnPlaneVisibility"))
 local cameraMotion=FlightCamera.new()
 local cameraParams=RaycastParams.new();cameraParams.FilterType=Enum.RaycastFilterType.Include
 cameraParams.FilterDescendantsInstances={workspace.Terrain,workspace:WaitForChild("PaperFlightWorld")}
@@ -1853,6 +1881,12 @@ cameraParams.IgnoreWater=true
 local Regions=require(package:WaitForChild("Regions"))
 local Economy=require(package.Economy)
 local remote=package:WaitForChild("RaceEvent")
+-- Install the watcher before launch; Atomic models can still be replaced on stream-in.
+local planeWatcher
+task.spawn(function()
+ planeWatcher=OwnPlaneVisibility.new(workspace:WaitForChild("ActivePaperPlanes"),"Plane_"..player.UserId)
+end)
+script.Destroying:Connect(function() if planeWatcher then planeWatcher:Destroy() end end)
 local camera=workspace.CurrentCamera
 local gui=Instance.new("ScreenGui");gui.Name="PaperFlightHUD";gui.ResetOnSpawn=false;gui.IgnoreGuiInset=true
 gui.Parent=player:WaitForChild("PlayerGui")
@@ -2263,10 +2297,6 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
  if not plane then return end
  if not visualPlane then
   visualPlane=package.PlaneModels[profile.planeId]:Clone();visualPlane.Name="LocalFlightVisual";visualPlane:ScaleTo(0.65);visualPlane.Parent=camera;colorPlane(visualPlane)
-  for _,p in plane:GetDescendants() do
-   if p:IsA("BasePart") then p.LocalTransparencyModifier=1 end
-   if p:IsA("Trail") then p.Enabled=false end
-  end
  end
  local frame=plane:GetPivot();smoothedFrame=smoothedFrame and smoothedFrame:Lerp(frame,1-math.exp(-16*dt)) or frame
  visualPlane:PivotTo(smoothedFrame)

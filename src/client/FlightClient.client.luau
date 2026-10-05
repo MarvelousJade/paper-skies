@@ -10,6 +10,7 @@ local package=RS:WaitForChild("PaperFlight")
 local Config=require(package.Config)
 local Flight=require(package.Flight)
 local FlightCamera=require(package.FlightCamera)
+local OwnPlaneVisibility=require(package:WaitForChild("OwnPlaneVisibility"))
 local cameraMotion=FlightCamera.new()
 local cameraParams=RaycastParams.new();cameraParams.FilterType=Enum.RaycastFilterType.Include
 cameraParams.FilterDescendantsInstances={workspace.Terrain,workspace:WaitForChild("PaperFlightWorld")}
@@ -17,6 +18,12 @@ cameraParams.IgnoreWater=true
 local Regions=require(package:WaitForChild("Regions"))
 local Economy=require(package.Economy)
 local remote=package:WaitForChild("RaceEvent")
+-- Install the watcher before launch; Atomic models can still be replaced on stream-in.
+local planeWatcher
+task.spawn(function()
+ planeWatcher=OwnPlaneVisibility.new(workspace:WaitForChild("ActivePaperPlanes"),"Plane_"..player.UserId)
+end)
+script.Destroying:Connect(function() if planeWatcher then planeWatcher:Destroy() end end)
 local camera=workspace.CurrentCamera
 local gui=Instance.new("ScreenGui");gui.Name="PaperFlightHUD";gui.ResetOnSpawn=false;gui.IgnoreGuiInset=true
 gui.Parent=player:WaitForChild("PlayerGui")
@@ -427,10 +434,6 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
  if not plane then return end
  if not visualPlane then
   visualPlane=package.PlaneModels[profile.planeId]:Clone();visualPlane.Name="LocalFlightVisual";visualPlane:ScaleTo(0.65);visualPlane.Parent=camera;colorPlane(visualPlane)
-  for _,p in plane:GetDescendants() do
-   if p:IsA("BasePart") then p.LocalTransparencyModifier=1 end
-   if p:IsA("Trail") then p.Enabled=false end
-  end
  end
  local frame=plane:GetPivot();smoothedFrame=smoothedFrame and smoothedFrame:Lerp(frame,1-math.exp(-16*dt)) or frame
  visualPlane:PivotTo(smoothedFrame)
