@@ -382,3 +382,54 @@ The successful replacement fixture changed the starting balance in the temporary
 ### T06 Authoring tool errors did not mutate the project
 
 A JavaScript orchestration attempt used an unavailable `structuredClone` helper and was corrected to a JSON round trip for serializable source strings. A malformed quoted tool call also failed before execution and was corrected. These were authoring errors, not gameplay bugs. They are recorded for completeness; the gameplay and integration cases are stronger interview examples.
+
+
+## October 4 stamina, flight envelope, and camera follow up
+
+The preceding radial-world and hangar build was committed first as `b4a7299`, as requested. The changes below remain uncommitted for user playtesting. Automated validation passed 82 flight/economy/camera assertions and 444 world assertions, including all eight launch directions.
+
+### D10 Boost now recovers as stamina
+
+**Requirement:** Make boost recoverable while retaining meaningful plane progression.
+
+**Implementation:** The server owns a 4.5-second capacity. Release boost and fly at 5 degrees upward or lower, at least 76 SPS, without a stall. After 0.85 seconds in that state, recharge begins at the equipped plane's rate. Dart refills from empty in 8.35 seconds including the delay; Kestrel takes about 6.14. Climbing, stalling, or holding boost resets the delay. Holding an empty bar cannot create repeated tiny boosts.
+
+**Engineering detail:** Recharge integrates only the part of a simulation step beyond the delay boundary. This prevents a whole extra frame of recharge at lower update rates. Fuel is clamped to capacity and carried only in the server flight state; the client receives presentation telemetry.
+
+**Evidence:** Tests cover delay, refill rate, capacity, a second boost after recovery, empty held input, climbing/stall exclusion, and 30/120 Hz agreement. Live telemetry showed recovery from 3.17 to 3.43 seconds during a suitable glide, with the HUD reporting RECHARGING; later telemetry reached full capacity.
+
+**Interview point:** Explain why the client sends intent rather than its stamina balance, and how a delay boundary can introduce frame-rate dependence.
+
+### D11 Aircraft have soft climb, altitude, and range differences
+
+**Requirement:** Weak paper planes should shed speed quickly on upward turns and drop their noses sooner. Better models should travel and climb farther.
+
+**Implementation:** Each type has a climb comfort angle and a quadratic additional drag cost above it. Pulling upward raises the speed required to avoid a stall. Beyond the aircraft's nominal air ceiling, added drag and sink increase progressively. Range emerges from the existing type-specific drag/sink and energy management; there is no per-type travel-distance kill switch. Global world bounds and run duration remain.
+
+**Evidence:** From altitude 350 with a 10-degree initial pitch and a sustained 24-degree target, Dart first stalled at 3.18 seconds and had dropped its nose during the four-second test. Kestrel had not stalled at four seconds and retained about 131 SPS. The starter ended at about 78 SPS after its partial recovery. A separate test verifies momentum can still carry a plane above its nominal ceiling. Comparative unobstructed glides verify Kestrel travels over 20% farther than Dart.
+
+**Test design:** Ordinary glide fixtures now start at altitude 400, inside the starter envelope, instead of 800. A separate fixture explicitly tests the new above-ceiling penalties. This keeps ordinary glide behavior and altitude penalties independently testable.
+
+**Limit:** These are tuned game mechanics, not a full aerodynamic solver. Full summit-route reachability, player feel, and economy progression still need playtesting.
+
+### D12 Camera zoom now follows throw and boost events
+
+**Previous behavior:** FOV was assigned directly from speed every frame. Since speed stays high after boost release, that approach could not satisfy the requested return to normal framing.
+
+**Change:** A small shared camera module produces a 1.4-second throw pulse plus an independent boost target, with exponential easing. Normal flight is 70-degree FOV at 29 studs; boost targets 84 degrees at 40 studs. The throw pulse adds up to 10 degrees and nine studs. Releasing local boost immediately targets normal framing, while smoothing avoids a snap. Every throw resets the pulse.
+
+**Evidence:** Seven deterministic camera assertions cover throw pullback, return, active boost, eased release, eventual normal framing, 30/120 Hz agreement, and reset. Live keyboard-driven samples peaked at 79.45 degrees for throw and 83.99 for boost, then returned to 70 after release. The Studio console showed only normal startup messages during that check.
+
+**Interview point:** Physical speed and perceived speed are separate concerns. Keeping camera state separate makes the effect testable without altering authoritative flight.
+
+### T07 An oversized source read was truncated
+
+A batched JSON read exceeded the command output limit, so parsing encountered the tool's truncation warning. No source write occurred. Reading individual files with bounded output and storing their content before generating edits resolved the authoring problem.
+
+### T08 Live test setup must check the current flight mode
+
+The first keyboard sequence assumed the player was Ready, but recorded telemetry showed an existing flight. F ended that run, and the second F entered aiming; no throw event was recorded. Inspecting the HUD state established that the player was aiming. A subsequent single throw produced the intended camera/boost measurements. This was a test setup error, not evidence that throwing failed.
+
+One immediate post-Stop diagnostic also reported an invalid require argument. A follow-up inspection confirmed the modules existed; explicitly resolving the Flight ModuleScript in a subsequent call succeeded. The exact reason for that transient tool execution failure was not isolated.
+
+All temporary telemetry recorders were discarded by stopping Play. The scene is left in Edit with the new production scripts installed. The separate distant-terrain rendering issue B08 remains open.

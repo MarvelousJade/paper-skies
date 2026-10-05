@@ -9,6 +9,8 @@ local player=Players.LocalPlayer
 local package=RS:WaitForChild("PaperFlight")
 local Config=require(package.Config)
 local Flight=require(package.Flight)
+local FlightCamera=require(package.FlightCamera)
+local cameraMotion=FlightCamera.new()
 local World=require(package.WorldData)
 local Economy=require(package.Economy)
 local remote=package:WaitForChild("RaceEvent")
@@ -282,8 +284,8 @@ remote.OnClientEvent:Connect(function(kind,data)
   telemetry.gold=0;earned.Text="$0";distance.Text="";message.Text="Aim the green path, then click to throw."
   camera.CameraType=Enum.CameraType.Scriptable;preview();cursor(false)
  elseif kind=="Thrown" then
-  mode="Countdown";smoothedFrame=nil;restoreRings();cleanPreview();message.Text="";cursor(false)
-  telemetry.gold=0;telemetry.distance=0;telemetry.boostRemaining=Config.BoostDuration;telemetry.boosting=false;telemetry.speed=Flight.stats(profile.levels,profile.planeId).launchSpeed;wind:Play()
+  mode="Countdown";cameraMotion=FlightCamera.new();smoothedFrame=nil;restoreRings();cleanPreview();message.Text="";cursor(false)
+  telemetry.gold=0;telemetry.distance=0;telemetry.boostRemaining=Config.BoostDuration;telemetry.boosting=false;telemetry.recharging=false;telemetry.speed=Flight.stats(profile.levels,profile.planeId).launchSpeed;wind:Play()
  elseif kind=="Flying" then mode="Flying"
  elseif kind=="Telemetry" then
   telemetry=data;earned.Text="$"..data.gold
@@ -392,17 +394,22 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
   local state={position=frame.Position,yaw=math.atan2(-frame.LookVector.X,-frame.LookVector.Z),pitch=math.asin(frame.LookVector.Y),speed=telemetry.speed,stalled=telemetry.stalled,bank=0}
   local input=Flight.aimInput(state,yaw,pitch);remote:FireServer("Input",input.X,input.Y,boostHeld)
  end
- if flying then
+ if flying or mode=="Countdown" then
   local pos=smoothedFrame.Position
-  camera.CFrame=CFrame.lookAt(pos-direction*29+Vector3.new(0,5,0),pos+direction*70)
-  camera.FieldOfView=70+intensity*12
+  -- Release immediately targets normal framing; the spring-like smoothing prevents a snap.
+  cameraMotion=FlightCamera.step(cameraMotion,dt,boostHeld and telemetry.boosting==true)
+  camera.CFrame=CFrame.lookAt(pos-direction*cameraMotion.distance+Vector3.new(0,5,0),pos+direction*70)
+  camera.FieldOfView=cameraMotion.fov
   speed.Text=string.format("%d SPS",telemetry.speed)
   condition.Text=telemetry.stalled and "STALL - LOWER THE NOSE" or telemetry.lift>3 and "RISING AIR" or telemetry.boosting and "BOOSTING" or "GLIDING"
   condition.TextColor3=telemetry.stalled and Color3.fromRGB(255,127,83) or Color3.fromRGB(208,220,227)
   local fuel=telemetry.boostRemaining or 0
   fill.Size=UDim2.fromScale(math.clamp(fuel/Config.BoostDuration,0,1),1)
-  fill.BackgroundColor3=telemetry.boosting and Color3.fromRGB(117,235,255) or Color3.fromRGB(91,166,251)
-  boostLabel.Text=fuel>0.01 and string.format("BOOST  %.1fs",fuel) or "BOOST EMPTY"
+  fill.BackgroundColor3=telemetry.boosting and Color3.fromRGB(117,235,255) or telemetry.recharging and Color3.fromRGB(115,231,158) or Color3.fromRGB(91,166,251)
+  local boostStatus=telemetry.recharging and "RECHARGING" or fuel>=Config.BoostDuration-0.01 and "BOOST READY"
+   or boostHeld and fuel<=0.01 and "RELEASE BOOST"
+   or not boostHeld and not telemetry.boosting and "GLIDE TO RECHARGE" or "BOOST"
+  boostLabel.Text=string.format("%s  %.1fs",boostStatus,fuel)
   boostButton.Text=telemetry.boosting and "BOOSTING" or "HOLD BOOST"
  end
 end)

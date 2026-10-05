@@ -24,6 +24,7 @@ end
 for parent,name,cls,path in [
  ("package","Config","ModuleScript","src/shared/Config.luau"),
  ("package","Flight","ModuleScript","src/shared/Flight.luau"),
+ ("package","FlightCamera","ModuleScript","src/shared/FlightCamera.luau"),
  ("package","Landscape","ModuleScript","src/shared/Landscape.luau"),
  ("package","WorldData","ModuleScript","src/shared/WorldData.luau"),
  ("package","Economy","ModuleScript","src/shared/Economy.luau"),

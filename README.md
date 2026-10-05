@@ -7,14 +7,17 @@ A Roblox paper-plane exploration prototype built with AI assistance for a softwa
 Press **F** to aim, move the mouse to aim the continuous green trajectory, then click or press **F** again to throw. The character stays on the plateau while a separate plane flies. Aiming supports every direction; the default throw angles slightly upward to clear the plateau.
 
 - Mouse: aim and steer.
-- Hold Space: boost using a finite 4.5-second supply.
+- Hold Space: spend boost stamina (4.5-second capacity).
+- Release boost and glide level/downward: recharge after 0.85 seconds. The bar turns green while recovering.
 - F: aim, throw, or end the run and bank gold.
 - Shift or Q: release/recapture the cursor.
 - R: end/reset the run.
 - Controller: left stick aims, A activates, B resets, R2 boosts.
 - Touch: drag to aim and hold boost. Device testing is pending.
 
-Climbing spends speed, prolonged climbing causes a stall and nose drop, and diving rebuilds speed. This is a tuned kinematic glider. Collect optional neon rings and distance gold to buy different plane types through **Planes**. Customize changes paper color; Explore lists regions.
+Climbing spends speed, prolonged climbing causes a stall and nose drop, and diving rebuilds speed. The starter loses energy sharply beyond a 12-degree climb; stronger types tolerate steeper climbs (up to a 28-degree comfort threshold on Kestrel). Above each type's air ceiling, additional drag and sink gradually make further climbing harder. Range comes from energy, drag, sink, and flying technique; there is no per-type distance cutoff. This is a tuned kinematic glider. Collect optional neon rings and distance gold to buy different plane types through **Planes**. Customize changes paper color; Explore lists regions.
+
+A throw briefly widens the camera to about 80 degrees and increases follow distance. It settles back to the normal 70-degree view. Active boost smoothly widens to 84 degrees; releasing boost returns to normal even while speed remains high.
 
 ## Plane progression
 
@@ -64,7 +67,8 @@ The installer builds the five aircraft and world from source. Terrain uses the `
 ## Source layout
 
 - `src/shared/Config.luau`: aircraft catalog, prices, flight bounds, audio, tuning.
-- `src/shared/Flight.luau`: gliding, stalls, boost, steering, swept ring crossing.
+- `src/shared/Flight.luau`: gliding, aircraft climb/altitude response, server-owned boost stamina, steering, swept ring crossing.
+- `src/shared/FlightCamera.luau`: deterministic throw and boost camera easing.
 - `src/shared/Landscape.luau`: islands, mountains, plateau, foothill passages.
 - `src/shared/WorldData.luau`: wildlife placement, reward routes, summit data, aircraft-specific thermals.
 - `src/shared/Economy.luau`: ownership, purchases, selection, legacy upgrade helpers.
@@ -73,7 +77,7 @@ The installer builds the five aircraft and world from source. Terrain uses the `
 - `src/client/FlightClient.client.luau`: camera, hangar, model selection, HUD, wind, streaks, pickup feedback, summit halos.
 - `tools/BuildPlaneModels.luau`: five reproducible folded-paper models.
 - `tools/BuildExplorationWorld.luau`: terrain, scenery, rings, wildlife.
-- `tests/Flight.spec.luau`: 59 assertions.
+- `tests/Flight.spec.luau`: 82 assertions.
 - `tests/World.spec.luau`: 444 assertions.
 
 ## Engineering decisions
@@ -90,7 +94,9 @@ Wind asset: 687874741. Pickup audio: [ding-ding stronger by The_Sink](https://cr
 
 ## Validation
 
-- 59 flight, pickup, economy, profile-normalization, and model assertions passed.
+- 82 flight, stamina, camera, pickup, economy, profile-normalization, and model assertions passed.
+- A controlled 24-degree climb stalled the starter at 3.18 seconds; Kestrel remained unstalled at four seconds.
+- Live camera samples reached 79.45 degrees on throw and 83.99 on boost, then returned to 70 on release. Server telemetry and the HUD both showed stamina recovery during a suitable glide.
 - 444 actual-scene geometry/layout assertions passed, including eight default throw directions.
 - Live purchase deducted Delta's real 550-gold price; repeat selection was free.
 - Held and server-launched models matched Delta; changing type during flight was rejected; Kestrel could be purchased after landing.
@@ -108,6 +114,6 @@ Pending: the distant-terrain Play rendering issue, full flights to new summits, 
 
 ## Git and portfolio
 
-The requested checkpoint is **`3cf87cc` — Build mountain discovery routes and document engineering lessons**. Earlier snapshots are `5fd61e2` and `d3fe27b`. The subsequent radial-world and plane-hangar work remains uncommitted for review.
+The latest requested checkpoint is **`b4a7299` — Add aircraft hangar and surround launch with exploration landmarks**. Earlier snapshots include `3cf87cc`, `5fd61e2`, and `d3fe27b`. Rechargeable stamina, aircraft flight limits, and throw/boost camera changes remain uncommitted for user testing.
 
 Describe AI assistance accurately. Be prepared to explain aircraft stats, flight energy, boost budgeting, input validation, server-owned purchases, swept collection, profile normalization, and the limits of the current validation.

@@ -214,7 +214,7 @@ RunService.Heartbeat:Connect(function(dt)
     s.notify=0;collect(player,s,s.ringPosition,pos);s.ringPosition=pos
     prefetch(player,pos+Flight.frame(s.state).LookVector*650-Vector3.new(0,90,0))
     send(player,"Telemetry",{gold=s.gold+math.floor(s.distance/40),rings=s.count,distance=s.distance,
-     speed=s.state.speed,stalled=s.state.stalled,lift=lift,boostRemaining=s.state.boostRemaining,boosting=s.state.boosting,region=World.region(pos),altitude=pos.Y,
+     speed=s.state.speed,stalled=s.state.stalled,lift=lift,boostRemaining=s.state.boostRemaining,boosting=s.state.boosting,recharging=s.state.recharging,region=World.region(pos),altitude=pos.Y,
      pitch=s.state.pitch,yaw=s.state.yaw,position=pos})
    end
   end
