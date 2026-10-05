@@ -24,7 +24,7 @@ end
 local function send(player,kind,data) if player.Parent then remote:FireClient(player,kind,data) end end
 local function sync(player,message)
  local p=profiles[player]
- if p then send(player,"Profile",{gold=p.gold,levels=p.levels,color=p.color,best=p.bestDistance,saveMode=saveModes[player],message=message}) end
+ if p then send(player,"Profile",{gold=p.gold,levels=p.levels,planeId=p.planeId,ownedPlanes=p.ownedPlanes,color=p.color,best=p.bestDistance,saveMode=saveModes[player],message=message}) end
 end
 local function restore(player)
  aiming[player]=nil
@@ -83,13 +83,13 @@ local function launch(player,yaw,pitch)
  local c=player.Character;local h=c and c:FindFirstChildOfClass("Humanoid")
  if not h or h.Health<=0 then return end
  cooldowns[player]=os.clock();aiming[player]=nil;c:SetAttribute("PaperThrowPose","Throwing")
- local model=package.Plane:Clone();model.Name="Plane_"..player.UserId;model:ScaleTo(0.65)
+ local model=package.PlaneModels[profiles[player].planeId]:Clone();model.Name="Plane_"..player.UserId;model:ScaleTo(0.65)
  model.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
  for _,part in model:GetDescendants() do
-  if part:IsA("BasePart") then part.Color=colors[profiles[player].color] end
+  if part:IsA("BasePart") then part.Color=colors[profiles[player].color]:Lerp(Color3.fromRGB(105,128,145),part:GetAttribute("FoldShade") or 0) end
  end
  model.Parent=planes
- local stats=Flight.stats(profiles[player].levels)
+ local stats=Flight.stats(profiles[player].levels,profiles[player].planeId)
  local state=Flight.new(Config.Launch,yaw,pitch,stats)
  model:PivotTo(Flight.frame(state))
  if workspace.StreamingEnabled then player:AddReplicationFocus(model.PrimaryPart) end
@@ -97,7 +97,7 @@ local function launch(player,yaw,pitch)
  params.FilterDescendantsInstances={workspace.PaperFlightWorld,workspace.Terrain}
  sessions[player]={model=model,state=state,stats=stats,params=params,input=Vector2.zero,boostHeld=false,
   elapsed=0,countdown=Config.ThrowDelay,lastInput=os.clock(),lastPacket=0,notify=0,
-  gold=0,count=0,collected={},distance=0,ringPosition=Config.Launch}
+  airPlaneId=profiles[player].planeId,gold=0,count=0,collected={},distance=0,ringPosition=Config.Launch}
  send(player,"Thrown",{seconds=Config.ThrowDelay,yaw=yaw,pitch=pitch})
 end
 local function collect(player,s,a,b)
@@ -126,9 +126,9 @@ remote.OnServerEvent:Connect(function(player,action,x,y,boost)
  elseif action=="Aim" then prepare(player)
  elseif action=="Launch" then launch(player,x,y)
  elseif action=="Reset" then stop(player,"Run banked. Ready for another throw.")
- elseif action=="Upgrade" then
+ elseif action=="Plane" then
   if sessions[player] or not profiles[player] or typeof(x)~="string" then return end
-  local _,message=Economy.buy(profiles[player],x);sync(player,message)
+  local _,message=Economy.selectPlane(profiles[player],x);sync(player,message)
  elseif action=="Color" then
   if profiles[player] and not sessions[player] and finiteBound(x,4) and x%1==0 and x>=1 then profiles[player].color=x;sync(player) end
  elseif action=="Input" then
@@ -199,7 +199,7 @@ RunService.Heartbeat:Connect(function(dt)
    s.elapsed+=fixed
    if os.clock()-s.lastInput>0.5 then s.input=Vector2.zero;s.boostHeld=false end
    local old=s.state.position
-   local lift=World.lift(old)
+   local lift=World.lift(old,s.airPlaneId)
    s.state=Flight.step(s.state,s.input,fixed,s.stats,lift,s.boostHeld)
    local pos=s.state.position
    local hit=workspace:Raycast(old,pos-old,s.params)

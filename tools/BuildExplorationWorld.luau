@@ -56,15 +56,15 @@ end
 local terrain=workspace.Terrain
 local backups=SS:FindFirstChild("PaperFlightBackups") or Instance.new("Folder")
 backups.Name="PaperFlightBackups";backups.Parent=SS
-if not terrain:GetAttribute("PaperArchipelagoV4") then
+if not terrain:GetAttribute("PaperArchipelagoV5") then
  -- Previous V2 terrain is reproducible from commit 5fd61e2; preserve the existing snapshot.
  -- Only clear the authored world bounds, in bounded operations.
- for x=-5376,4864-1,512 do for z=-8960,2816-1,512 do for y=-32,2304-1,512 do
-  local size=V(math.min(512,4864-x),math.min(512,2304-y),math.min(512,2816-z))
+ for x=-5632,4864-1,512 do for z=-8960,5632-1,512 do for y=-32,2304-1,512 do
+  local size=V(math.min(512,4864-x),math.min(512,2304-y),math.min(512,5632-z))
   terrain:FillBlock(CF(V(x,y,z)+size/2),size,Enum.Material.Air)
  end end;task.wait() end
  local chunk=256;local cells=64;local completed=0
- for x0=-5376,4608,chunk do for z0=-8960,2560,chunk do
+ for x0=-5632,4352,chunk do for z0=-5376,5376,chunk do
   local heights,surfaces={},{};local low,high=math.huge,-math.huge
   for ix=1,cells do
    heights[ix]={};surfaces[ix]={}
@@ -74,7 +74,7 @@ if not terrain:GetAttribute("PaperArchipelagoV4") then
     local h,rock=Landscape.height(x,z)
     heights[ix][iz]=h;low=math.min(low,h);high=math.max(high,h)
     local patch=math.noise(x/140,z/160)>0.28
-    surfaces[ix][iz]=h<17 and Enum.Material.Sand or (rock or patch) and Enum.Material.Rock or Enum.Material.Grass
+    surfaces[ix][iz]=h<17 and Enum.Material.Sand or (rock or patch) and Enum.Material.Rock or Enum.Material.LeafyGrass
    end
   end
   if high>-12 then
@@ -100,7 +100,7 @@ if not terrain:GetAttribute("PaperArchipelagoV4") then
    end
    terrain:WriteVoxels(Region3.new(V(x0,bottom,z0),V(x0+chunk,top,z0+chunk)),4,materials,occupancy)
   end
-  completed+=1;terrain:SetAttribute("PaperBuildProgress",completed.."/1840 terrain tiles")
+  completed+=1;terrain:SetAttribute("PaperBuildProgress",completed.."/1720 terrain tiles")
   if completed%8==0 then task.wait() end
  end end
  -- Carve actual open corridors through terrain, including both ends of each mountain.
@@ -109,16 +109,17 @@ if not terrain:GetAttribute("PaperArchipelagoV4") then
    terrain:FillBall(tunnel.center+tunnel.normal*offset,tunnel.radius,Enum.Material.Air)
   end
  end
- terrain:SetAttribute("PaperArchipelagoV4",true)
+ terrain:SetAttribute("PaperArchipelagoV5",true)
 end
-terrain:SetMaterialColor(Enum.Material.Grass,Color3.fromRGB(73,143,105))
+terrain:SetMaterialColor(Enum.Material.LeafyGrass,Color3.fromRGB(73,143,105))
 terrain:SetMaterialColor(Enum.Material.Rock,Color3.fromRGB(112,116,125))
 terrain:SetMaterialColor(Enum.Material.Sand,Color3.fromRGB(214,197,160))
 -- Flat water and smooth grass match the reference's broad, readable surfaces.
-pcall(function() terrain.Decoration=false end)
+-- LeafyGrass keeps a meadow surface without the animated Grass blades.
+-- Decoration is not scriptable; do not hide a failed property write in pcall.
 local sea=model("Sea");sea.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
 -- Roblox caps individual Part dimensions, so use aligned tiles for the full ocean.
-for x=-5000,5000,2000 do for z=-9800,4200,2000 do
+for x=-6000,6000,2000 do for z=-6000,6000,2000 do
  local water=part(sea,"Water",V(2000,12,2000),CF(x,-7,z),Color3.fromRGB(101,151,186),Enum.Material.SmoothPlastic)
  water.Reflectance=0.08
 end end
@@ -172,7 +173,7 @@ local function treeAt(x,z,index)
  end
 end
 for i=1,420 do
- treeAt(rng:NextNumber(-4900,4500),rng:NextNumber(-8550,2450),i)
+ treeAt(rng:NextNumber(-5300,4250),rng:NextNumber(-5100,5300),i)
 end
 -- A few nearby groves keep the introductory valley visually grounded.
 for i=1,60 do treeAt(rng:NextNumber(-1250,600),rng:NextNumber(-1750,150),i) end
@@ -185,7 +186,7 @@ end
 -- Persistent coarse silhouettes make the whole archipelago readable beyond streaming range.
 -- Detailed terrain occludes these lower surfaces nearby; the client fades close proxy tiles.
 local vista=model("DistantLandscape");vista.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
-for x=-5376,4864-256,256 do for z=-8960,2816-256,256 do
+for x=-5632,4608-256,256 do for z=-5376,5632-256,256 do
  local centerY,_,isMountain=Landscape.height(x+128,z+128)
  if isMountain and centerY>170 then
   local tile=model("VistaTile",vista);tile:SetAttribute("Center",V(x+128,centerY,z+128))
@@ -197,7 +198,7 @@ for x=-5376,4864-256,256 do for z=-8960,2816-256,256 do
   local a,b,c,d=point(x,z),point(x+256,z),point(x+256,z+256),point(x,z+256)
   local _,rock=Landscape.height(x+128,z+128)
   quad(tile,"DistantSurface",a,b,c,d,rock and Color3.fromRGB(105,113,123) or Color3.fromRGB(73,137,101))
-  for _,p in tile:GetDescendants() do if p:IsA("BasePart") then decor(p);p.CastShadow=false;p.Transparency=1 end end
+  for _,p in tile:GetDescendants() do if p:IsA("BasePart") then decor(p);p.CastShadow=false;p.Transparency=0 end end
  end
 end end
 local deck=model("LaunchCliff")
@@ -211,7 +212,7 @@ for _,x in {-577,-523} do
  local crate=part(deck,"SupplyCrate",V(11,11,11),CF(x,362.5,612),Color3.fromRGB(111,83,53),Enum.Material.WoodPlanks)
  for _,off in {-4.6,4.6} do part(deck,"CrateBand",V(0.7,11.2,11.2),crate.CFrame*CF(off,0,0),Color3.fromRGB(153,121,76),Enum.Material.Wood) end
 end
-local sign=part(deck,"Instructions",V(35,12,1),CF(-550,374,638),Color3.fromRGB(42,54,61),Enum.Material.Wood)
+local sign=part(deck,"Instructions",V(35,12,1),CF(-550,363,638),Color3.fromRGB(42,54,61),Enum.Material.Wood)
 local surface=Instance.new("SurfaceGui");surface.Face=Enum.NormalId.Front;surface.PixelsPerStud=35;surface.Parent=sign
 local text=Instance.new("TextLabel");text.BackgroundTransparency=1;text.Size=UDim2.fromScale(1,1);text.Font=Enum.Font.GothamBold;text.TextSize=55
 text.Text="PAPER SKIES\nCollect gold. Catch rising air.\nF TO LAUNCH";text.TextColor3=Color3.fromRGB(239,238,219);text.Parent=surface
@@ -220,6 +221,23 @@ for _,ring in World.Rings do
  local m=model("Ring"..ring.id,rings);m:SetAttribute("RingId",ring.id);m:SetAttribute("Trail",ring.group)
  m.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
  local cf=CFrame.lookAt(ring.position,ring.position+ring.normal)
+ if ring.group:find("^Summit ") then
+  -- Only seven summit rewards stay loaded; the halo reveals their small openings at a distance.
+  m.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
+  local anchor=decor(part(m,"SummitBeaconAnchor",V(0.1,0.1,0.1),CF(ring.position),ring.color))
+  anchor.Transparency=1
+  local beacon=Instance.new("BillboardGui");beacon.Name="SummitBeacon";beacon.Adornee=anchor
+  beacon.Size=UDim2.fromOffset(28,28);beacon.AlwaysOnTop=false;beacon.LightInfluence=0
+  beacon.MaxDistance=12000;beacon.Enabled=false;beacon.Parent=m
+  for _,layer in {{1,0.7,5},{0.75,0,2.5}} do
+   local circle=Instance.new("Frame");circle.AnchorPoint=Vector2.new(0.5,0.5)
+   circle.Position=UDim2.fromScale(0.5,0.5);circle.Size=UDim2.fromScale(layer[1],layer[1])
+   circle.BackgroundTransparency=1;circle.Parent=beacon
+   local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(1,0);corner.Parent=circle
+   local stroke=Instance.new("UIStroke");stroke.Color=ring.color;stroke.Thickness=layer[3]
+   stroke.Transparency=layer[2];stroke.Parent=circle
+  end
+ end
  -- Thin, open neon hoops: the middle contains no physical or invisible collision part.
  for j=1,48 do
   local a=(j-1)/48*math.pi*2;local b=j/48*math.pi*2

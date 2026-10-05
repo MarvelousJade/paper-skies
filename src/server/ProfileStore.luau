@@ -21,8 +21,13 @@ local function sanitize(raw)
  for key,definition in Config.Upgrades do
   p.levels[key]=integer(typeof(raw.levels)=="table" and raw.levels[key] or 0,definition.maxLevel)
  end
+ for _,id in Config.PlaneOrder do
+  if typeof(raw.ownedPlanes)=="table" and raw.ownedPlanes[id]==true then p.ownedPlanes[id]=true end
+ end
+ if typeof(raw.planeId)=="string" and p.ownedPlanes[raw.planeId] then p.planeId=raw.planeId end
  return p
 end
+Store.sanitize=sanitize -- Pure profile normalization is exposed for migration tests.
 function Store.load(player)
  if not dataStore then
   records[player]={profile=Economy.new(),saving=false}
@@ -32,7 +37,7 @@ function Store.load(player)
   return dataStore:UpdateAsync(tostring(player.UserId),function(old)
    old=typeof(old)=="table" and old or {}
    if old.owner and old.owner~=owner and (old.lease or 0)>os.time() then return nil end
-   return {profile=sanitize(old.profile),owner=owner,lease=os.time()+180,schema=1}
+   return {profile=sanitize(old.profile),owner=owner,lease=os.time()+180,schema=2}
   end)
  end)
  if not ok or not value or value.owner~=owner then return nil,"Could not load progress. Please reconnect." end
@@ -55,7 +60,7 @@ function Store.save(player,release)
    return dataStore:UpdateAsync(tostring(player.UserId),function(old)
     if typeof(old)~="table" or old.owner~=owner then return nil end
     return {profile=snapshot,owner=not release and owner or nil,
-     lease=not release and os.time()+180 or 0,schema=1}
+     lease=not release and os.time()+180 or 0,schema=2}
    end)
   end)
   if ok and result then success=true;break end

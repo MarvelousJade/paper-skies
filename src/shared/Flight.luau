@@ -3,10 +3,10 @@ local Config = require(script.Parent.Config)
 export type Stats = {launchSpeed:number, drag:number, sink:number, turnRate:number}
 export type State = {position:Vector3, yaw:number, pitch:number, speed:number, stalled:boolean, bank:number, boostRemaining:number?, boosting:boolean?}
 local Flight = {}
-function Flight.stats(levels: {[string]:number}?): Stats
- local l=levels or {}
- return {launchSpeed=165+(l.Launch or 0)*6, drag=0.000165*(1-0.085*(l.Glide or 0)),
-  sink=2.2*(1-0.07*(l.Glide or 0)), turnRate=Config.TurnRate*(1+0.08*(l.Handling or 0))}
+function Flight.stats(levels: {[string]:number}?,planeId:string?): Stats
+ local l=levels or {};local plane=Config.Planes[planeId or "Dart"] or Config.Planes.Dart
+ return {launchSpeed=plane.launchSpeed+(l.Launch or 0)*6, drag=plane.drag*(1-0.085*(l.Glide or 0)),
+  sink=plane.sink*(1-0.07*(l.Glide or 0)), turnRate=Config.TurnRate*plane.handling*(1+0.08*(l.Handling or 0))}
 end
 function Flight.new(position:Vector3, yaw:number, pitch:number, stats:Stats): State
  return {position=position,yaw=yaw,pitch=pitch,speed=stats.launchSpeed,stalled=false,bank=0,boostRemaining=Config.BoostDuration,boosting=false}

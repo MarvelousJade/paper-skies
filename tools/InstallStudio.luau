@@ -18,6 +18,8 @@ Config.ThrowStand = Vector3.new(-550, 360, 534)
 Config.MouseSensitivity = 0.0025
 Config.MaxAimYaw = math.pi
 Config.ThrowDelay = 0.4
+Config.AimPitch = math.rad(10)
+Config.ThermalFadeHeight = 220
 Config.MaxPitch = math.rad(48)
 Config.MinPitch = math.rad(-65)
 Config.TurnRate = math.rad(52)
@@ -27,8 +29,8 @@ Config.StallSpeed = 54
 Config.RecoverySpeed = 76
 Config.TrimPitch = math.rad(-6)
 Config.MaxDuration = 240
-Config.WorldMin = Vector3.new(-5600,-20,-9300)
-Config.WorldMax = Vector3.new(5100,2600,3200)
+Config.WorldMin = Vector3.new(-5900,-20,-5600)
+Config.WorldMax = Vector3.new(4900,2800,5900)
 Config.RingValue = 10
 Config.CollectionRadius = 12
 Config.RingMargin = 3.6
@@ -37,8 +39,18 @@ Config.BoostDuration = 4.5
 Config.BoostAcceleration = 65
 Config.MaxSpeed = 250
 Config.WindSoundId = "rbxassetid://687874741"
+-- Costs and performance are game balance values, not claims about real folded designs.
+Config.PlaneOrder={"Dart","Lockwing","Delta","Sailwing","Kestrel"}
+Config.Planes={
+ Dart={name="Paper Dart",price=0,launchSpeed=165,drag=0.000165,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,rank=1},
+ Lockwing={name="Lockwing",price=180,launchSpeed=172,drag=0.00015,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,rank=2},
+ Delta={name="Delta",price=550,launchSpeed=180,drag=0.000135,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,rank=3},
+ Sailwing={name="Sailwing",price=1400,launchSpeed=188,drag=0.00012,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,rank=4},
+ Kestrel={name="Kestrel",price=3200,launchSpeed=198,drag=0.000105,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,rank=5},
+}
+-- Retained for existing profile bonuses; new purchases use named plane types.
 Config.Upgrades = {
- Glide = {title="Better folds", description="Less drag and a slower descent", baseCost=50, maxLevel=5},
+ Glide = {title="Better folds", description="Less drag and access to higher rising air", baseCost=50, maxLevel=5},
  Launch = {title="Stronger throw", description="More starting speed and height potential", baseCost=60, maxLevel=5},
  Handling = {title="Balanced wings", description="Faster response when turning", baseCost=40, maxLevel=5},
 }
@@ -54,10 +66,10 @@ local Config = require(script.Parent.Config)
 export type Stats = {launchSpeed:number, drag:number, sink:number, turnRate:number}
 export type State = {position:Vector3, yaw:number, pitch:number, speed:number, stalled:boolean, bank:number, boostRemaining:number?, boosting:boolean?}
 local Flight = {}
-function Flight.stats(levels: {[string]:number}?): Stats
- local l=levels or {}
- return {launchSpeed=165+(l.Launch or 0)*6, drag=0.000165*(1-0.085*(l.Glide or 0)),
-  sink=2.2*(1-0.07*(l.Glide or 0)), turnRate=Config.TurnRate*(1+0.08*(l.Handling or 0))}
+function Flight.stats(levels: {[string]:number}?,planeId:string?): Stats
+ local l=levels or {};local plane=Config.Planes[planeId or "Dart"] or Config.Planes.Dart
+ return {launchSpeed=plane.launchSpeed+(l.Launch or 0)*6, drag=plane.drag*(1-0.085*(l.Glide or 0)),
+  sink=plane.sink*(1-0.07*(l.Glide or 0)), turnRate=Config.TurnRate*plane.handling*(1+0.08*(l.Handling or 0))}
 end
 function Flight.new(position:Vector3, yaw:number, pitch:number, stats:Stats): State
  return {position=position,yaw=yaw,pitch=pitch,speed=stats.launchSpeed,stalled=false,bank=0,boostRemaining=Config.BoostDuration,boosting=false}
@@ -122,23 +134,21 @@ write(package,"Landscape","ModuleScript",[=[
 -- Low-frequency meadow relief remains separate from broken mountain surfaces.
 local Landscape={}
 Landscape.Islands={
- {x=-350,z=-950,rx=2250,rz=2650},{x=1050,z=-4050,rx=2100,rz=2050},
- {x=-2950,z=-3500,rx=980,rz=1200},{x=3000,z=-1350,rx=950,rz=1350},
- {x=-950,z=-6500,rx=1380,rz=800},
- -- Broad lowland extensions on the far sides of the mountains retain soft coastal edges.
- {x=-2600,z=-1900,rx=1300,rz=1500},{x=2700,z=-2350,rx=1400,rz=1700},
- {x=-700,z=-5300,rx=1500,rz=1500},{x=2700,z=-6300,rx=1450,rz=1750},
- {x=-3900,z=-5000,rx=1100,rz=1400},{x=-1000,z=-7600,rx=1500,rz=1150},
- {x=2250,z=1450,rx=1500,rz=1200},
+ -- A central island and seven outer lobes surround the launch plateau.
+ {x=-550,z=534,rx=2200,rz=2100},
+ {x=-2450,z=-700,rx=1850,rz=1800},{x=1450,z=-1350,rx=1800,rz=1900},
+ {x=2550,z=1350,rx=1900,rz=1750},{x=650,z=3600,rx=1850,rz=1850},
+ {x=-1850,z=3150,rx=1750,rz=1750},{x=-3850,z=1000,rx=1600,rz=1750},
+ {x=-550,z=-3250,rx=1850,rz=1750},
 }
 Landscape.Peaks={
- {x=-1710,z=-850,rx=650,rz=950,h=1550,style="ridge",angle=-0.22,seed=11},
- {x=1530,z=-1150,rx=640,rz=1050,h=880,style="massif",angle=0.3,seed=23},
- {x=-650,z=-4050,rx=690,rz=890,h=620,style="table",angle=-0.45,seed=37},
- {x=2200,z=-4820,rx=650,rz=900,h=1900,style="spire",angle=0.2,seed=51},
- {x=-2980,z=-3650,rx=560,rz=650,h=430,style="broken",angle=0.65,seed=67},
- {x=-800,z=-6520,rx=610,rz=520,h=730,style="massif",angle=-0.3,seed=79},
- {x=980,z=780,rx=560,rz=660,h=560,style="broken",angle=-0.6,seed=91},
+ {x=-2450,z=-700,rx=650,rz=950,h=1550,style="ridge",angle=-0.22,seed=11},
+ {x=1450,z=-1350,rx=640,rz=1050,h=880,style="massif",angle=0.3,seed=23},
+ {x=2550,z=1350,rx=690,rz=890,h=620,style="table",angle=-0.45,seed=37},
+ {x=650,z=3600,rx=650,rz=900,h=1900,style="spire",angle=0.2,seed=51},
+ {x=-1850,z=3150,rx=560,rz=650,h=430,style="broken",angle=0.65,seed=67},
+ {x=-3850,z=1000,rx=610,rz=520,h=730,style="massif",angle=-0.3,seed=79},
+ {x=-550,z=-3250,rx=560,rz=660,h=560,style="broken",angle=-0.6,seed=91},
 }
 function Landscape.baseHeight(x:number,z:number): number
  local h=-30
@@ -148,7 +158,7 @@ function Landscape.baseHeight(x:number,z:number): number
   local rolling=61+math.noise(x/1400,z/1550)*28
   h=math.max(h,-24+coast*(rolling+24))
  end
- local lake=math.sqrt(((x-90)/720)^2+((z+2120)/950)^2)
+ local lake=math.sqrt(((x-1250)/520)^2+((z-450)/600)^2)
  if lake<1.18 then
   local t=math.clamp((lake-0.82)/0.36,0,1)
   h=math.min(h,-22+t*t*(3-2*t)*115)
@@ -157,10 +167,10 @@ function Landscape.baseHeight(x:number,z:number): number
 end
 -- Low foothill buttresses have ground-level openings, not bores through the main summits.
 Landscape.Spurs={
- {name="Fern Arch",x=-980,z=-1100,rx=145,rz=150,h=105,normal=Vector3.zAxis},
- {name="East Foothill Hollow",x=825,z=-700,rx=145,rz=160,h=130,normal=Vector3.zAxis},
- {name="Western Ledge",x=-1450,z=-3850,rx=155,rz=145,h=95,normal=Vector3.xAxis},
- {name="Highland Root Arch",x=1450,z=-5100,rx=155,rz=145,h=115,normal=Vector3.zAxis},
+ {name="Fern Arch",x=-1550,z=-1100,rx=145,rz=150,h=105,normal=Vector3.zAxis},
+ {name="East Foothill Hollow",x=950,z=-550,rx=145,rz=160,h=130,normal=Vector3.zAxis},
+ {name="Western Ledge",x=-1250,z=2200,rx=155,rz=145,h=95,normal=Vector3.xAxis},
+ {name="Highland Root Arch",x=1250,z=2750,rx=155,rz=145,h=115,normal=Vector3.zAxis},
 }
 Landscape.Tunnels={}
 for _,spur in Landscape.Spurs do
@@ -211,7 +221,7 @@ function Landscape.height(x:number,z:number): (number,boolean,boolean)
   end
  end
  -- Broad 520 x 540 summit with angular cliff shoulders. No spherical launch mound.
- local dx=math.abs((x+550)/260);local dz=math.abs((z-805)/270)
+ local dx=math.abs((x+550)/260);local dz=math.abs((z-534)/270)
  local mesa=math.max(dx,dz)
  if mesa<1.75 then
   local slope=math.clamp((1.75-mesa)/0.75,0,1)
@@ -226,22 +236,23 @@ return Landscape
 write(package,"WorldData","ModuleScript",[=[
 --!strict
 local Landscape=require(script.Parent.Landscape)
+local Config=require(script.Parent.Config)
 local World={}
 World.Regions={
- {name="Coastal Cliffs",center=Vector3.new(-550,0,400),color=Color3.fromRGB(85,153,95)},
- {name="Paperwood Valley",center=Vector3.new(-700,0,-1300),color=Color3.fromRGB(81,150,108)},
- {name="Azure Lagoon",center=Vector3.new(350,0,-2300),color=Color3.fromRGB(96,198,232)},
- {name="Cloudspire Highlands",center=Vector3.new(1300,0,-4400),color=Color3.fromRGB(165,157,231)},
- {name="Western Isles",center=Vector3.new(-2950,0,-3500),color=Color3.fromRGB(228,177,98)},
- {name="Northern Reach",center=Vector3.new(-850,0,-6450),color=Color3.fromRGB(195,223,228)},
+ {name="Coastal Cliffs",center=Vector3.new(-550,0,534),color=Color3.fromRGB(85,153,95)},
+ {name="Paperwood Valley",center=Vector3.new(-2450,0,-700),color=Color3.fromRGB(81,150,108)},
+ {name="Azure Lagoon",center=Vector3.new(2000,0,650),color=Color3.fromRGB(96,198,232)},
+ {name="Cloudspire Highlands",center=Vector3.new(650,0,3600),color=Color3.fromRGB(165,157,231)},
+ {name="Western Isles",center=Vector3.new(-3100,0,2200),color=Color3.fromRGB(228,177,98)},
+ {name="Northern Reach",center=Vector3.new(-550,0,-3250),color=Color3.fromRGB(195,223,228)},
 }
 World.Thermals={
- {center=Vector3.new(-550,0,-600),radius=220,height=750,strength=34},
- {center=Vector3.new(700,0,-1850),radius=250,height=850,strength=38},
- {center=Vector3.new(-1400,0,-2800),radius=260,height=950,strength=40},
- {center=Vector3.new(850,0,-4100),radius=280,height=1150,strength=42},
- {center=Vector3.new(-2200,0,-3700),radius=280,height=1000,strength=42},
- {center=Vector3.new(-750,0,-5850),radius=300,height=1200,strength=44},
+ {center=Vector3.new(-550,0,-700),radius=260,height=900,strength=13},
+ {center=Vector3.new(600,0,-400),radius=270,height=950,strength=14},
+ {center=Vector3.new(900,0,1950),radius=280,height=1100,strength=14},
+ {center=Vector3.new(-600,0,2450),radius=300,height=1200,strength=15},
+ {center=Vector3.new(-2200,0,1350),radius=280,height=1000,strength=14},
+ {center=Vector3.new(-1850,0,-2100),radius=300,height=1200,strength=15},
 }
 -- Two visible lowland encounters; the remaining wildlife is hidden behind mountain silhouettes.
 -- Seeded rejection sampling keeps every animal off slopes and makes discovery placement reproducible.
@@ -273,7 +284,7 @@ local function hiddenBehind(x,z,y)
 end
 for attempt=1,60000 do
  if #World.Animals>=15 then break end
- local x=random:NextNumber(-4700,4100);local z=random:NextNumber(-8400,2300)
+ local x=random:NextNumber(-5000,4100);local z=random:NextNumber(-4650,5000)
  local y,_,mountain=Landscape.height(x,z)
  if y<25 or y>110 or mountain or (Vector2.new(x+550,z-534)).Magnitude<1050 then continue end
  local behind
@@ -307,16 +318,16 @@ local function add(position,normal,radius,color,value,group)
 end
 -- Short optional trails are separated by open space. They reward exploration, not ordered checkpoints.
 local routes={
- {center=Vector3.new(-1400,280,-1700),radius=270,start=0.2,count=5},
- {center=Vector3.new(650,240,-1800),radius=240,start=-1.3,count=4},
- {center=Vector3.new(-250,210,-2900),radius=300,start=0.6,count=5},
- {center=Vector3.new(1300,360,-2900),radius=240,start=2.5,count=4},
- {center=Vector3.new(-2750,310,-2850),radius=280,start=-0.5,count=5},
- {center=Vector3.new(1200,400,-4150),radius=310,start=1.1,count=4},
- {center=Vector3.new(-150,360,-5180),radius=250,start=0.4,count=5},
- {center=Vector3.new(-1550,290,-6250),radius=230,start=1.8,count=4},
- {center=Vector3.new(2970,300,-1750),radius=270,start=-1.6,count=5},
- {center=Vector3.new(-2860,230,-4500),radius=220,start=2.1,count=4},
+ {center=Vector3.new(-1700,230,-1450),radius=270,start=0.2,count=5},
+ {center=Vector3.new(400,210,-1650),radius=240,start=-1.3,count=4},
+ {center=Vector3.new(-50,190,-2650),radius=300,start=0.6,count=5},
+ {center=Vector3.new(2000,210,-500),radius=240,start=2.5,count=4},
+ {center=Vector3.new(2200,240,2400),radius=280,start=-0.5,count=5},
+ {center=Vector3.new(500,240,2250),radius=310,start=1.1,count=4},
+ {center=Vector3.new(-850,210,3600),radius=250,start=0.4,count=5},
+ {center=Vector3.new(-2500,200,2300),radius=230,start=1.8,count=4},
+ {center=Vector3.new(-3200,230,0),radius=270,start=-1.6,count=5},
+ {center=Vector3.new(-2700,210,-1750),radius=220,start=2.1,count=4},
 }
 for group,route in routes do
  local points={};local raise=0
@@ -360,16 +371,20 @@ for index,peak in Landscape.Peaks do
  local towardLaunch=Vector3.new(-550-peak.x,0,534-peak.z).Unit
  local width=math.max(peak.rx,peak.rz)
  table.insert(World.Thermals,{center=Vector3.new(peak.x,0,peak.z)+towardLaunch*width*0.55,
-  radius=width*0.85,height=center.Y+180,strength=52})
+  radius=width*0.85,height=center.Y+260,strength=18})
  table.insert(World.Summits,{position=top,ringPosition=center,peak=index})
  add(center,normal,6,palette[(index+2)%#palette+1],60,"Summit "..index)
 end
-function World.lift(position:Vector3): number
+function World.lift(position:Vector3,planeId:string?): number
+ -- Aircraft attributes change usable rising air; there is no hard positional ceiling.
+ local plane=Config.Planes[planeId or "Dart"] or Config.Planes.Dart
+ local altitudeFade=math.clamp((plane.airCeiling-position.Y)/Config.ThermalFadeHeight,0,1)
+ local efficiency=plane.thermalEfficiency
  local value=0
  for _,zone in World.Thermals do
   local distance=Vector2.new(position.X-zone.center.X,position.Z-zone.center.Z).Magnitude
   if distance<zone.radius and position.Y>20 and position.Y<zone.height then
-   value=math.max(value,zone.strength*(1-(distance/zone.radius)^2))
+   value=math.max(value,zone.strength*(1-(distance/zone.radius)^2)*altitudeFade*efficiency)
   end
  end
  return value
@@ -388,9 +403,9 @@ write(package,"Economy","ModuleScript",[=[
 --!strict
 local Config=require(script.Parent.Config)
 local Economy={}
-export type Profile={gold:number,levels:{[string]:number},color:number,bestDistance:number}
+export type Profile={gold:number,levels:{[string]:number},color:number,bestDistance:number,planeId:string,ownedPlanes:{[string]:boolean}}
 function Economy.new(): Profile
- return {gold=0,levels={Glide=0,Launch=0,Handling=0},color=1,bestDistance=0}
+ return {gold=0,levels={Glide=0,Launch=0,Handling=0},color=1,bestDistance=0,planeId="Dart",ownedPlanes={Dart=true}}
 end
 function Economy.cost(key:string,level:number):number
  return math.floor(Config.Upgrades[key].baseCost*1.65^level)
@@ -404,6 +419,15 @@ function Economy.buy(profile:Profile,key:string):(boolean,string)
  if profile.gold<price then return false,"Collect more gold first" end
  profile.gold-=price;profile.levels[key]+=1
  return true,upgrade.title.." upgraded!"
+end
+-- One transaction buys and equips; choosing an owned model never charges twice.
+function Economy.selectPlane(profile:Profile,id:string):(boolean,string)
+ local plane=Config.Planes[id]
+ if not plane then return false,"Unknown plane" end
+ if profile.ownedPlanes[id] then profile.planeId=id;return true,plane.name.." equipped!" end
+ if profile.gold<plane.price then return false,"Collect more gold for "..plane.name end
+ profile.gold-=plane.price;profile.ownedPlanes[id]=true;profile.planeId=id
+ return true,plane.name.." unlocked!"
 end
 return Economy
 ]=])
@@ -431,8 +455,13 @@ local function sanitize(raw)
  for key,definition in Config.Upgrades do
   p.levels[key]=integer(typeof(raw.levels)=="table" and raw.levels[key] or 0,definition.maxLevel)
  end
+ for _,id in Config.PlaneOrder do
+  if typeof(raw.ownedPlanes)=="table" and raw.ownedPlanes[id]==true then p.ownedPlanes[id]=true end
+ end
+ if typeof(raw.planeId)=="string" and p.ownedPlanes[raw.planeId] then p.planeId=raw.planeId end
  return p
 end
+Store.sanitize=sanitize -- Pure profile normalization is exposed for migration tests.
 function Store.load(player)
  if not dataStore then
   records[player]={profile=Economy.new(),saving=false}
@@ -442,7 +471,7 @@ function Store.load(player)
   return dataStore:UpdateAsync(tostring(player.UserId),function(old)
    old=typeof(old)=="table" and old or {}
    if old.owner and old.owner~=owner and (old.lease or 0)>os.time() then return nil end
-   return {profile=sanitize(old.profile),owner=owner,lease=os.time()+180,schema=1}
+   return {profile=sanitize(old.profile),owner=owner,lease=os.time()+180,schema=2}
   end)
  end)
  if not ok or not value or value.owner~=owner then return nil,"Could not load progress. Please reconnect." end
@@ -465,7 +494,7 @@ function Store.save(player,release)
    return dataStore:UpdateAsync(tostring(player.UserId),function(old)
     if typeof(old)~="table" or old.owner~=owner then return nil end
     return {profile=snapshot,owner=not release and owner or nil,
-     lease=not release and os.time()+180 or 0,schema=1}
+     lease=not release and os.time()+180 or 0,schema=2}
    end)
   end)
   if ok and result then success=true;break end
@@ -509,7 +538,7 @@ end
 local function send(player,kind,data) if player.Parent then remote:FireClient(player,kind,data) end end
 local function sync(player,message)
  local p=profiles[player]
- if p then send(player,"Profile",{gold=p.gold,levels=p.levels,color=p.color,best=p.bestDistance,saveMode=saveModes[player],message=message}) end
+ if p then send(player,"Profile",{gold=p.gold,levels=p.levels,planeId=p.planeId,ownedPlanes=p.ownedPlanes,color=p.color,best=p.bestDistance,saveMode=saveModes[player],message=message}) end
 end
 local function restore(player)
  aiming[player]=nil
@@ -568,13 +597,13 @@ local function launch(player,yaw,pitch)
  local c=player.Character;local h=c and c:FindFirstChildOfClass("Humanoid")
  if not h or h.Health<=0 then return end
  cooldowns[player]=os.clock();aiming[player]=nil;c:SetAttribute("PaperThrowPose","Throwing")
- local model=package.Plane:Clone();model.Name="Plane_"..player.UserId;model:ScaleTo(0.65)
+ local model=package.PlaneModels[profiles[player].planeId]:Clone();model.Name="Plane_"..player.UserId;model:ScaleTo(0.65)
  model.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
  for _,part in model:GetDescendants() do
-  if part:IsA("BasePart") then part.Color=colors[profiles[player].color] end
+  if part:IsA("BasePart") then part.Color=colors[profiles[player].color]:Lerp(Color3.fromRGB(105,128,145),part:GetAttribute("FoldShade") or 0) end
  end
  model.Parent=planes
- local stats=Flight.stats(profiles[player].levels)
+ local stats=Flight.stats(profiles[player].levels,profiles[player].planeId)
  local state=Flight.new(Config.Launch,yaw,pitch,stats)
  model:PivotTo(Flight.frame(state))
  if workspace.StreamingEnabled then player:AddReplicationFocus(model.PrimaryPart) end
@@ -582,7 +611,7 @@ local function launch(player,yaw,pitch)
  params.FilterDescendantsInstances={workspace.PaperFlightWorld,workspace.Terrain}
  sessions[player]={model=model,state=state,stats=stats,params=params,input=Vector2.zero,boostHeld=false,
   elapsed=0,countdown=Config.ThrowDelay,lastInput=os.clock(),lastPacket=0,notify=0,
-  gold=0,count=0,collected={},distance=0,ringPosition=Config.Launch}
+  airPlaneId=profiles[player].planeId,gold=0,count=0,collected={},distance=0,ringPosition=Config.Launch}
  send(player,"Thrown",{seconds=Config.ThrowDelay,yaw=yaw,pitch=pitch})
 end
 local function collect(player,s,a,b)
@@ -611,9 +640,9 @@ remote.OnServerEvent:Connect(function(player,action,x,y,boost)
  elseif action=="Aim" then prepare(player)
  elseif action=="Launch" then launch(player,x,y)
  elseif action=="Reset" then stop(player,"Run banked. Ready for another throw.")
- elseif action=="Upgrade" then
+ elseif action=="Plane" then
   if sessions[player] or not profiles[player] or typeof(x)~="string" then return end
-  local _,message=Economy.buy(profiles[player],x);sync(player,message)
+  local _,message=Economy.selectPlane(profiles[player],x);sync(player,message)
  elseif action=="Color" then
   if profiles[player] and not sessions[player] and finiteBound(x,4) and x%1==0 and x>=1 then profiles[player].color=x;sync(player) end
  elseif action=="Input" then
@@ -684,7 +713,7 @@ RunService.Heartbeat:Connect(function(dt)
    s.elapsed+=fixed
    if os.clock()-s.lastInput>0.5 then s.input=Vector2.zero;s.boostHeld=false end
    local old=s.state.position
-   local lift=World.lift(old)
+   local lift=World.lift(old,s.airPlaneId)
    s.state=Flight.step(s.state,s.input,fixed,s.stats,lift,s.boostHeld)
    local pos=s.state.position
    local hit=workspace:Raycast(old,pos-old,s.params)
@@ -730,7 +759,7 @@ local camera=workspace.CurrentCamera
 local gui=Instance.new("ScreenGui");gui.Name="PaperFlightHUD";gui.ResetOnSpawn=false;gui.IgnoreGuiInset=true
 gui.Parent=player:WaitForChild("PlayerGui")
 local boostHeld=false
-local mode="Ready";local yaw=0;local pitch=Config.TrimPitch;local cursorFree=false
+local mode="Ready";local yaw=0;local pitch=Config.AimPitch;local cursorFree=false
 local profile=Economy.new();local saveMode="Loading progress";local soundEnabled=true
 local telemetry={speed=165,boostRemaining=Config.BoostDuration,boosting=false,stalled=false,lift=0,distance=0,gold=0,rings=0,region="Coastal Cliffs",altitude=362}
 local originalFov=camera.FieldOfView
@@ -786,7 +815,7 @@ boostButton.InputBegan:Connect(function(input)
 end)
 local hint=label(gui,"Controls","Mouse - Aim / steer\nF - Launch / throw",UDim2.fromOffset(330,68),UDim2.new(0,24,1,-158),18)
 hint.TextXAlignment=Enum.TextXAlignment.Left;hint.TextYAlignment=Enum.TextYAlignment.Bottom
-local message=label(gui,"Message","Collect gold. Improve your folds. Explore farther.",UDim2.new(0.8,0,0,36),UDim2.new(0.1,0,0,165),20)
+local message=label(gui,"Message","Collect gold. Unlock new planes. Explore higher.",UDim2.new(0.8,0,0,36),UDim2.new(0.1,0,0,165),20)
 local reticle=label(gui,"AimReticle","+",UDim2.fromOffset(32,32),UDim2.new(0.5,-16,0.5,-16),32);reticle.Visible=false
 local nav=Instance.new("Frame");nav.Name="Menu";nav.BackgroundTransparency=1;nav.Size=UDim2.fromOffset(100,270);nav.Position=UDim2.new(0,24,0.5,-95);nav.Parent=gui
 local upgrades=button(nav,"Upgrades","UP\nPlanes",UDim2.fromOffset(86,82),UDim2.fromOffset(0,0))
@@ -816,18 +845,26 @@ end
 local function renderModal()
  contents:ClearAllChildren()
  if modalMode=="Upgrades" then
-  heading.Text="PLANE UPGRADES"
-  local i=0
-  for _,key in {"Glide","Launch","Handling"} do
-   local def=Config.Upgrades[key];local level=profile.levels[key];local price=Economy.cost(key,level)
-   local b=button(contents,key,def.title.."  "..level.."/"..def.maxLevel.."     "..(level>=def.maxLevel and "MAX" or "$"..price),
-    UDim2.new(1,0,0,65),UDim2.fromOffset(0,i*83),Color3.fromRGB(63,83,68))
-   b.ZIndex=12;b.TextSize=21
-   b.Activated:Connect(function() remote:FireServer("Upgrade",key) end)
-   local detail=label(contents,key.."Detail",def.description,UDim2.new(1,-10,0,19),UDim2.fromOffset(5,i*83+62),13);detail.ZIndex=13
-   i+=1
+  heading.Text="PAPER PLANE HANGAR"
+  for i,id in Config.PlaneOrder do
+   local def=Config.Planes[id];local owned=profile.ownedPlanes[id];local equipped=profile.planeId==id
+   local y=(i-1)*56
+   local viewport=Instance.new("ViewportFrame");viewport.Name=id.."Preview";viewport.Size=UDim2.fromOffset(80,52)
+   viewport.Position=UDim2.fromOffset(0,y);viewport.BackgroundTransparency=1;viewport.ZIndex=12;viewport.Parent=contents
+   viewport.Ambient=Color3.fromRGB(210,216,230);viewport.LightColor=Color3.fromRGB(255,248,230)
+   local aircraft=package.PlaneModels[id]:Clone();aircraft.Parent=viewport;aircraft:PivotTo(CFrame.new())
+   for _,v in aircraft:GetDescendants() do if v:IsA("Trail") then v.Enabled=false end end
+   local eye=Instance.new("Camera");eye.CFrame=CFrame.lookAt(Vector3.new(10,13,-14),Vector3.zero);eye.FieldOfView=45;eye.Parent=viewport;viewport.CurrentCamera=eye
+   local name=label(contents,id.."Name",def.name,UDim2.new(1,-205,0,24),UDim2.fromOffset(85,y),20)
+   name.ZIndex=12;name.TextXAlignment=Enum.TextXAlignment.Left
+   local detail=label(contents,id.."Stats",string.format("%d SPS  |  Rising air to %d",def.launchSpeed,def.airCeiling),UDim2.new(1,-205,0,20),UDim2.fromOffset(85,y+25),13)
+   detail.ZIndex=12;detail.TextXAlignment=Enum.TextXAlignment.Left
+   local text=equipped and "EQUIPPED" or owned and "EQUIP" or "$"..def.price
+   local buy=button(contents,id,text,UDim2.fromOffset(112,43),UDim2.new(1,-112,0,y+4),equipped and Color3.fromRGB(56,116,94) or Color3.fromRGB(63,83,68))
+   buy.ZIndex=12;buy.TextSize=16
+   buy.Activated:Connect(function() remote:FireServer("Plane",id) end)
   end
-  local note=label(contents,"SaveMode",saveMode,UDim2.new(1,0,0,23),UDim2.fromOffset(0,278),13);note.ZIndex=12
+  local note=label(contents,"SaveMode",saveMode,UDim2.new(1,0,0,23),UDim2.fromOffset(0,281),13);note.ZIndex=12
  elseif modalMode=="Colors" then
   heading.Text="PAPER COLORS"
   for i,color in palette do
@@ -857,11 +894,11 @@ local function cleanPreview()
  table.clear(dots)
 end
 local function colorPlane(model)
- for _,p in model:GetDescendants() do if p:IsA("BasePart") then p.Color=palette[profile.color] end end
+ for _,p in model:GetDescendants() do if p:IsA("BasePart") then p.Color=palette[profile.color]:Lerp(Color3.fromRGB(105,128,145),p:GetAttribute("FoldShade") or 0) end end
 end
 local function preview()
  cleanPreview()
- heldPlane=package.Plane:Clone();heldPlane.Name="HeldPaperPlane";heldPlane:ScaleTo(0.2);heldPlane.Parent=camera;colorPlane(heldPlane)
+ heldPlane=package.PlaneModels[profile.planeId]:Clone();heldPlane.Name="HeldPaperPlane";heldPlane:ScaleTo(0.2);heldPlane.Parent=camera;colorPlane(heldPlane)
  for _,v in heldPlane:GetDescendants() do if v:IsA("Trail") then v.Enabled=false end end
  trajectory=Instance.new("Folder");trajectory.Name="ThrowTrajectory";trajectory.Parent=camera
  local previous
@@ -883,10 +920,11 @@ local function restoreRings()
  table.clear(hiddenRings);table.clear(collectedIds)
 end
 workspace.DescendantAdded:Connect(function(part)
- if not part:IsA("BasePart") then return end
+ if not part:IsA("BasePart") and not part:IsA("BillboardGui") then return end
  local ring=part.Parent
  if ring and collectedIds[ring:GetAttribute("RingId")] then
-  part.LocalTransparencyModifier=1;table.insert(hiddenRings,part)
+  if part:IsA("BasePart") then part.LocalTransparencyModifier=1;table.insert(hiddenRings,part)
+  else part.Enabled=false end
  end
 end)
 local function requestAction()
@@ -977,17 +1015,18 @@ local function updateHud()
 end
 remote.OnClientEvent:Connect(function(kind,data)
  if kind=="Profile" then
-  profile.gold=data.gold;profile.levels=data.levels;profile.color=data.color;saveMode=data.saveMode
+  local changed=profile.planeId~=data.planeId
+  profile.gold=data.gold;profile.levels=data.levels;profile.planeId=data.planeId or "Dart";profile.ownedPlanes=data.ownedPlanes or {Dart=true};profile.color=data.color;saveMode=data.saveMode
   wallet.Text="$"..data.gold;if data.message then message.Text=data.message end
-  if heldPlane then colorPlane(heldPlane) end
+  if heldPlane then if changed then preview() else colorPlane(heldPlane) end end
   if modal.Visible then renderModal() end
  elseif kind=="Aiming" then
-  mode="Aiming";boostHeld=false;yaw=0;pitch=Config.TrimPitch;modal.Visible=false
+  mode="Aiming";boostHeld=false;yaw=0;pitch=Config.AimPitch;modal.Visible=false
   telemetry.gold=0;earned.Text="$0";distance.Text="";message.Text="Aim the green path, then click to throw."
   camera.CameraType=Enum.CameraType.Scriptable;preview();cursor(false)
  elseif kind=="Thrown" then
   mode="Countdown";smoothedFrame=nil;restoreRings();cleanPreview();message.Text="";cursor(false)
-  telemetry.gold=0;telemetry.distance=0;telemetry.boostRemaining=Config.BoostDuration;telemetry.boosting=false;telemetry.speed=Flight.stats(profile.levels).launchSpeed;wind:Play()
+  telemetry.gold=0;telemetry.distance=0;telemetry.boostRemaining=Config.BoostDuration;telemetry.boosting=false;telemetry.speed=Flight.stats(profile.levels,profile.planeId).launchSpeed;wind:Play()
  elseif kind=="Flying" then mode="Flying"
  elseif kind=="Telemetry" then
   telemetry=data;earned.Text="$"..data.gold
@@ -1004,7 +1043,10 @@ remote.OnClientEvent:Connect(function(kind,data)
   local rings=folder and folder:FindFirstChild("Rings")
   local ring=rings and rings:FindFirstChild("Ring"..data.id)
   if ring then
-   for _,p in ring:GetDescendants() do if p:IsA("BasePart") then p.LocalTransparencyModifier=1;table.insert(hiddenRings,p) end end
+   for _,p in ring:GetDescendants() do
+    if p:IsA("BasePart") then p.LocalTransparencyModifier=1;table.insert(hiddenRings,p)
+    elseif p:IsA("BillboardGui") then p.Enabled=false end
+   end
   end
  elseif kind=="Ended" then
   mode="Ready";boostHeld=false;telemetry.gold=data.gold;earned.Text="+$"..data.gold
@@ -1066,9 +1108,9 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
   if heldPlane then heldPlane:PivotTo(CFrame.new((hand and hand.Position or Config.Launch)+direction*0.8)*aimFrame) end
   previewClock+=dt
   if previewClock>1/30 then
-   previewClock=0;local stats=Flight.stats(profile.levels);local state=Flight.new(Config.Launch,yaw,pitch,stats)
+   previewClock=0;local stats=Flight.stats(profile.levels,profile.planeId);local state=Flight.new(Config.Launch,yaw,pitch,stats)
    for i=1,#dots do
-    if i>1 then for _=1,6 do state=Flight.step(state,Flight.aimInput(state,yaw,pitch),1/60,stats) end end
+    if i>1 then for _=1,6 do state=Flight.step(state,Flight.aimInput(state,yaw,pitch),1/60,stats,World.lift(state.position,profile.planeId)) end end
     dots[i].Position=(i==1 and heldPlane) and heldPlane:GetPivot().Position or state.position
    end
   end
@@ -1079,7 +1121,7 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
  local folder=workspace:FindFirstChild("ActivePaperPlanes");local plane=folder and folder:FindFirstChild("Plane_"..player.UserId)
  if not plane then return end
  if not visualPlane then
-  visualPlane=package.Plane:Clone();visualPlane.Name="LocalFlightVisual";visualPlane:ScaleTo(0.65);visualPlane.Parent=camera;colorPlane(visualPlane)
+  visualPlane=package.PlaneModels[profile.planeId]:Clone();visualPlane.Name="LocalFlightVisual";visualPlane:ScaleTo(0.65);visualPlane.Parent=camera;colorPlane(visualPlane)
   for _,p in plane:GetDescendants() do
    if p:IsA("BasePart") then p.LocalTransparencyModifier=1 end
    if p:IsA("Trail") then p.Enabled=false end
@@ -1121,9 +1163,25 @@ task.spawn(function()
   for _,tile in tiles do
    local d=(tile.center-eye).Magnitude
    local fade=1-math.clamp((d-1100)/550,0,1)
-   for _,p in tile.parts do if p:IsA("BasePart") then p.Transparency=fade end end
+   for _,p in tile.parts do if p:IsA("BasePart") then p.LocalTransparencyModifier=fade end end
   end
   task.wait(0.5)
+ end
+end)
+-- Distant summit halos keep a readable angular size while the actual opening stays small.
+task.spawn(function()
+ local world=workspace:WaitForChild("PaperFlightWorld")
+ local rings=world:WaitForChild("Rings")
+ while gui.Parent do
+  for _,ring in rings:GetChildren() do
+   local beacon=ring:FindFirstChild("SummitBeacon")
+   local anchor=ring:FindFirstChild("SummitBeaconAnchor")
+   if beacon and anchor then
+    local distance=(camera.CFrame.Position-anchor.Position).Magnitude
+    beacon.Enabled=distance>300 and not collectedIds[ring:GetAttribute("RingId")]
+   end
+  end
+  task.wait(0.15)
  end
 end)
 updateHud();remote:FireServer("Sync")
@@ -1487,6 +1545,98 @@ return "Dream Valley built. Previous world preserved in ServerStorage.PaperFligh
 end
 originalArt()
 end
+local function planeModels()
+-- Original procedural paper models inspired by online folding references.
+-- Fold N Fly Lock-Bottom and AFRL dart / glider / sailplane silhouettes; no imported textures.
+local package=game.ReplicatedStorage.PaperFlight
+local Config=require(package.Config)
+local old=package:FindFirstChild("PlaneModels");if old then old:Destroy() end
+local folder=Instance.new("Folder");folder.Name="PlaneModels";folder.Parent=package
+local V,CF=Vector3.new,CFrame.new
+local rng=Random.new(70421)
+local function model(name,parent)
+ local m=Instance.new("Model");m.Name=name;m.Parent=parent or folder;return m
+end
+local function part(parent,name,size,cf,color,material,class)
+ local p=Instance.new(class or "Part");p.Name=name;p.Size=size;p.CFrame=cf;p.Color=color
+ p.Material=material or Enum.Material.SmoothPlastic;p.Anchored=true;p.CanTouch=false
+ p.TopSurface=Enum.SurfaceType.Smooth;p.BottomSurface=Enum.SurfaceType.Smooth;p.Parent=parent;return p
+end
+local function decor(p) p.CanCollide=false;p.CanQuery=false;return p end
+local function triangle(parent,name,a,b,c,color)
+ local ab,ac,bc=b-a,c-a,c-b
+ if ab:Dot(ab)>ac:Dot(ac) and ab:Dot(ab)>bc:Dot(bc) then c,a=a,c
+ elseif ac:Dot(ac)>bc:Dot(bc) then a,b=b,a end
+ ab,ac,bc=b-a,c-a,c-b
+ if bc.Magnitude<0.001 or ac:Cross(ab).Magnitude<0.001 then return end
+ local right=ac:Cross(ab).Unit;local back=bc.Unit;local up=back:Cross(right).Unit
+ local h=math.abs(ab:Dot(up))
+ for _,s in {{(a+b)/2,right,back,math.abs(ab:Dot(back))},{(a+c)/2,-right,-back,math.abs(ac:Dot(back))}} do
+  if s[4]>0.001 then part(parent,name,V(0.035,h,s[4]),CFrame.fromMatrix(s[1],s[2],up,s[3]),color,nil,"WedgePart") end
+ end
+end
+local function quad(parent,name,a,b,c,d,col)
+ triangle(parent,name,a,b,c,col);triangle(parent,name,a,c,d,col)
+end
+local function beam(parent,name,a,b,width,col)
+ return part(parent,name,V(width,width,(b-a).Magnitude),CFrame.lookAt((a+b)/2,b),col)
+end
+
+local paper=Color3.fromRGB(255,249,228)
+local definitions={
+ Dart={nose=-6,tail=4.5,wing={V(0,0,-6),V(4.4,0.35,4.5),V(0.3,0,3.6)}},
+ Lockwing={nose=-4.2,tail=3.5,wing={V(0,0,-4.2),V(4.8,0.2,-1.4),V(4.8,0.25,3.5),V(0.3,0,3.1)}},
+ Delta={nose=-6,tail=4.4,wing={V(0,0,-6),V(5.3,0.3,4.4),V(2.8,0.12,2.6),V(0.3,0,4)}},
+ Sailwing={nose=-4.8,tail=5.2,wing={V(0,0,-4.8),V(5.25,0.25,-1.5),V(5.25,0.35,1.6),V(0.4,0,2.2)}},
+ Kestrel={nose=-5.8,tail=5,wing={V(0,0,-5.8),V(0.8,0,-1.6),V(5.2,0.35,2),V(3.8,0.65,5),V(0.3,0,3.8)}},
+}
+for _,id in Config.PlaneOrder do
+ local def=definitions[id];local m=model(id);m:SetAttribute("PlaneType",id)
+ local root=decor(part(m,"Root",V(0.1,0.1,0.1),CF(),paper));root.Transparency=1;m.PrimaryPart=root
+ local function face(name,a,b,c,shade)
+  local before=#m:GetChildren()
+  triangle(m,name,a,b,c,paper:Lerp(Color3.fromRGB(105,128,145),shade))
+  local children=m:GetChildren()
+  for j=before+1,#children do children[j]:SetAttribute("FoldShade",shade) end
+ end
+ for _,side in {-1,1} do
+  local function p(v) return V(v.X*side,v.Y,v.Z) end
+  local wing=def.wing
+  for j=2,#wing-1 do face("PaperWing",p(wing[1]),p(wing[j]),p(wing[j+1]),side==1 and 0.03 or 0.1) end
+  face("CentralFold",V(0,0,def.nose),p(V(0.8,0.02,def.tail-0.4)),V(0,-0.75,def.tail-0.3),0.22)
+  face("FoldLip",V(0,0.02,def.nose+0.5),p(V(0.85,0.07,def.tail-0.6)),p(V(1.25,0.09,def.tail-0.9)),0.13)
+  local crease=beam(m,"Crease",V(0,0.045,def.nose+0.25),p(V(0.8,0.07,def.tail-0.4)),0.025,Color3.fromRGB(190,190,175))
+  crease:SetAttribute("FoldShade",0.25)
+  if id=="Lockwing" then
+   quad(m,"RaisedWingtip",p(V(4.8,0.2,-1.4)),p(V(4.8,0.25,3.5)),p(V(4.55,0.9,3.5)),p(V(4.55,0.85,-1.2)),paper)
+   face("NoseLock",V(0,0.04,-2.6),p(V(1.3,0.15,-1.2)),V(0,0.22,-0.2),0.18)
+  elseif id=="Sailwing" then
+   face("Tailplane",p(V(0.25,0,2.4)),p(V(2.3,0.2,4.8)),p(V(0.25,0,5.2)),0.08)
+   quad(m,"Winglet",p(V(5.25,0.25,-1.5)),p(V(5.25,0.35,1.6)),p(V(5.05,1.1,1.5)),p(V(5.05,1,-1.1)),paper)
+  elseif id=="Kestrel" then
+   face("CanardFold",p(V(0.1,0.02,-4.5)),p(V(2.1,0.22,-2.3)),p(V(0.65,0.06,-1.6)),0.1)
+   face("SplitTailFold",p(V(2.8,0.4,2.6)),p(V(2.8,1.15,4.6)),p(V(3.8,0.65,5)),0.16)
+   face("LeadingFold",p(V(0.85,0.035,-1.5)),p(V(5.15,0.38,2)),p(V(3.25,0.15,1.1)),0.14)
+  elseif id=="Delta" then
+   face("TrailingFold",p(V(2.8,0.15,2.6)),p(V(5.3,0.33,4.4)),p(V(3.6,0.5,4.3)),0.16)
+  end
+ end
+ for _,p in m:GetDescendants() do if p:IsA("BasePart") then decor(p);p.CastShadow=true end end
+ for _,side in {-1,1} do
+  local a=Instance.new("Attachment");a.Position=V(side*4.1,0.2,def.tail-0.4);a.Parent=root
+  local b=Instance.new("Attachment");b.Position=a.Position+V(0,0.1,0);b.Parent=root
+  local trail=Instance.new("Trail");trail.Attachment0=a;trail.Attachment1=b;trail.Lifetime=0.5
+  trail.Color=ColorSequence.new(paper);trail.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0.65),NumberSequenceKeypoint.new(1,1)});trail.Parent=root
+ end
+ m:PivotTo(CF())
+end
+-- Compatibility with earlier installer stages.
+local previous=package:FindFirstChild("Plane");if previous then previous:Destroy() end
+local starter=folder.Dart:Clone();starter.Name="Plane";starter.Parent=package
+return "Built five distinct folded paper plane models"
+
+end
+print(planeModels())
 local function exploration()
 -- Exploration-world rebuild. Prior part-based worlds are archived before the swap.
 -- Terrain is generated only inside this game's authored archipelago footprint.
@@ -1546,15 +1696,15 @@ end
 local terrain=workspace.Terrain
 local backups=SS:FindFirstChild("PaperFlightBackups") or Instance.new("Folder")
 backups.Name="PaperFlightBackups";backups.Parent=SS
-if not terrain:GetAttribute("PaperArchipelagoV4") then
+if not terrain:GetAttribute("PaperArchipelagoV5") then
  -- Previous V2 terrain is reproducible from commit 5fd61e2; preserve the existing snapshot.
  -- Only clear the authored world bounds, in bounded operations.
- for x=-5376,4864-1,512 do for z=-8960,2816-1,512 do for y=-32,2304-1,512 do
-  local size=V(math.min(512,4864-x),math.min(512,2304-y),math.min(512,2816-z))
+ for x=-5632,4864-1,512 do for z=-8960,5632-1,512 do for y=-32,2304-1,512 do
+  local size=V(math.min(512,4864-x),math.min(512,2304-y),math.min(512,5632-z))
   terrain:FillBlock(CF(V(x,y,z)+size/2),size,Enum.Material.Air)
  end end;task.wait() end
  local chunk=256;local cells=64;local completed=0
- for x0=-5376,4608,chunk do for z0=-8960,2560,chunk do
+ for x0=-5632,4352,chunk do for z0=-5376,5376,chunk do
   local heights,surfaces={},{};local low,high=math.huge,-math.huge
   for ix=1,cells do
    heights[ix]={};surfaces[ix]={}
@@ -1564,7 +1714,7 @@ if not terrain:GetAttribute("PaperArchipelagoV4") then
     local h,rock=Landscape.height(x,z)
     heights[ix][iz]=h;low=math.min(low,h);high=math.max(high,h)
     local patch=math.noise(x/140,z/160)>0.28
-    surfaces[ix][iz]=h<17 and Enum.Material.Sand or (rock or patch) and Enum.Material.Rock or Enum.Material.Grass
+    surfaces[ix][iz]=h<17 and Enum.Material.Sand or (rock or patch) and Enum.Material.Rock or Enum.Material.LeafyGrass
    end
   end
   if high>-12 then
@@ -1590,7 +1740,7 @@ if not terrain:GetAttribute("PaperArchipelagoV4") then
    end
    terrain:WriteVoxels(Region3.new(V(x0,bottom,z0),V(x0+chunk,top,z0+chunk)),4,materials,occupancy)
   end
-  completed+=1;terrain:SetAttribute("PaperBuildProgress",completed.."/1840 terrain tiles")
+  completed+=1;terrain:SetAttribute("PaperBuildProgress",completed.."/1720 terrain tiles")
   if completed%8==0 then task.wait() end
  end end
  -- Carve actual open corridors through terrain, including both ends of each mountain.
@@ -1599,16 +1749,17 @@ if not terrain:GetAttribute("PaperArchipelagoV4") then
    terrain:FillBall(tunnel.center+tunnel.normal*offset,tunnel.radius,Enum.Material.Air)
   end
  end
- terrain:SetAttribute("PaperArchipelagoV4",true)
+ terrain:SetAttribute("PaperArchipelagoV5",true)
 end
-terrain:SetMaterialColor(Enum.Material.Grass,Color3.fromRGB(73,143,105))
+terrain:SetMaterialColor(Enum.Material.LeafyGrass,Color3.fromRGB(73,143,105))
 terrain:SetMaterialColor(Enum.Material.Rock,Color3.fromRGB(112,116,125))
 terrain:SetMaterialColor(Enum.Material.Sand,Color3.fromRGB(214,197,160))
 -- Flat water and smooth grass match the reference's broad, readable surfaces.
-pcall(function() terrain.Decoration=false end)
+-- LeafyGrass keeps a meadow surface without the animated Grass blades.
+-- Decoration is not scriptable; do not hide a failed property write in pcall.
 local sea=model("Sea");sea.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
 -- Roblox caps individual Part dimensions, so use aligned tiles for the full ocean.
-for x=-5000,5000,2000 do for z=-9800,4200,2000 do
+for x=-6000,6000,2000 do for z=-6000,6000,2000 do
  local water=part(sea,"Water",V(2000,12,2000),CF(x,-7,z),Color3.fromRGB(101,151,186),Enum.Material.SmoothPlastic)
  water.Reflectance=0.08
 end end
@@ -1662,7 +1813,7 @@ local function treeAt(x,z,index)
  end
 end
 for i=1,420 do
- treeAt(rng:NextNumber(-4900,4500),rng:NextNumber(-8550,2450),i)
+ treeAt(rng:NextNumber(-5300,4250),rng:NextNumber(-5100,5300),i)
 end
 -- A few nearby groves keep the introductory valley visually grounded.
 for i=1,60 do treeAt(rng:NextNumber(-1250,600),rng:NextNumber(-1750,150),i) end
@@ -1675,7 +1826,7 @@ end
 -- Persistent coarse silhouettes make the whole archipelago readable beyond streaming range.
 -- Detailed terrain occludes these lower surfaces nearby; the client fades close proxy tiles.
 local vista=model("DistantLandscape");vista.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
-for x=-5376,4864-256,256 do for z=-8960,2816-256,256 do
+for x=-5632,4608-256,256 do for z=-5376,5632-256,256 do
  local centerY,_,isMountain=Landscape.height(x+128,z+128)
  if isMountain and centerY>170 then
   local tile=model("VistaTile",vista);tile:SetAttribute("Center",V(x+128,centerY,z+128))
@@ -1687,7 +1838,7 @@ for x=-5376,4864-256,256 do for z=-8960,2816-256,256 do
   local a,b,c,d=point(x,z),point(x+256,z),point(x+256,z+256),point(x,z+256)
   local _,rock=Landscape.height(x+128,z+128)
   quad(tile,"DistantSurface",a,b,c,d,rock and Color3.fromRGB(105,113,123) or Color3.fromRGB(73,137,101))
-  for _,p in tile:GetDescendants() do if p:IsA("BasePart") then decor(p);p.CastShadow=false;p.Transparency=1 end end
+  for _,p in tile:GetDescendants() do if p:IsA("BasePart") then decor(p);p.CastShadow=false;p.Transparency=0 end end
  end
 end end
 local deck=model("LaunchCliff")
@@ -1701,7 +1852,7 @@ for _,x in {-577,-523} do
  local crate=part(deck,"SupplyCrate",V(11,11,11),CF(x,362.5,612),Color3.fromRGB(111,83,53),Enum.Material.WoodPlanks)
  for _,off in {-4.6,4.6} do part(deck,"CrateBand",V(0.7,11.2,11.2),crate.CFrame*CF(off,0,0),Color3.fromRGB(153,121,76),Enum.Material.Wood) end
 end
-local sign=part(deck,"Instructions",V(35,12,1),CF(-550,374,638),Color3.fromRGB(42,54,61),Enum.Material.Wood)
+local sign=part(deck,"Instructions",V(35,12,1),CF(-550,363,638),Color3.fromRGB(42,54,61),Enum.Material.Wood)
 local surface=Instance.new("SurfaceGui");surface.Face=Enum.NormalId.Front;surface.PixelsPerStud=35;surface.Parent=sign
 local text=Instance.new("TextLabel");text.BackgroundTransparency=1;text.Size=UDim2.fromScale(1,1);text.Font=Enum.Font.GothamBold;text.TextSize=55
 text.Text="PAPER SKIES\nCollect gold. Catch rising air.\nF TO LAUNCH";text.TextColor3=Color3.fromRGB(239,238,219);text.Parent=surface
@@ -1710,6 +1861,23 @@ for _,ring in World.Rings do
  local m=model("Ring"..ring.id,rings);m:SetAttribute("RingId",ring.id);m:SetAttribute("Trail",ring.group)
  m.ModelStreamingMode=Enum.ModelStreamingMode.Atomic
  local cf=CFrame.lookAt(ring.position,ring.position+ring.normal)
+ if ring.group:find("^Summit ") then
+  -- Only seven summit rewards stay loaded; the halo reveals their small openings at a distance.
+  m.ModelStreamingMode=Enum.ModelStreamingMode.Persistent
+  local anchor=decor(part(m,"SummitBeaconAnchor",V(0.1,0.1,0.1),CF(ring.position),ring.color))
+  anchor.Transparency=1
+  local beacon=Instance.new("BillboardGui");beacon.Name="SummitBeacon";beacon.Adornee=anchor
+  beacon.Size=UDim2.fromOffset(28,28);beacon.AlwaysOnTop=false;beacon.LightInfluence=0
+  beacon.MaxDistance=12000;beacon.Enabled=false;beacon.Parent=m
+  for _,layer in {{1,0.7,5},{0.75,0,2.5}} do
+   local circle=Instance.new("Frame");circle.AnchorPoint=Vector2.new(0.5,0.5)
+   circle.Position=UDim2.fromScale(0.5,0.5);circle.Size=UDim2.fromScale(layer[1],layer[1])
+   circle.BackgroundTransparency=1;circle.Parent=beacon
+   local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(1,0);corner.Parent=circle
+   local stroke=Instance.new("UIStroke");stroke.Color=ring.color;stroke.Thickness=layer[3]
+   stroke.Transparency=layer[2];stroke.Parent=circle
+  end
+ end
  -- Thin, open neon hoops: the middle contains no physical or invisible collision part.
  for j=1,48 do
   local a=(j-1)/48*math.pi*2;local b=j/48*math.pi*2

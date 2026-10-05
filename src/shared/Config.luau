@@ -5,6 +5,8 @@ Config.ThrowStand = Vector3.new(-550, 360, 534)
 Config.MouseSensitivity = 0.0025
 Config.MaxAimYaw = math.pi
 Config.ThrowDelay = 0.4
+Config.AimPitch = math.rad(10)
+Config.ThermalFadeHeight = 220
 Config.MaxPitch = math.rad(48)
 Config.MinPitch = math.rad(-65)
 Config.TurnRate = math.rad(52)
@@ -14,8 +16,8 @@ Config.StallSpeed = 54
 Config.RecoverySpeed = 76
 Config.TrimPitch = math.rad(-6)
 Config.MaxDuration = 240
-Config.WorldMin = Vector3.new(-5600,-20,-9300)
-Config.WorldMax = Vector3.new(5100,2600,3200)
+Config.WorldMin = Vector3.new(-5900,-20,-5600)
+Config.WorldMax = Vector3.new(4900,2800,5900)
 Config.RingValue = 10
 Config.CollectionRadius = 12
 Config.RingMargin = 3.6
@@ -24,8 +26,18 @@ Config.BoostDuration = 4.5
 Config.BoostAcceleration = 65
 Config.MaxSpeed = 250
 Config.WindSoundId = "rbxassetid://687874741"
+-- Costs and performance are game balance values, not claims about real folded designs.
+Config.PlaneOrder={"Dart","Lockwing","Delta","Sailwing","Kestrel"}
+Config.Planes={
+ Dart={name="Paper Dart",price=0,launchSpeed=165,drag=0.000165,sink=2.2,handling=1,airCeiling=650,thermalEfficiency=0.7,rank=1},
+ Lockwing={name="Lockwing",price=180,launchSpeed=172,drag=0.00015,sink=1.95,handling=1.06,airCeiling=950,thermalEfficiency=0.8,rank=2},
+ Delta={name="Delta",price=550,launchSpeed=180,drag=0.000135,sink=1.7,handling=1.13,airCeiling=1300,thermalEfficiency=0.9,rank=3},
+ Sailwing={name="Sailwing",price=1400,launchSpeed=188,drag=0.00012,sink=1.45,handling=1.2,airCeiling=1750,thermalEfficiency=1.02,rank=4},
+ Kestrel={name="Kestrel",price=3200,launchSpeed=198,drag=0.000105,sink=1.2,handling=1.28,airCeiling=2250,thermalEfficiency=1.15,rank=5},
+}
+-- Retained for existing profile bonuses; new purchases use named plane types.
 Config.Upgrades = {
- Glide = {title="Better folds", description="Less drag and a slower descent", baseCost=50, maxLevel=5},
+ Glide = {title="Better folds", description="Less drag and access to higher rising air", baseCost=50, maxLevel=5},
  Launch = {title="Stronger throw", description="More starting speed and height potential", baseCost=60, maxLevel=5},
  Handling = {title="Balanced wings", description="Faster response when turning", baseCost=40, maxLevel=5},
 }

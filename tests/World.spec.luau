@@ -48,7 +48,7 @@ for _,summit in W.Summits do
 end
 local kinds=0;for _ in species do kinds+=1 end
 check(kinds==5 and #W.Animals==15,"Five animal species must be scattered through the lowlands")
-for _,p in {Vector2.new(-700,650),Vector2.new(-400,950),Vector2.new(-550,800)} do
+for _,p in {Vector2.new(-700,380),Vector2.new(-400,700),Vector2.new(-550,534)} do
  check(math.abs(L.height(p.X,p.Y)-349)<0.1,"Launch plateau must have a broad flat summit")
 end
 local previous
@@ -58,5 +58,35 @@ for _,r in W.Rings do
   check(gap>25 and gap<48,"Curved sky clusters must stay close together")
  end
  previous=r
+end
+local bearings={};local front,back,left,right=0,0,0,0
+for _,peak in L.Peaks do
+ local dx,dz=peak.x+550,peak.z-534
+ table.insert(bearings,math.atan2(dz,dx))
+ if dz<0 then front+=1 else back+=1 end
+ if dx<0 then left+=1 else right+=1 end
+end
+table.sort(bearings)
+check(front>=3 and back>=3 and left>=3 and right>=3,"mountains must surround the start")
+for i,a in bearings do
+ local b=bearings[i%#bearings+1];if i==#bearings then b+=math.pi*2 end
+ check(b-a<math.rad(75),"no large empty sector around spawn")
+end
+for _,r in W.Rings do
+ if r.group:find("^Summit ") then
+  local model=workspace.PaperFlightWorld.Rings:FindFirstChild("Ring"..r.id)
+  check(model.ModelStreamingMode==Enum.ModelStreamingMode.Persistent,"summit rewards must remain loaded at distance")
+  check(model:FindFirstChild("SummitBeacon")~=nil,"summit reward needs a distant halo")
+ end
+end
+local F=require(package.Flight);local C=require(package.Config)
+for i=0,7 do
+ local yaw=i*math.pi/4;local state=F.new(C.Launch,yaw,C.AimPitch,F.stats());local clear=true
+ for tick=1,180 do
+  local next=F.step(state,F.aimInput(state,yaw,C.AimPitch),1/60,F.stats(),W.lift(state.position,"Dart"))
+  if workspace:Raycast(state.position,next.position-state.position,params) then clear=false;break end
+  state=next
+ end
+ check(clear,"default throw must clear plateau in all directions")
 end
 return string.format("%d geometry and discovery-layout checks passed",passed)

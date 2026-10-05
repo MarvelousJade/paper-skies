@@ -33,6 +33,7 @@ for parent,name,cls,path in [
 ]:
     output.append(f'write({parent},"{name}","{cls}",{literal(read(path))})\n')
 output.append("if not package:FindFirstChild('Plane') then\nlocal function originalArt()\n"+read("tools/BuildDreamWorld.luau")+"\nend\noriginalArt()\nend\n")
+output.append("local function planeModels()\n"+read("tools/BuildPlaneModels.luau")+"\nend\nprint(planeModels())\n")
 output.append("local function exploration()\n"+read("tools/BuildExplorationWorld.luau")+"\nend\nprint(exploration())\n")
 (ROOT/"tools/InstallStudio.luau").write_text("".join(output),encoding="utf-8")
 print("Generated exploration tools/InstallStudio.luau")

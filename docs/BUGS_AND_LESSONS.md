@@ -2,7 +2,7 @@
 
 This log explains the bugs, design hurdles, and testing problems documented during development of Paper Skies. Each entry records what happened, why, what changed, and what evidence supports the result. It is intended for interview preparation and future debugging.
 
-Prepared on October 4, 2026 against the current working tree. Baseline: `d3fe27b`. Last committed exploration snapshot: `5fd61e2`. The current mountain and discovery changes are uncommitted. Intermediate experiments were not individually committed, so some observations are recorded from the development session rather than recoverable as separate Git revisions.
+Initial log prepared on October 4, 2026 for the mountain/discovery checkpoint; later findings are appended below. Baseline: `d3fe27b`. Last committed exploration snapshot: `5fd61e2`. Those changes were later committed as 3cf87cc; the radial-world and hangar follow-up remains uncommitted. Intermediate experiments were not individually committed, so some observations are recorded from the development session rather than recoverable as separate Git revisions.
 
 The implementation and automated checks were produced with AI assistance. The project owner supplied requirements, visual references, and playtest feedback. The interview examples below describe the project; use first-person claims only for work you personally performed or can reproduce and explain.
 
@@ -60,7 +60,7 @@ The latest recorded verification is **27 flight, pickup, and economy assertions 
 
 **Cause:** Coarse, full-map proxy tiles bridged terrain height changes. A large planar approximation could sit above detailed terrain between its samples, especially around valleys and coastlines.
 
-**Fix:** Restrict proxies to mountain areas above elevation 170; reduce tile size from 512 to 256 studs; lower proxy vertices using nearby height samples and a 28-stud offset. Hide them in Edit mode. In Play, fade nearby proxies out between approximately 1,100 and 1,650 studs from the camera. They do not collide with the plane.
+**Fix:** Restrict proxies to mountain areas above elevation 170; reduce tile size from 512 to 256 studs; lower proxy vertices using nearby height samples and a 28-stud offset. The first revision hid them in Edit mode. In Play, fade nearby proxies out between approximately 1,100 and 1,650 studs from the camera. They do not collide with the plane.
 
 **Verification:** Later Edit captures no longer showed the original triangle artifacts. A Play capture showed distant mountain silhouettes from the launch area.
 
@@ -80,7 +80,7 @@ The latest recorded verification is **27 flight, pickup, and economy assertions 
 
 **Reason:** Earlier generic shapes and relief did not distinguish meadow surfaces, dramatic mountain silhouettes, and a playable flat launch area.
 
-**Change:** Separate broad low-frequency meadow relief from ridge, massif, table, spire, and broken mountain profiles. Use gullies and surface variation on the mountains. Create a broad flat launch plateau with angular shoulders. Disable decorative grass blades while retaining grassy coverage. Add trees only where elevation, material, and slope allow them.
+**Change:** Separate broad low-frequency meadow relief from ridge, massif, table, spire, and broken mountain profiles. Use gullies and surface variation on the mountains. Create a broad flat launch plateau with angular shoulders. Attempt to disable decorative grass blades while retaining grassy coverage; the failed property write was later found and corrected in B04. Add trees only where elevation, material, and slope allow them.
 
 **Evidence:** Screenshots were reviewed; plateau sample assertions pass. The current scene contains 143 trees above elevation 180.
 
@@ -174,7 +174,7 @@ The latest recorded verification is **27 flight, pickup, and economy assertions 
 
 **Historical implementation notes:** The builder already tiled water into 2,000-stud sections to accommodate part-size limits and removed competing atmosphere effects that could obscure the view. These explanations are recorded in the earlier builder. This log does not have a preserved before/after runtime measurement for either issue.
 
-**Evidence:** The latest build completed 1,840 terrain tiles. Expanded coastlines and rear meadows were visually inspected.
+**Evidence:** The mountain checkpoint build completed 1,840 terrain tiles; the radial revision uses 1,720. Expanded coastlines and rear meadows were visually inspected.
 
 **Lesson:** Keep procedural generation reproducible, bounded, and observable. A completed build is not a mobile performance benchmark.
 
@@ -291,3 +291,94 @@ For the next issue, record:
 
 Preserve failed experiments when they explain the investigation. Record measurements only when they were actually captured. Distinguish a user-requested design change from a defect, and a proposed fix from an implemented one.
 
+
+
+## October 4 radial world and plane hangar follow up
+
+The mountain/discovery checkpoint was committed as `3cf87cc` at the user's request. The subsequent radial world and five-plane hangar changes remain uncommitted. Current checks passed: 59 flight/economy/profile/model assertions and 444 geometry/layout assertions.
+
+### B04 Grass decoration was still enabled
+
+**Observed:** Dense grass blades remained visible despite the earlier documentation saying they were disabled.
+
+**Cause:** The builder wrapped `terrain.Decoration=false` in a pcall and ignored failure. A direct check failed in this scripting context. Roblox documents Decoration as non-scriptable, so the earlier claim of successful disabling was incorrect.
+
+**Fix:** Generate meadows using LeafyGrass and convert the current authored grass surface to that material. Remove the silent property-write attempt.
+
+**Evidence:** The later Play screenshot showed the broad meadow surface without the tall blades. See [Roblox terrain documentation](https://create.roblox.com/docs/reference/engine/classes/Terrain).
+
+**Lesson:** A protected call prevents a crash; its success result still needs checking before claiming the action worked.
+
+### B05 A rear throw hit the instruction board
+
+**Observed:** The eight-direction launch check failed at yaw 180 degrees. A diagnostic raycast identified `LaunchCliff.Instructions` at approximately (-548.6, 379.0, 637.5), on simulation tick 41.
+
+**Cause:** The old deck layout assumed forward launches. Opening all directions exposed an obstacle behind the player.
+
+**Fix:** Lower the instruction board from center height 374 to 363, below the tested rear trajectory. Use a slightly upward default launch pitch to clear the centered plateau.
+
+**Evidence:** All eight default throw paths passed after the change. This tests the sampled center path, not every possible pitch or full-wing collision.
+
+**Lesson:** Expanding a control range creates new geometry and UX test cases.
+
+### B06 A material conversion failed before reporting progress
+
+**Observed:** An asynchronous meadow conversion remained at its initial progress label.
+
+**Cause identified in the script:** `Landscape.height` returns height plus two booleans. Passing it as the final argument in `math.max(high, Landscape.height(...))` expands all return values, introducing booleans into a numeric operation.
+
+**Fix:** Parenthesize the function call to keep only its first result: `math.max(high, (Landscape.height(...)))`. Run the conversion with an awaited result.
+
+**Evidence:** The corrected conversion completed 440 bounded horizontal regions and reported Complete. The exact first asynchronous exception was not preserved across the subsequent Play transition.
+
+**Lesson:** Lua multiple-return behavior matters at argument boundaries; background work also needs explicit completion and error reporting.
+
+### B07 Collected summit halos needed their own cleanup
+
+**Observed:** The first summit feedback check found the halo still enabled after an injected collection event.
+
+**Cause and scope:** The original event handler hid BaseParts but did not explicitly disable BillboardGui descendants. A periodic updater was expected to handle the halo; why that first observation still saw it enabled was not isolated.
+
+**Fix:** Disable BillboardGui descendants synchronously in the collection handler and handle returning billboard instances in the streaming callback. Keep the periodic distance/collection visibility update.
+
+**Evidence:** A fresh session received one summit event, hid 49 parts including the anchor, and reported the halo disabled. This is a presentation check; it does not prove physical flight collection in the same scenario.
+
+### B08 Far rear mountains are missing in the Play preview
+
+**Status: Open.**
+
+**Observed:** Summit halos were visible against the sky while the associated rear terrain and coarse proxy scenery were absent in repeated Play screenshots. Edit screenshots from the same area show the mountains correctly.
+
+**Evidence:** Server terrain raycasts find the rear spire. A temporary extra replication focus made the same terrain queryable on the client, but did not resolve its appearance in the captured view. Proxy parts were present with zero effective transparency in inspections.
+
+**Attempts:** Tested opaque proxy surfaces with local fading, thicker proxy faces, additional streaming requests/foci, reduced atmospheric density, and a temporary scaled backdrop. These did not establish a reliable rendering fix. A temporary distant red diagnostic part also failed to appear in the captured view. All temporary diagnostics and foci were discarded on leaving Play.
+
+**Uncertainty:** The checks have not isolated whether the cause is render distance/quality, preview behavior, or another client rendering issue. Do not call this a confirmed Roblox engine defect.
+
+**Tool limitation:** Changing SavedQualityLevel through the scripting tool lacked the required RobloxScript capability; sending Escape through virtual input was rejected as a CoreGUI action. No graphics-preference change was confirmed.
+
+**Next work:** Compare a normal interactive Studio session and a controlled published client across graphics levels, inspect actual camera/render behavior, and only then choose a rendering or world-distance adjustment. The feature's distant halos work, but complete distant-terrain visibility remains unverified.
+
+### D08 Plane progression changed from numerical upgrades to aircraft types
+
+The user clarified that better performance should come from buying visibly different paper planes. The hangar now provides Paper Dart, Lockwing, Delta, Sailwing, and Kestrel, using online reference images recorded in [Plane references](PLANE_REFERENCES.md).
+
+Purchases, ownership, equipment, flight attributes, and models are driven by the same aircraft ID. The server rejects changes during flight. Profile normalization preserves valid owned types, rejects unknown IDs, and retains legacy gold and numerical bonuses.
+
+Live QA used a temporary 5000-gold starting profile. Buying Delta left 4450; selecting it again did not charge; held and launched models matched. A mid-flight change was rejected, and Kestrel was purchased after landing. The temporary starting balance was removed and normal starter gold was verified as zero.
+
+### D09 Updraft strength and exploration layout were retuned together
+
+The previous 52-stud/second mountain updraft was too strong in user feedback. Raw mountain lift is now 18; the starter's efficiency limits it to 12.6 before radial/altitude falloff. Air response comes from the equipped aircraft, with ceilings from 650 to 2250 and a 220-stud fade band.
+
+Seven mountains and surrounding land lobes now occupy bearings around the start. Tests require mountains on all sides and no gap above 75 degrees. More advanced aircraft improve access to high air without imposing an invisible flight ceiling. Full summit-route reachability remains a playtest task.
+
+### T05 A runtime price patch was not a reliable test fixture
+
+A tool-side mutation of the required configuration table did not cause the running server to sell Delta at the temporary price. The purchase assertion failed, and the following model assertion therefore still observed the starter. The experiment did not establish that the production purchase handler was broken.
+
+The successful replacement fixture changed the starting balance in the temporary Studio test source before entering a fresh Play session. This exercised the actual server purchase path at the real price. Normal source was restored afterward. Treat tool execution context and module state as part of the test environment.
+
+### T06 Authoring tool errors did not mutate the project
+
+A JavaScript orchestration attempt used an unavailable `structuredClone` helper and was corrected to a JSON round trip for serializable source strings. A malformed quoted tool call also failed before execution and was corrected. These were authoring errors, not gameplay bugs. They are recorded for completeness; the gameplay and integration cases are stronger interview examples.

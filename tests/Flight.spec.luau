@@ -40,8 +40,8 @@ check(bought and p.gold==0 and p.levels.Glide==1,"purchase deducts exact server 
 check(not Economy.buy(p,"FakeUpgrade"),"unknown upgrade rejected")
 p.levels.Glide=5;p.gold=999
 check(not Economy.buy(p,"Glide") and p.gold==999,"max-level purchase cannot deduct gold")
-check(World.lift(World.Thermals[1].center+Vector3.new(0,200,0))>20,"thermal lifts at center")
-check(World.lift(Vector3.new(2700,300,1300))==0,"no invisible lift outside thermals")
+check(World.lift(World.Thermals[1].center+Vector3.new(0,200,0),"Dart")>8 and World.lift(World.Thermals[1].center+Vector3.new(0,200,0),"Dart")<13,"starter updraft must remain gentle")
+check(World.lift(Vector3.new(4700,300,-5100))==0,"no invisible lift outside thermals")
 check(Flight.crossedRing(Vector3.new(0,0,80),Vector3.new(0,0,-80),Vector3.zero,Vector3.zAxis,29),"high-speed crossing through opening")
 check(not Flight.crossedRing(Vector3.new(33,0,80),Vector3.new(33,0,-80),Vector3.zero,Vector3.zAxis,29),"outside ring opening rejected")
 check(not Flight.crossedRing(Vector3.new(0,0,80),Vector3.new(0,0,40),Vector3.zero,Vector3.zAxis,29),"approaching ring is not a crossing")
@@ -66,4 +66,40 @@ for _=1,90 do f30=Flight.step(f30,Vector2.zero,1/30,stats,0,true) end
 for _=1,360 do f120=Flight.step(f120,Vector2.zero,1/120,stats,0,true) end
 check(math.abs(f30.boostRemaining-f120.boostRemaining)<0.0001,"boost duration is timestep-independent")
 check(glide.speed>140 and glide.speed<170,"ordinary glide remains near 150 SPS")
+local hangar=Economy.new()
+check(hangar.planeId=="Dart" and hangar.ownedPlanes.Dart,"new players own and equip the starter")
+check(not Economy.selectPlane(hangar,"Kestrel") and hangar.planeId=="Dart","cannot buy without funds")
+check(not Economy.selectPlane(hangar,"Fake"),"unknown plane rejected")
+hangar.gold=550
+check(Economy.selectPlane(hangar,"Delta") and hangar.gold==0 and hangar.planeId=="Delta","plane purchase pays exact price and equips")
+check(Economy.selectPlane(hangar,"Delta") and hangar.gold==0,"owned plane does not charge twice")
+check(Economy.selectPlane(hangar,"Dart") and hangar.ownedPlanes.Delta,"switching back retains ownership")
+local zone=World.Thermals[10]
+local low=zone.center+Vector3.yAxis*200
+local high=zone.center+Vector3.yAxis*1500
+check(World.lift(low,"Dart")<=12.61,"ground uplift is much weaker than the previous 52")
+check(World.lift(high,"Dart")==0,"starter air must not carry players to the highest mountain")
+check(World.lift(high,"Kestrel")>0,"advanced aircraft can use high altitude air")
+check(World.lift(low,"Invalid")==World.lift(low,"Dart"),"invalid type falls back to starter lift")
+local previous
+for _,id in Config.PlaneOrder do
+ local definition=Config.Planes[id];local stats=Flight.stats({},id)
+ check(stats.launchSpeed==definition.launchSpeed,"flight uses equipped type attributes")
+ check(World.lift(zone.center+Vector3.yAxis*definition.airCeiling,id)==0,"lift tapers fully at aircraft ceiling")
+ if previous then
+  check(stats.launchSpeed>previous.launchSpeed and stats.drag<previous.drag and stats.sink<previous.sink,"higher tier has stronger flight attributes")
+ end
+ previous=stats
+end
+local Store=require(game.ServerScriptService.PaperFlightProfiles)
+local saved=Store.sanitize({gold=42,ownedPlanes={Dart=true,Delta=true,Fake=true},planeId="Delta"})
+check(saved.planeId=="Delta" and saved.ownedPlanes.Delta and not saved.ownedPlanes.Fake,"profile normalization preserves valid ownership only")
+local invalid=Store.sanitize({ownedPlanes={Delta="true"},planeId="Delta"})
+check(invalid.planeId=="Dart" and invalid.ownedPlanes.Dart and not invalid.ownedPlanes.Delta,"unowned equipped type falls back safely")
+local legacy=Store.sanitize({gold=123,levels={Glide=2,Launch=1,Handling=0}})
+check(legacy.gold==123 and legacy.levels.Glide==2 and legacy.planeId=="Dart","legacy profiles retain gold and previous bonuses")
+for _,id in Config.PlaneOrder do
+ local model=package.PlaneModels:FindFirstChild(id)
+ check(model and model.PrimaryPart and model:GetAttribute("PlaneType")==id,"every aircraft type has a matching model")
+end
 return string.format("%d flight, pickup, and upgrade assertions passed",passed)

@@ -3,23 +3,21 @@
 -- Low-frequency meadow relief remains separate from broken mountain surfaces.
 local Landscape={}
 Landscape.Islands={
- {x=-350,z=-950,rx=2250,rz=2650},{x=1050,z=-4050,rx=2100,rz=2050},
- {x=-2950,z=-3500,rx=980,rz=1200},{x=3000,z=-1350,rx=950,rz=1350},
- {x=-950,z=-6500,rx=1380,rz=800},
- -- Broad lowland extensions on the far sides of the mountains retain soft coastal edges.
- {x=-2600,z=-1900,rx=1300,rz=1500},{x=2700,z=-2350,rx=1400,rz=1700},
- {x=-700,z=-5300,rx=1500,rz=1500},{x=2700,z=-6300,rx=1450,rz=1750},
- {x=-3900,z=-5000,rx=1100,rz=1400},{x=-1000,z=-7600,rx=1500,rz=1150},
- {x=2250,z=1450,rx=1500,rz=1200},
+ -- A central island and seven outer lobes surround the launch plateau.
+ {x=-550,z=534,rx=2200,rz=2100},
+ {x=-2450,z=-700,rx=1850,rz=1800},{x=1450,z=-1350,rx=1800,rz=1900},
+ {x=2550,z=1350,rx=1900,rz=1750},{x=650,z=3600,rx=1850,rz=1850},
+ {x=-1850,z=3150,rx=1750,rz=1750},{x=-3850,z=1000,rx=1600,rz=1750},
+ {x=-550,z=-3250,rx=1850,rz=1750},
 }
 Landscape.Peaks={
- {x=-1710,z=-850,rx=650,rz=950,h=1550,style="ridge",angle=-0.22,seed=11},
- {x=1530,z=-1150,rx=640,rz=1050,h=880,style="massif",angle=0.3,seed=23},
- {x=-650,z=-4050,rx=690,rz=890,h=620,style="table",angle=-0.45,seed=37},
- {x=2200,z=-4820,rx=650,rz=900,h=1900,style="spire",angle=0.2,seed=51},
- {x=-2980,z=-3650,rx=560,rz=650,h=430,style="broken",angle=0.65,seed=67},
- {x=-800,z=-6520,rx=610,rz=520,h=730,style="massif",angle=-0.3,seed=79},
- {x=980,z=780,rx=560,rz=660,h=560,style="broken",angle=-0.6,seed=91},
+ {x=-2450,z=-700,rx=650,rz=950,h=1550,style="ridge",angle=-0.22,seed=11},
+ {x=1450,z=-1350,rx=640,rz=1050,h=880,style="massif",angle=0.3,seed=23},
+ {x=2550,z=1350,rx=690,rz=890,h=620,style="table",angle=-0.45,seed=37},
+ {x=650,z=3600,rx=650,rz=900,h=1900,style="spire",angle=0.2,seed=51},
+ {x=-1850,z=3150,rx=560,rz=650,h=430,style="broken",angle=0.65,seed=67},
+ {x=-3850,z=1000,rx=610,rz=520,h=730,style="massif",angle=-0.3,seed=79},
+ {x=-550,z=-3250,rx=560,rz=660,h=560,style="broken",angle=-0.6,seed=91},
 }
 function Landscape.baseHeight(x:number,z:number): number
  local h=-30
@@ -29,7 +27,7 @@ function Landscape.baseHeight(x:number,z:number): number
   local rolling=61+math.noise(x/1400,z/1550)*28
   h=math.max(h,-24+coast*(rolling+24))
  end
- local lake=math.sqrt(((x-90)/720)^2+((z+2120)/950)^2)
+ local lake=math.sqrt(((x-1250)/520)^2+((z-450)/600)^2)
  if lake<1.18 then
   local t=math.clamp((lake-0.82)/0.36,0,1)
   h=math.min(h,-22+t*t*(3-2*t)*115)
@@ -38,10 +36,10 @@ function Landscape.baseHeight(x:number,z:number): number
 end
 -- Low foothill buttresses have ground-level openings, not bores through the main summits.
 Landscape.Spurs={
- {name="Fern Arch",x=-980,z=-1100,rx=145,rz=150,h=105,normal=Vector3.zAxis},
- {name="East Foothill Hollow",x=825,z=-700,rx=145,rz=160,h=130,normal=Vector3.zAxis},
- {name="Western Ledge",x=-1450,z=-3850,rx=155,rz=145,h=95,normal=Vector3.xAxis},
- {name="Highland Root Arch",x=1450,z=-5100,rx=155,rz=145,h=115,normal=Vector3.zAxis},
+ {name="Fern Arch",x=-1550,z=-1100,rx=145,rz=150,h=105,normal=Vector3.zAxis},
+ {name="East Foothill Hollow",x=950,z=-550,rx=145,rz=160,h=130,normal=Vector3.zAxis},
+ {name="Western Ledge",x=-1250,z=2200,rx=155,rz=145,h=95,normal=Vector3.xAxis},
+ {name="Highland Root Arch",x=1250,z=2750,rx=155,rz=145,h=115,normal=Vector3.zAxis},
 }
 Landscape.Tunnels={}
 for _,spur in Landscape.Spurs do
@@ -92,7 +90,7 @@ function Landscape.height(x:number,z:number): (number,boolean,boolean)
   end
  end
  -- Broad 520 x 540 summit with angular cliff shoulders. No spherical launch mound.
- local dx=math.abs((x+550)/260);local dz=math.abs((z-805)/270)
+ local dx=math.abs((x+550)/260);local dz=math.abs((z-534)/270)
  local mesa=math.max(dx,dz)
  if mesa<1.75 then
   local slope=math.clamp((1.75-mesa)/0.75,0,1)

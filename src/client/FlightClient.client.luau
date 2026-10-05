@@ -16,7 +16,7 @@ local camera=workspace.CurrentCamera
 local gui=Instance.new("ScreenGui");gui.Name="PaperFlightHUD";gui.ResetOnSpawn=false;gui.IgnoreGuiInset=true
 gui.Parent=player:WaitForChild("PlayerGui")
 local boostHeld=false
-local mode="Ready";local yaw=0;local pitch=Config.TrimPitch;local cursorFree=false
+local mode="Ready";local yaw=0;local pitch=Config.AimPitch;local cursorFree=false
 local profile=Economy.new();local saveMode="Loading progress";local soundEnabled=true
 local telemetry={speed=165,boostRemaining=Config.BoostDuration,boosting=false,stalled=false,lift=0,distance=0,gold=0,rings=0,region="Coastal Cliffs",altitude=362}
 local originalFov=camera.FieldOfView
@@ -72,7 +72,7 @@ boostButton.InputBegan:Connect(function(input)
 end)
 local hint=label(gui,"Controls","Mouse - Aim / steer\nF - Launch / throw",UDim2.fromOffset(330,68),UDim2.new(0,24,1,-158),18)
 hint.TextXAlignment=Enum.TextXAlignment.Left;hint.TextYAlignment=Enum.TextYAlignment.Bottom
-local message=label(gui,"Message","Collect gold. Improve your folds. Explore farther.",UDim2.new(0.8,0,0,36),UDim2.new(0.1,0,0,165),20)
+local message=label(gui,"Message","Collect gold. Unlock new planes. Explore higher.",UDim2.new(0.8,0,0,36),UDim2.new(0.1,0,0,165),20)
 local reticle=label(gui,"AimReticle","+",UDim2.fromOffset(32,32),UDim2.new(0.5,-16,0.5,-16),32);reticle.Visible=false
 local nav=Instance.new("Frame");nav.Name="Menu";nav.BackgroundTransparency=1;nav.Size=UDim2.fromOffset(100,270);nav.Position=UDim2.new(0,24,0.5,-95);nav.Parent=gui
 local upgrades=button(nav,"Upgrades","UP\nPlanes",UDim2.fromOffset(86,82),UDim2.fromOffset(0,0))
@@ -102,18 +102,26 @@ end
 local function renderModal()
  contents:ClearAllChildren()
  if modalMode=="Upgrades" then
-  heading.Text="PLANE UPGRADES"
-  local i=0
-  for _,key in {"Glide","Launch","Handling"} do
-   local def=Config.Upgrades[key];local level=profile.levels[key];local price=Economy.cost(key,level)
-   local b=button(contents,key,def.title.."  "..level.."/"..def.maxLevel.."     "..(level>=def.maxLevel and "MAX" or "$"..price),
-    UDim2.new(1,0,0,65),UDim2.fromOffset(0,i*83),Color3.fromRGB(63,83,68))
-   b.ZIndex=12;b.TextSize=21
-   b.Activated:Connect(function() remote:FireServer("Upgrade",key) end)
-   local detail=label(contents,key.."Detail",def.description,UDim2.new(1,-10,0,19),UDim2.fromOffset(5,i*83+62),13);detail.ZIndex=13
-   i+=1
+  heading.Text="PAPER PLANE HANGAR"
+  for i,id in Config.PlaneOrder do
+   local def=Config.Planes[id];local owned=profile.ownedPlanes[id];local equipped=profile.planeId==id
+   local y=(i-1)*56
+   local viewport=Instance.new("ViewportFrame");viewport.Name=id.."Preview";viewport.Size=UDim2.fromOffset(80,52)
+   viewport.Position=UDim2.fromOffset(0,y);viewport.BackgroundTransparency=1;viewport.ZIndex=12;viewport.Parent=contents
+   viewport.Ambient=Color3.fromRGB(210,216,230);viewport.LightColor=Color3.fromRGB(255,248,230)
+   local aircraft=package.PlaneModels[id]:Clone();aircraft.Parent=viewport;aircraft:PivotTo(CFrame.new())
+   for _,v in aircraft:GetDescendants() do if v:IsA("Trail") then v.Enabled=false end end
+   local eye=Instance.new("Camera");eye.CFrame=CFrame.lookAt(Vector3.new(10,13,-14),Vector3.zero);eye.FieldOfView=45;eye.Parent=viewport;viewport.CurrentCamera=eye
+   local name=label(contents,id.."Name",def.name,UDim2.new(1,-205,0,24),UDim2.fromOffset(85,y),20)
+   name.ZIndex=12;name.TextXAlignment=Enum.TextXAlignment.Left
+   local detail=label(contents,id.."Stats",string.format("%d SPS  |  Rising air to %d",def.launchSpeed,def.airCeiling),UDim2.new(1,-205,0,20),UDim2.fromOffset(85,y+25),13)
+   detail.ZIndex=12;detail.TextXAlignment=Enum.TextXAlignment.Left
+   local text=equipped and "EQUIPPED" or owned and "EQUIP" or "$"..def.price
+   local buy=button(contents,id,text,UDim2.fromOffset(112,43),UDim2.new(1,-112,0,y+4),equipped and Color3.fromRGB(56,116,94) or Color3.fromRGB(63,83,68))
+   buy.ZIndex=12;buy.TextSize=16
+   buy.Activated:Connect(function() remote:FireServer("Plane",id) end)
   end
-  local note=label(contents,"SaveMode",saveMode,UDim2.new(1,0,0,23),UDim2.fromOffset(0,278),13);note.ZIndex=12
+  local note=label(contents,"SaveMode",saveMode,UDim2.new(1,0,0,23),UDim2.fromOffset(0,281),13);note.ZIndex=12
  elseif modalMode=="Colors" then
   heading.Text="PAPER COLORS"
   for i,color in palette do
@@ -143,11 +151,11 @@ local function cleanPreview()
  table.clear(dots)
 end
 local function colorPlane(model)
- for _,p in model:GetDescendants() do if p:IsA("BasePart") then p.Color=palette[profile.color] end end
+ for _,p in model:GetDescendants() do if p:IsA("BasePart") then p.Color=palette[profile.color]:Lerp(Color3.fromRGB(105,128,145),p:GetAttribute("FoldShade") or 0) end end
 end
 local function preview()
  cleanPreview()
- heldPlane=package.Plane:Clone();heldPlane.Name="HeldPaperPlane";heldPlane:ScaleTo(0.2);heldPlane.Parent=camera;colorPlane(heldPlane)
+ heldPlane=package.PlaneModels[profile.planeId]:Clone();heldPlane.Name="HeldPaperPlane";heldPlane:ScaleTo(0.2);heldPlane.Parent=camera;colorPlane(heldPlane)
  for _,v in heldPlane:GetDescendants() do if v:IsA("Trail") then v.Enabled=false end end
  trajectory=Instance.new("Folder");trajectory.Name="ThrowTrajectory";trajectory.Parent=camera
  local previous
@@ -169,10 +177,11 @@ local function restoreRings()
  table.clear(hiddenRings);table.clear(collectedIds)
 end
 workspace.DescendantAdded:Connect(function(part)
- if not part:IsA("BasePart") then return end
+ if not part:IsA("BasePart") and not part:IsA("BillboardGui") then return end
  local ring=part.Parent
  if ring and collectedIds[ring:GetAttribute("RingId")] then
-  part.LocalTransparencyModifier=1;table.insert(hiddenRings,part)
+  if part:IsA("BasePart") then part.LocalTransparencyModifier=1;table.insert(hiddenRings,part)
+  else part.Enabled=false end
  end
 end)
 local function requestAction()
@@ -263,17 +272,18 @@ local function updateHud()
 end
 remote.OnClientEvent:Connect(function(kind,data)
  if kind=="Profile" then
-  profile.gold=data.gold;profile.levels=data.levels;profile.color=data.color;saveMode=data.saveMode
+  local changed=profile.planeId~=data.planeId
+  profile.gold=data.gold;profile.levels=data.levels;profile.planeId=data.planeId or "Dart";profile.ownedPlanes=data.ownedPlanes or {Dart=true};profile.color=data.color;saveMode=data.saveMode
   wallet.Text="$"..data.gold;if data.message then message.Text=data.message end
-  if heldPlane then colorPlane(heldPlane) end
+  if heldPlane then if changed then preview() else colorPlane(heldPlane) end end
   if modal.Visible then renderModal() end
  elseif kind=="Aiming" then
-  mode="Aiming";boostHeld=false;yaw=0;pitch=Config.TrimPitch;modal.Visible=false
+  mode="Aiming";boostHeld=false;yaw=0;pitch=Config.AimPitch;modal.Visible=false
   telemetry.gold=0;earned.Text="$0";distance.Text="";message.Text="Aim the green path, then click to throw."
   camera.CameraType=Enum.CameraType.Scriptable;preview();cursor(false)
  elseif kind=="Thrown" then
   mode="Countdown";smoothedFrame=nil;restoreRings();cleanPreview();message.Text="";cursor(false)
-  telemetry.gold=0;telemetry.distance=0;telemetry.boostRemaining=Config.BoostDuration;telemetry.boosting=false;telemetry.speed=Flight.stats(profile.levels).launchSpeed;wind:Play()
+  telemetry.gold=0;telemetry.distance=0;telemetry.boostRemaining=Config.BoostDuration;telemetry.boosting=false;telemetry.speed=Flight.stats(profile.levels,profile.planeId).launchSpeed;wind:Play()
  elseif kind=="Flying" then mode="Flying"
  elseif kind=="Telemetry" then
   telemetry=data;earned.Text="$"..data.gold
@@ -290,7 +300,10 @@ remote.OnClientEvent:Connect(function(kind,data)
   local rings=folder and folder:FindFirstChild("Rings")
   local ring=rings and rings:FindFirstChild("Ring"..data.id)
   if ring then
-   for _,p in ring:GetDescendants() do if p:IsA("BasePart") then p.LocalTransparencyModifier=1;table.insert(hiddenRings,p) end end
+   for _,p in ring:GetDescendants() do
+    if p:IsA("BasePart") then p.LocalTransparencyModifier=1;table.insert(hiddenRings,p)
+    elseif p:IsA("BillboardGui") then p.Enabled=false end
+   end
   end
  elseif kind=="Ended" then
   mode="Ready";boostHeld=false;telemetry.gold=data.gold;earned.Text="+$"..data.gold
@@ -352,9 +365,9 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
   if heldPlane then heldPlane:PivotTo(CFrame.new((hand and hand.Position or Config.Launch)+direction*0.8)*aimFrame) end
   previewClock+=dt
   if previewClock>1/30 then
-   previewClock=0;local stats=Flight.stats(profile.levels);local state=Flight.new(Config.Launch,yaw,pitch,stats)
+   previewClock=0;local stats=Flight.stats(profile.levels,profile.planeId);local state=Flight.new(Config.Launch,yaw,pitch,stats)
    for i=1,#dots do
-    if i>1 then for _=1,6 do state=Flight.step(state,Flight.aimInput(state,yaw,pitch),1/60,stats) end end
+    if i>1 then for _=1,6 do state=Flight.step(state,Flight.aimInput(state,yaw,pitch),1/60,stats,World.lift(state.position,profile.planeId)) end end
     dots[i].Position=(i==1 and heldPlane) and heldPlane:GetPivot().Position or state.position
    end
   end
@@ -365,7 +378,7 @@ RunService:BindToRenderStep("PaperFlightCamera",Enum.RenderPriority.Camera.Value
  local folder=workspace:FindFirstChild("ActivePaperPlanes");local plane=folder and folder:FindFirstChild("Plane_"..player.UserId)
  if not plane then return end
  if not visualPlane then
-  visualPlane=package.Plane:Clone();visualPlane.Name="LocalFlightVisual";visualPlane:ScaleTo(0.65);visualPlane.Parent=camera;colorPlane(visualPlane)
+  visualPlane=package.PlaneModels[profile.planeId]:Clone();visualPlane.Name="LocalFlightVisual";visualPlane:ScaleTo(0.65);visualPlane.Parent=camera;colorPlane(visualPlane)
   for _,p in plane:GetDescendants() do
    if p:IsA("BasePart") then p.LocalTransparencyModifier=1 end
    if p:IsA("Trail") then p.Enabled=false end
@@ -407,9 +420,25 @@ task.spawn(function()
   for _,tile in tiles do
    local d=(tile.center-eye).Magnitude
    local fade=1-math.clamp((d-1100)/550,0,1)
-   for _,p in tile.parts do if p:IsA("BasePart") then p.Transparency=fade end end
+   for _,p in tile.parts do if p:IsA("BasePart") then p.LocalTransparencyModifier=fade end end
   end
   task.wait(0.5)
+ end
+end)
+-- Distant summit halos keep a readable angular size while the actual opening stays small.
+task.spawn(function()
+ local world=workspace:WaitForChild("PaperFlightWorld")
+ local rings=world:WaitForChild("Rings")
+ while gui.Parent do
+  for _,ring in rings:GetChildren() do
+   local beacon=ring:FindFirstChild("SummitBeacon")
+   local anchor=ring:FindFirstChild("SummitBeaconAnchor")
+   if beacon and anchor then
+    local distance=(camera.CFrame.Position-anchor.Position).Magnitude
+    beacon.Enabled=distance>300 and not collectedIds[ring:GetAttribute("RingId")]
+   end
+  end
+  task.wait(0.15)
  end
 end)
 updateHud();remote:FireServer("Sync")

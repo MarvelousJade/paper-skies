@@ -1,21 +1,22 @@
 --!strict
 local Landscape=require(script.Parent.Landscape)
+local Config=require(script.Parent.Config)
 local World={}
 World.Regions={
- {name="Coastal Cliffs",center=Vector3.new(-550,0,400),color=Color3.fromRGB(85,153,95)},
- {name="Paperwood Valley",center=Vector3.new(-700,0,-1300),color=Color3.fromRGB(81,150,108)},
- {name="Azure Lagoon",center=Vector3.new(350,0,-2300),color=Color3.fromRGB(96,198,232)},
- {name="Cloudspire Highlands",center=Vector3.new(1300,0,-4400),color=Color3.fromRGB(165,157,231)},
- {name="Western Isles",center=Vector3.new(-2950,0,-3500),color=Color3.fromRGB(228,177,98)},
- {name="Northern Reach",center=Vector3.new(-850,0,-6450),color=Color3.fromRGB(195,223,228)},
+ {name="Coastal Cliffs",center=Vector3.new(-550,0,534),color=Color3.fromRGB(85,153,95)},
+ {name="Paperwood Valley",center=Vector3.new(-2450,0,-700),color=Color3.fromRGB(81,150,108)},
+ {name="Azure Lagoon",center=Vector3.new(2000,0,650),color=Color3.fromRGB(96,198,232)},
+ {name="Cloudspire Highlands",center=Vector3.new(650,0,3600),color=Color3.fromRGB(165,157,231)},
+ {name="Western Isles",center=Vector3.new(-3100,0,2200),color=Color3.fromRGB(228,177,98)},
+ {name="Northern Reach",center=Vector3.new(-550,0,-3250),color=Color3.fromRGB(195,223,228)},
 }
 World.Thermals={
- {center=Vector3.new(-550,0,-600),radius=220,height=750,strength=34},
- {center=Vector3.new(700,0,-1850),radius=250,height=850,strength=38},
- {center=Vector3.new(-1400,0,-2800),radius=260,height=950,strength=40},
- {center=Vector3.new(850,0,-4100),radius=280,height=1150,strength=42},
- {center=Vector3.new(-2200,0,-3700),radius=280,height=1000,strength=42},
- {center=Vector3.new(-750,0,-5850),radius=300,height=1200,strength=44},
+ {center=Vector3.new(-550,0,-700),radius=260,height=900,strength=13},
+ {center=Vector3.new(600,0,-400),radius=270,height=950,strength=14},
+ {center=Vector3.new(900,0,1950),radius=280,height=1100,strength=14},
+ {center=Vector3.new(-600,0,2450),radius=300,height=1200,strength=15},
+ {center=Vector3.new(-2200,0,1350),radius=280,height=1000,strength=14},
+ {center=Vector3.new(-1850,0,-2100),radius=300,height=1200,strength=15},
 }
 -- Two visible lowland encounters; the remaining wildlife is hidden behind mountain silhouettes.
 -- Seeded rejection sampling keeps every animal off slopes and makes discovery placement reproducible.
@@ -47,7 +48,7 @@ local function hiddenBehind(x,z,y)
 end
 for attempt=1,60000 do
  if #World.Animals>=15 then break end
- local x=random:NextNumber(-4700,4100);local z=random:NextNumber(-8400,2300)
+ local x=random:NextNumber(-5000,4100);local z=random:NextNumber(-4650,5000)
  local y,_,mountain=Landscape.height(x,z)
  if y<25 or y>110 or mountain or (Vector2.new(x+550,z-534)).Magnitude<1050 then continue end
  local behind
@@ -81,16 +82,16 @@ local function add(position,normal,radius,color,value,group)
 end
 -- Short optional trails are separated by open space. They reward exploration, not ordered checkpoints.
 local routes={
- {center=Vector3.new(-1400,280,-1700),radius=270,start=0.2,count=5},
- {center=Vector3.new(650,240,-1800),radius=240,start=-1.3,count=4},
- {center=Vector3.new(-250,210,-2900),radius=300,start=0.6,count=5},
- {center=Vector3.new(1300,360,-2900),radius=240,start=2.5,count=4},
- {center=Vector3.new(-2750,310,-2850),radius=280,start=-0.5,count=5},
- {center=Vector3.new(1200,400,-4150),radius=310,start=1.1,count=4},
- {center=Vector3.new(-150,360,-5180),radius=250,start=0.4,count=5},
- {center=Vector3.new(-1550,290,-6250),radius=230,start=1.8,count=4},
- {center=Vector3.new(2970,300,-1750),radius=270,start=-1.6,count=5},
- {center=Vector3.new(-2860,230,-4500),radius=220,start=2.1,count=4},
+ {center=Vector3.new(-1700,230,-1450),radius=270,start=0.2,count=5},
+ {center=Vector3.new(400,210,-1650),radius=240,start=-1.3,count=4},
+ {center=Vector3.new(-50,190,-2650),radius=300,start=0.6,count=5},
+ {center=Vector3.new(2000,210,-500),radius=240,start=2.5,count=4},
+ {center=Vector3.new(2200,240,2400),radius=280,start=-0.5,count=5},
+ {center=Vector3.new(500,240,2250),radius=310,start=1.1,count=4},
+ {center=Vector3.new(-850,210,3600),radius=250,start=0.4,count=5},
+ {center=Vector3.new(-2500,200,2300),radius=230,start=1.8,count=4},
+ {center=Vector3.new(-3200,230,0),radius=270,start=-1.6,count=5},
+ {center=Vector3.new(-2700,210,-1750),radius=220,start=2.1,count=4},
 }
 for group,route in routes do
  local points={};local raise=0
@@ -134,16 +135,20 @@ for index,peak in Landscape.Peaks do
  local towardLaunch=Vector3.new(-550-peak.x,0,534-peak.z).Unit
  local width=math.max(peak.rx,peak.rz)
  table.insert(World.Thermals,{center=Vector3.new(peak.x,0,peak.z)+towardLaunch*width*0.55,
-  radius=width*0.85,height=center.Y+180,strength=52})
+  radius=width*0.85,height=center.Y+260,strength=18})
  table.insert(World.Summits,{position=top,ringPosition=center,peak=index})
  add(center,normal,6,palette[(index+2)%#palette+1],60,"Summit "..index)
 end
-function World.lift(position:Vector3): number
+function World.lift(position:Vector3,planeId:string?): number
+ -- Aircraft attributes change usable rising air; there is no hard positional ceiling.
+ local plane=Config.Planes[planeId or "Dart"] or Config.Planes.Dart
+ local altitudeFade=math.clamp((plane.airCeiling-position.Y)/Config.ThermalFadeHeight,0,1)
+ local efficiency=plane.thermalEfficiency
  local value=0
  for _,zone in World.Thermals do
   local distance=Vector2.new(position.X-zone.center.X,position.Z-zone.center.Z).Magnitude
   if distance<zone.radius and position.Y>20 and position.Y<zone.height then
-   value=math.max(value,zone.strength*(1-(distance/zone.radius)^2))
+   value=math.max(value,zone.strength*(1-(distance/zone.radius)^2)*altitudeFade*efficiency)
   end
  end
  return value
